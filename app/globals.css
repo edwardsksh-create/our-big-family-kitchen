@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --paper: #FBF7EE;
+  --cream: #E6DFCA;
+  --ink: #2A2522;
+  --ink-soft: #5C544F;
+  --primary: #8D2842;
+  --accent: #C96236;
+  --rule: rgba(42, 37, 34, 0.12);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif), Georgia, serif;
+  font-variation-settings: "SOFT" 30;
+  letter-spacing: -0.01em;
+}
+
+@layer components {
+  .warm {
+    @apply font-serif italic;
+    font-variation-settings: "SOFT" 80;
+  }
+
+  .label {
+    @apply font-sans text-xs uppercase tracking-[0.14em] text-ink-soft;
+  }
+
+  .hairline {
+    @apply border-t border-rule;
+  }
+
+  .prose-body p {
+    @apply mb-4;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-full px-6 py-3 font-sans text-sm
+           uppercase tracking-[0.14em] transition-all duration-200 ease-out-soft;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-paper hover:bg-ink hover:shadow-lg;
+  }
+
+  .btn-ghost {
+    @apply btn border border-rule text-ink hover:border-ink hover:bg-ink/5;
+  }
+
+  .card-hover {
+    @apply transition-transform duration-300 ease-out-soft hover:-translate-y-0.5;
+  }
+}
