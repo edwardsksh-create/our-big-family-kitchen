@@ -7,20 +7,20 @@ grant usage on schema next_auth to service_role;
 grant all  on schema next_auth to postgres;
 
 create table if not exists next_auth.users (
-  id            uuid primary key default gen_random_uuid(),
-  name          text,
-  email         text,
+  id              uuid primary key default gen_random_uuid(),
+  name            text,
+  email           text,
   "emailVerified" timestamptz,
-  image         text
+  image           text
 );
 
 create unique index if not exists email_unique on next_auth.users (email);
 
 create table if not exists next_auth.sessions (
-  id            uuid primary key default gen_random_uuid(),
-  expires       timestamptz not null,
+  id             uuid primary key default gen_random_uuid(),
+  expires        timestamptz not null,
   "sessionToken" text not null,
-  "userId"      uuid references next_auth.users(id) on delete cascade
+  "userId"       uuid references next_auth.users(id) on delete cascade
 );
 
 create unique index if not exists sessions_session_token_unique on next_auth.sessions ("sessionToken");

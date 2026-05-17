@@ -1,11 +1,11 @@
 -- Our Big Family Kitchen — application schema
--- Run order: 0001_app_schema.sql → 0002_next_auth.sql → 0003_seeds.sql → 0004_rls.sql
+-- Run order: 0001_app_schema.sql → 0002_next_auth.sql → 0003_seeds.sql → 0004_rls.sql → 0005_seed_admin.sql
 
 create extension if not exists "pgcrypto";
 
 -- Family lines -------------------------------------------------------------
 
-create table family_lines (
+create table if not exists family_lines (
   id          uuid primary key default gen_random_uuid(),
   slug        text unique not null,
   name        text not null,
@@ -16,7 +16,7 @@ create table family_lines (
 
 -- Sections -----------------------------------------------------------------
 
-create table sections (
+create table if not exists sections (
   id          uuid primary key default gen_random_uuid(),
   slug        text unique not null,
   name        text not null,
@@ -26,7 +26,7 @@ create table sections (
 
 -- Contributors -------------------------------------------------------------
 
-create table contributors (
+create table if not exists contributors (
   id            uuid primary key default gen_random_uuid(),
   email         text unique not null,
   name          text,
@@ -39,11 +39,11 @@ create table contributors (
   created_at    timestamptz not null default now()
 );
 
-create index contributors_email_idx on contributors (lower(email));
+create index if not exists contributors_email_idx on contributors (lower(email));
 
 -- Contributor ↔ family line ------------------------------------------------
 
-create table contributor_family_lines (
+create table if not exists contributor_family_lines (
   contributor_id uuid not null references contributors(id) on delete cascade,
   family_line_id uuid not null references family_lines(id) on delete cascade,
   primary key (contributor_id, family_line_id)
@@ -51,7 +51,7 @@ create table contributor_family_lines (
 
 -- Tags ---------------------------------------------------------------------
 
-create table tags (
+create table if not exists tags (
   id   uuid primary key default gen_random_uuid(),
   slug text unique not null,
   name text not null
@@ -59,7 +59,7 @@ create table tags (
 
 -- Recipes ------------------------------------------------------------------
 
-create table recipes (
+create table if not exists recipes (
   id                       uuid primary key default gen_random_uuid(),
   title                    text not null,
   slug                     text,
@@ -76,15 +76,15 @@ create table recipes (
   published_at             timestamptz
 );
 
-create unique index recipes_slug_unique on recipes (slug) where slug is not null;
-create index recipes_status_idx          on recipes (status);
-create index recipes_contributor_idx     on recipes (contributor_id);
-create index recipes_primary_family_idx  on recipes (primary_family_line_id);
-create index recipes_section_idx         on recipes (section_id);
+create unique index if not exists recipes_slug_unique     on recipes (slug) where slug is not null;
+create        index if not exists recipes_status_idx          on recipes (status);
+create        index if not exists recipes_contributor_idx     on recipes (contributor_id);
+create        index if not exists recipes_primary_family_idx  on recipes (primary_family_line_id);
+create        index if not exists recipes_section_idx         on recipes (section_id);
 
 -- Recipe components --------------------------------------------------------
 
-create table ingredients (
+create table if not exists ingredients (
   id         uuid primary key default gen_random_uuid(),
   recipe_id  uuid not null references recipes(id) on delete cascade,
   sub_header text,
@@ -92,9 +92,9 @@ create table ingredients (
   sort_order int  not null
 );
 
-create index ingredients_recipe_idx on ingredients (recipe_id, sort_order);
+create index if not exists ingredients_recipe_idx on ingredients (recipe_id, sort_order);
 
-create table instructions (
+create table if not exists instructions (
   id         uuid primary key default gen_random_uuid(),
   recipe_id  uuid not null references recipes(id) on delete cascade,
   sub_header text,
@@ -102,15 +102,15 @@ create table instructions (
   sort_order int  not null
 );
 
-create index instructions_recipe_idx on instructions (recipe_id, sort_order);
+create index if not exists instructions_recipe_idx on instructions (recipe_id, sort_order);
 
-create table recipe_tags (
+create table if not exists recipe_tags (
   recipe_id uuid not null references recipes(id) on delete cascade,
   tag_id    uuid not null references tags(id)    on delete cascade,
   primary key (recipe_id, tag_id)
 );
 
-create table photos (
+create table if not exists photos (
   id             uuid primary key default gen_random_uuid(),
   recipe_id      uuid not null references recipes(id) on delete cascade,
   contributor_id uuid references contributors(id) on delete set null,
@@ -119,11 +119,11 @@ create table photos (
   sort_order     int  not null default 0
 );
 
-create index photos_recipe_idx on photos (recipe_id, sort_order);
+create index if not exists photos_recipe_idx on photos (recipe_id, sort_order);
 
 -- Comments -----------------------------------------------------------------
 
-create table comments (
+create table if not exists comments (
   id             uuid primary key default gen_random_uuid(),
   recipe_id      uuid not null references recipes(id) on delete cascade,
   contributor_id uuid references contributors(id) on delete set null,
@@ -133,11 +133,11 @@ create table comments (
   created_at     timestamptz not null default now()
 );
 
-create index comments_recipe_idx on comments (recipe_id, created_at);
+create index if not exists comments_recipe_idx on comments (recipe_id, created_at);
 
 -- Invitations --------------------------------------------------------------
 
-create table invitations (
+create table if not exists invitations (
   id              uuid primary key default gen_random_uuid(),
   email           text unique not null,
   family_line_ids uuid[] not null default '{}',
@@ -147,11 +147,11 @@ create table invitations (
   token           text unique not null
 );
 
-create index invitations_email_idx on invitations (lower(email));
+create index if not exists invitations_email_idx on invitations (lower(email));
 
 -- Submissions --------------------------------------------------------------
 
-create table submissions (
+create table if not exists submissions (
   id                      uuid primary key default gen_random_uuid(),
   source                  text not null check (source in ('form', 'email', 'photo_upload')),
   raw_payload             jsonb not null,
@@ -165,7 +165,7 @@ create table submissions (
 
 -- Federated recipes (read-only mirror of leusch-family-recipes for search) -
 
-create table federated_recipes (
+create table if not exists federated_recipes (
   id               uuid primary key default gen_random_uuid(),
   source_url       text not null,
   title            text not null,
@@ -175,7 +175,7 @@ create table federated_recipes (
   fetched_at       timestamptz not null default now()
 );
 
-create index federated_recipes_source_idx on federated_recipes (source_url);
+create index if not exists federated_recipes_source_idx on federated_recipes (source_url);
 
 -- Updated-at trigger -------------------------------------------------------
 
@@ -187,6 +187,7 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists recipes_set_updated_at on recipes;
 create trigger recipes_set_updated_at
   before update on recipes
   for each row execute function set_updated_at();

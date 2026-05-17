@@ -1,11 +1,11 @@
 -- Our Big Family Kitchen — application schema
--- Run order: 0001_app_schema.sql → 0002_next_auth.sql → 0003_seeds.sql → 0004_rls.sql
+-- Run order: 0001_app_schema.sql → 0002_next_auth.sql → 0003_seeds.sql → 0004_rls.sql → 0005_seed_admin.sql
 
 create extension if not exists "pgcrypto";
 
 -- Family lines -------------------------------------------------------------
 
-create table family_lines (
+create table if not exists family_lines (
   id          uuid primary key default gen_random_uuid(),
   slug        text unique not null,
   name        text not null,
@@ -16,7 +16,7 @@ create table family_lines (
 
 -- Sections -----------------------------------------------------------------
 
-create table sections (
+create table if not exists sections (
   id          uuid primary key default gen_random_uuid(),
   slug        text unique not null,
   name        text not null,
@@ -26,7 +26,7 @@ create table sections (
 
 -- Contributors -------------------------------------------------------------
 
-create table contributors (
+create table if not exists contributors (
   id            uuid primary key default gen_random_uuid(),
   email         text unique not null,
   name          text,
@@ -39,11 +39,11 @@ create table contributors (
   created_at    timestamptz not null default now()
 );
 
-create index contributors_email_idx on contributors (lower(email));
+create index if not exists contributors_email_idx on contributors (lower(email));
 
 -- Contributor ↔ family line ------------------------------------------------
 
-create table contributor_family_lines (
+create table if not exists contributor_family_lines (
   contributor_id uuid not null references contributors(id) on delete cascade,
   family_line_id uuid not null references family_lines(id) on delete cascade,
   primary key (contributor_id, family_line_id)
@@ -51,7 +51,7 @@ create table contributor_family_lines (
 
 -- Tags ---------------------------------------------------------------------
 
-create table tags (
+create table if not exists tags (
   id   uuid primary key default gen_random_uuid(),
   slug text unique not null,
   name text not null
@@ -59,7 +59,7 @@ create table tags (
 
 -- Recipes ------------------------------------------------------------------
 
-create table recipes (
+create table if not exists recipes (
   id                       uuid primary key default gen_random_uuid(),
   title                    text not null,
   slug                     text,
@@ -76,15 +76,15 @@ create table recipes (
   published_at             timestamptz
 );
 
-create unique index recipes_slug_unique on recipes (slug) where slug is not null;
-create index recipes_status_idx          on recipes (status);
-create index recipes_contributor_idx     on recipes (contributor_id);
-create index recipes_primary_family_idx  on recipes (primary_family_line_id);
-create index recipes_section_idx         on recipes (section_id);
+create unique index if not exists recipes_slug_unique     on recipes (slug) where slug is not null;
+create        index if not exists recipes_status_idx          on recipes (status);
+create        index if not exists recipes_contributor_idx     on recipes (contributor_id);
+create        index if not exists recipes_primary_family_idx  on recipes (primary_family_line_id);
+create        index if not exists recipes_section_idx         on recipes (section_id);
 
 -- Recipe components --------------------------------------------------------
 
-create table ingredients (
+create table if not exists ingredients (
   id         uuid primary key default gen_random_uuid(),
   recipe_id  uuid not null references recipes(id) on delete cascade,
   sub_header text,
@@ -92,9 +92,9 @@ create table ingredients (
   sort_order int  not null
 );
 
-create index ingredients_recipe_idx on ingredients (recipe_id, sort_order);
+create index if not exists ingredients_recipe_idx on ingredients (recipe_id, sort_order);
 
-create table instructions (
+create table if not exists instructions (
   id         uuid primary key default gen_random_uuid(),
   recipe_id  uuid not null references recipes(id) on delete cascade,
   sub_header text,
@@ -102,15 +102,15 @@ create table instructions (
   sort_order int  not null
 );
 
-create index instructions_recipe_idx on instructions (recipe_id, sort_order);
+create index if not exists instructions_recipe_idx on instructions (recipe_id, sort_order);
 
-create table recipe_tags (
+create table if not exists recipe_tags (
   recipe_id uuid not null references recipes(id) on delete cascade,
   tag_id    uuid not null references tags(id)    on delete cascade,
   primary key (recipe_id, tag_id)
 );
 
-create table photos (
+create table if not exists photos (
   id             uuid primary key default gen_random_uuid(),
   recipe_id      uuid not null references recipes(id) on delete cascade,
   contributor_id uuid references contributors(id) on delete set null,
@@ -119,11 +119,11 @@ create table photos (
   sort_order     int  not null default 0
 );
 
-create index photos_recipe_idx on photos (recipe_id, sort_order);
+create index if not exists photos_recipe_idx on photos (recipe_id, sort_order);
 
 -- Comments -----------------------------------------------------------------
 
-create table comments (
+create table if not exists comments (
   id             uuid primary key default gen_random_uuid(),
   recipe_id      uuid not null references recipes(id) on delete cascade,
   contributor_id uuid references contributors(id) on delete set null,
@@ -133,11 +133,11 @@ create table comments (
   created_at     timestamptz not null default now()
 );
 
-create index comments_recipe_idx on comments (recipe_id, created_at);
+create index if not exists comments_recipe_idx on comments (recipe_id, created_at);
 
 -- Invitations --------------------------------------------------------------
 
-create table invitations (
+create table if not exists invitations (
   id              uuid primary key default gen_random_uuid(),
   email           text unique not null,
   family_line_ids uuid[] not null default '{}',
@@ -147,11 +147,11 @@ create table invitations (
   token           text unique not null
 );
 
-create index invitations_email_idx on invitations (lower(email));
+create index if not exists invitations_email_idx on invitations (lower(email));
 
 -- Submissions --------------------------------------------------------------
 
-create table submissions (
+create table if not exists submissions (
   id                      uuid primary key default gen_random_uuid(),
   source                  text not null check (source in ('form', 'email', 'photo_upload')),
   raw_payload             jsonb not null,
@@ -165,7 +165,7 @@ create table submissions (
 
 -- Federated recipes (read-only mirror of leusch-family-recipes for search) -
 
-create table federated_recipes (
+create table if not exists federated_recipes (
   id               uuid primary key default gen_random_uuid(),
   source_url       text not null,
   title            text not null,
@@ -175,7 +175,7 @@ create table federated_recipes (
   fetched_at       timestamptz not null default now()
 );
 
-create index federated_recipes_source_idx on federated_recipes (source_url);
+create index if not exists federated_recipes_source_idx on federated_recipes (source_url);
 
 -- Updated-at trigger -------------------------------------------------------
 
@@ -187,6 +187,7 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists recipes_set_updated_at on recipes;
 create trigger recipes_set_updated_at
   before update on recipes
   for each row execute function set_updated_at();
@@ -199,20 +200,20 @@ grant usage on schema next_auth to service_role;
 grant all  on schema next_auth to postgres;
 
 create table if not exists next_auth.users (
-  id            uuid primary key default gen_random_uuid(),
-  name          text,
-  email         text,
+  id              uuid primary key default gen_random_uuid(),
+  name            text,
+  email           text,
   "emailVerified" timestamptz,
-  image         text
+  image           text
 );
 
 create unique index if not exists email_unique on next_auth.users (email);
 
 create table if not exists next_auth.sessions (
-  id            uuid primary key default gen_random_uuid(),
-  expires       timestamptz not null,
+  id             uuid primary key default gen_random_uuid(),
+  expires        timestamptz not null,
   "sessionToken" text not null,
-  "userId"      uuid references next_auth.users(id) on delete cascade
+  "userId"       uuid references next_auth.users(id) on delete cascade
 );
 
 create unique index if not exists sessions_session_token_unique on next_auth.sessions ("sessionToken");
@@ -286,26 +287,36 @@ on conflict (slug) do nothing;
 -- The "current user" is resolved via auth.jwt() -> 'email', which is what the
 -- NextAuth → Supabase JWT bridge will populate once we wire it. Until then,
 -- RLS effectively denies all non-service-role traffic.
+--
+-- Helpers live in the `public` schema (not `auth`) because the dashboard SQL
+-- editor user cannot create functions in the `auth` schema.
 
--- Helper: contributor id of the caller, via JWT email claim ----------------
+-- Helpers ------------------------------------------------------------------
 
-create or replace function auth.current_contributor_id()
+create or replace function public.current_contributor_id()
 returns uuid
-language sql stable as $$
+language sql stable
+security definer
+set search_path = public as $$
   select c.id from public.contributors c
   where lower(c.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
   limit 1
 $$;
 
-create or replace function auth.is_admin()
+create or replace function public.is_admin()
 returns boolean
-language sql stable as $$
+language sql stable
+security definer
+set search_path = public as $$
   select exists (
     select 1 from public.contributors c
     where lower(c.email) = lower(coalesce(auth.jwt() ->> 'email', ''))
       and c.role = 'admin'
   )
 $$;
+
+grant execute on function public.current_contributor_id() to authenticated, anon;
+grant execute on function public.is_admin()                to authenticated, anon;
 
 -- Enable RLS on every public table -----------------------------------------
 
@@ -324,88 +335,116 @@ alter table invitations              enable row level security;
 alter table submissions              enable row level security;
 alter table federated_recipes        enable row level security;
 
--- family_lines & sections: readable by everyone signed in, mutable by admin
+-- family_lines & sections --------------------------------------------------
+
+drop policy if exists family_lines_read         on family_lines;
+drop policy if exists family_lines_admin_write  on family_lines;
 
 create policy family_lines_read on family_lines
   for select to authenticated using (true);
 
 create policy family_lines_admin_write on family_lines
   for all to authenticated
-  using (auth.is_admin()) with check (auth.is_admin());
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists sections_read         on sections;
+drop policy if exists sections_admin_write  on sections;
 
 create policy sections_read on sections
   for select to authenticated using (true);
 
 create policy sections_admin_write on sections
   for all to authenticated
-  using (auth.is_admin()) with check (auth.is_admin());
+  using (public.is_admin()) with check (public.is_admin());
 
 -- Contributors -------------------------------------------------------------
+
+drop policy if exists contributors_read_all      on contributors;
+drop policy if exists contributors_update_self   on contributors;
+drop policy if exists contributors_admin_insert  on contributors;
+drop policy if exists contributors_admin_delete  on contributors;
 
 create policy contributors_read_all on contributors
   for select to authenticated using (true);
 
 create policy contributors_update_self on contributors
   for update to authenticated
-  using (id = auth.current_contributor_id())
-  with check (id = auth.current_contributor_id());
+  using (id = public.current_contributor_id())
+  with check (id = public.current_contributor_id());
 
 create policy contributors_admin_insert on contributors
   for insert to authenticated
-  with check (auth.is_admin());
+  with check (public.is_admin());
 
 create policy contributors_admin_delete on contributors
-  for delete to authenticated using (auth.is_admin());
+  for delete to authenticated using (public.is_admin());
 
--- Contributor ↔ family line: visibility follows contributors --------------
+-- Contributor ↔ family line ------------------------------------------------
+
+drop policy if exists cfl_read                  on contributor_family_lines;
+drop policy if exists cfl_self_or_admin_write   on contributor_family_lines;
 
 create policy cfl_read on contributor_family_lines
   for select to authenticated using (true);
 
 create policy cfl_self_or_admin_write on contributor_family_lines
   for all to authenticated
-  using (contributor_id = auth.current_contributor_id() or auth.is_admin())
-  with check (contributor_id = auth.current_contributor_id() or auth.is_admin());
+  using (contributor_id = public.current_contributor_id() or public.is_admin())
+  with check (contributor_id = public.current_contributor_id() or public.is_admin());
 
 -- Tags ---------------------------------------------------------------------
+
+drop policy if exists tags_read                on tags;
+drop policy if exists tags_contributor_write   on tags;
+drop policy if exists tags_admin_mutate        on tags;
+drop policy if exists tags_admin_delete        on tags;
 
 create policy tags_read on tags
   for select to authenticated using (true);
 
 create policy tags_contributor_write on tags
-  for insert to authenticated with check (auth.current_contributor_id() is not null);
+  for insert to authenticated with check (public.current_contributor_id() is not null);
 
 create policy tags_admin_mutate on tags
-  for update to authenticated using (auth.is_admin()) with check (auth.is_admin());
+  for update to authenticated using (public.is_admin()) with check (public.is_admin());
 
 create policy tags_admin_delete on tags
-  for delete to authenticated using (auth.is_admin());
+  for delete to authenticated using (public.is_admin());
 
 -- Recipes ------------------------------------------------------------------
+
+drop policy if exists recipes_published_read       on recipes;
+drop policy if exists recipes_own_or_admin_read    on recipes;
+drop policy if exists recipes_own_or_admin_update  on recipes;
+drop policy if exists recipes_contributor_insert   on recipes;
+drop policy if exists recipes_admin_delete         on recipes;
 
 create policy recipes_published_read on recipes
   for select to authenticated using (status = 'published');
 
 create policy recipes_own_or_admin_read on recipes
   for select to authenticated
-  using (contributor_id = auth.current_contributor_id() or auth.is_admin());
+  using (contributor_id = public.current_contributor_id() or public.is_admin());
 
 create policy recipes_own_or_admin_update on recipes
   for update to authenticated
-  using (contributor_id = auth.current_contributor_id() or auth.is_admin())
-  with check (contributor_id = auth.current_contributor_id() or auth.is_admin());
+  using (contributor_id = public.current_contributor_id() or public.is_admin())
+  with check (contributor_id = public.current_contributor_id() or public.is_admin());
 
 create policy recipes_contributor_insert on recipes
   for insert to authenticated
   with check (
-    auth.current_contributor_id() is not null
-    and contributor_id = auth.current_contributor_id()
+    public.current_contributor_id() is not null
+    and contributor_id = public.current_contributor_id()
   );
 
 create policy recipes_admin_delete on recipes
-  for delete to authenticated using (auth.is_admin());
+  for delete to authenticated using (public.is_admin());
 
 -- Ingredients / instructions / recipe_tags / photos: inherit recipe access --
+
+drop policy if exists ingredients_inherit_read   on ingredients;
+drop policy if exists ingredients_inherit_write  on ingredients;
 
 create policy ingredients_inherit_read on ingredients
   for select to authenticated
@@ -414,8 +453,8 @@ create policy ingredients_inherit_read on ingredients
       select 1 from recipes r
       where r.id = ingredients.recipe_id
         and (r.status = 'published'
-             or r.contributor_id = auth.current_contributor_id()
-             or auth.is_admin())
+             or r.contributor_id = public.current_contributor_id()
+             or public.is_admin())
     )
   );
 
@@ -425,16 +464,19 @@ create policy ingredients_inherit_write on ingredients
     exists (
       select 1 from recipes r
       where r.id = ingredients.recipe_id
-        and (r.contributor_id = auth.current_contributor_id() or auth.is_admin())
+        and (r.contributor_id = public.current_contributor_id() or public.is_admin())
     )
   )
   with check (
     exists (
       select 1 from recipes r
       where r.id = ingredients.recipe_id
-        and (r.contributor_id = auth.current_contributor_id() or auth.is_admin())
+        and (r.contributor_id = public.current_contributor_id() or public.is_admin())
     )
   );
+
+drop policy if exists instructions_inherit_read   on instructions;
+drop policy if exists instructions_inherit_write  on instructions;
 
 create policy instructions_inherit_read on instructions
   for select to authenticated
@@ -443,8 +485,8 @@ create policy instructions_inherit_read on instructions
       select 1 from recipes r
       where r.id = instructions.recipe_id
         and (r.status = 'published'
-             or r.contributor_id = auth.current_contributor_id()
-             or auth.is_admin())
+             or r.contributor_id = public.current_contributor_id()
+             or public.is_admin())
     )
   );
 
@@ -454,16 +496,19 @@ create policy instructions_inherit_write on instructions
     exists (
       select 1 from recipes r
       where r.id = instructions.recipe_id
-        and (r.contributor_id = auth.current_contributor_id() or auth.is_admin())
+        and (r.contributor_id = public.current_contributor_id() or public.is_admin())
     )
   )
   with check (
     exists (
       select 1 from recipes r
       where r.id = instructions.recipe_id
-        and (r.contributor_id = auth.current_contributor_id() or auth.is_admin())
+        and (r.contributor_id = public.current_contributor_id() or public.is_admin())
     )
   );
+
+drop policy if exists recipe_tags_inherit_read   on recipe_tags;
+drop policy if exists recipe_tags_inherit_write  on recipe_tags;
 
 create policy recipe_tags_inherit_read on recipe_tags
   for select to authenticated
@@ -472,8 +517,8 @@ create policy recipe_tags_inherit_read on recipe_tags
       select 1 from recipes r
       where r.id = recipe_tags.recipe_id
         and (r.status = 'published'
-             or r.contributor_id = auth.current_contributor_id()
-             or auth.is_admin())
+             or r.contributor_id = public.current_contributor_id()
+             or public.is_admin())
     )
   );
 
@@ -483,16 +528,19 @@ create policy recipe_tags_inherit_write on recipe_tags
     exists (
       select 1 from recipes r
       where r.id = recipe_tags.recipe_id
-        and (r.contributor_id = auth.current_contributor_id() or auth.is_admin())
+        and (r.contributor_id = public.current_contributor_id() or public.is_admin())
     )
   )
   with check (
     exists (
       select 1 from recipes r
       where r.id = recipe_tags.recipe_id
-        and (r.contributor_id = auth.current_contributor_id() or auth.is_admin())
+        and (r.contributor_id = public.current_contributor_id() or public.is_admin())
     )
   );
+
+drop policy if exists photos_inherit_read   on photos;
+drop policy if exists photos_inherit_write  on photos;
 
 create policy photos_inherit_read on photos
   for select to authenticated
@@ -501,8 +549,8 @@ create policy photos_inherit_read on photos
       select 1 from recipes r
       where r.id = photos.recipe_id
         and (r.status = 'published'
-             or r.contributor_id = auth.current_contributor_id()
-             or auth.is_admin())
+             or r.contributor_id = public.current_contributor_id()
+             or public.is_admin())
     )
   );
 
@@ -512,55 +560,66 @@ create policy photos_inherit_write on photos
     exists (
       select 1 from recipes r
       where r.id = photos.recipe_id
-        and (r.contributor_id = auth.current_contributor_id() or auth.is_admin())
+        and (r.contributor_id = public.current_contributor_id() or public.is_admin())
     )
   )
   with check (
     exists (
       select 1 from recipes r
       where r.id = photos.recipe_id
-        and (r.contributor_id = auth.current_contributor_id() or auth.is_admin())
+        and (r.contributor_id = public.current_contributor_id() or public.is_admin())
     )
   );
 
 -- Comments -----------------------------------------------------------------
+
+drop policy if exists comments_published_read         on comments;
+drop policy if exists comments_own_or_admin_read      on comments;
+drop policy if exists comments_insert                 on comments;
+drop policy if exists comments_update_own             on comments;
+drop policy if exists comments_delete_own_or_admin    on comments;
 
 create policy comments_published_read on comments
   for select to authenticated using (status = 'published');
 
 create policy comments_own_or_admin_read on comments
   for select to authenticated
-  using (contributor_id = auth.current_contributor_id() or auth.is_admin());
+  using (contributor_id = public.current_contributor_id() or public.is_admin());
 
 create policy comments_insert on comments
   for insert to authenticated
   with check (
-    auth.current_contributor_id() is not null
-    and contributor_id = auth.current_contributor_id()
+    public.current_contributor_id() is not null
+    and contributor_id = public.current_contributor_id()
   );
 
 create policy comments_update_own on comments
   for update to authenticated
-  using (contributor_id = auth.current_contributor_id())
-  with check (contributor_id = auth.current_contributor_id());
+  using (contributor_id = public.current_contributor_id())
+  with check (contributor_id = public.current_contributor_id());
 
 create policy comments_delete_own_or_admin on comments
   for delete to authenticated
-  using (contributor_id = auth.current_contributor_id() or auth.is_admin());
+  using (contributor_id = public.current_contributor_id() or public.is_admin());
 
 -- Admin-only tables --------------------------------------------------------
 
+drop policy if exists submissions_admin_all         on submissions;
+drop policy if exists invitations_admin_all         on invitations;
+drop policy if exists federated_recipes_admin_all   on federated_recipes;
+drop policy if exists federated_recipes_read        on federated_recipes;
+
 create policy submissions_admin_all on submissions
   for all to authenticated
-  using (auth.is_admin()) with check (auth.is_admin());
+  using (public.is_admin()) with check (public.is_admin());
 
 create policy invitations_admin_all on invitations
   for all to authenticated
-  using (auth.is_admin()) with check (auth.is_admin());
+  using (public.is_admin()) with check (public.is_admin());
 
 create policy federated_recipes_admin_all on federated_recipes
   for all to authenticated
-  using (auth.is_admin()) with check (auth.is_admin());
+  using (public.is_admin()) with check (public.is_admin());
 
 create policy federated_recipes_read on federated_recipes
   for select to authenticated using (true);
@@ -571,3 +630,30 @@ create policy federated_recipes_read on federated_recipes
 insert into contributors (email, name, role, joined_at)
 values ('edwards.ksh@gmail.com', 'Kate', 'admin', now())
 on conflict (email) do update set role = 'admin';
+-- Grant service_role access to all application tables.
+--
+-- When tables are created via the dashboard SQL editor (instead of through
+-- the Supabase CLI's auto-grants), the service_role does not get table
+-- privileges by default. The Data API then returns 42501 permission denied.
+--
+-- We grant only to service_role for Phase 1 (server-side access only).
+-- anon/authenticated grants will be added in Phase 2 along with client-side
+-- access via the @supabase/ssr bridge.
+
+grant usage on schema public to service_role;
+
+grant all on all tables    in schema public to service_role;
+grant all on all sequences in schema public to service_role;
+grant all on all functions in schema public to service_role;
+
+-- Future tables created in this schema automatically get grants for service_role.
+alter default privileges in schema public grant all on tables    to service_role;
+alter default privileges in schema public grant all on sequences to service_role;
+alter default privileges in schema public grant all on functions to service_role;
+
+-- next_auth schema: the @auth/supabase-adapter reads/writes here via service_role.
+grant usage on schema next_auth to service_role;
+grant all on all tables    in schema next_auth to service_role;
+grant all on all sequences in schema next_auth to service_role;
+alter default privileges in schema next_auth grant all on tables    to service_role;
+alter default privileges in schema next_auth grant all on sequences to service_role;
