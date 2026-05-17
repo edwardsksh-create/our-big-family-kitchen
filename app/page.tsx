@@ -1,10 +1,16 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { PRIMARY_LINES, SECONDARY_LINES } from '@/lib/family-lines';
 import { SECTIONS } from '@/lib/sections';
 import { FamilyLineCard } from '@/components/family-line-card';
 import { SectionCard } from '@/components/section-card';
+import { fetchFederatedCount } from '@/lib/queries/federated';
 
-export default function HomePage() {
+export const revalidate = 300;
+
+export default async function HomePage() {
+  const federatedCount = await fetchFederatedCount();
+
   return (
     <div className="mx-auto max-w-page px-6">
       {/* Hero */}
@@ -19,8 +25,8 @@ export default function HomePage() {
             and the new weeknight dinners can sit on the same shelf.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <a href="/recipes"      className="btn-primary">Browse recipes</a>
-            <a href="/family-lines/leusch" className="btn-ghost">Meet the families</a>
+            <Link href="/family-lines/leusch" className="btn-primary">Browse Aunt Laura’s cookbook</Link>
+            <Link href="/recipes"             className="btn-ghost">All recipes</Link>
           </div>
         </div>
 
@@ -73,11 +79,22 @@ export default function HomePage() {
       {/* Latest contributions */}
       <section className="py-16 md:py-20">
         <h2 className="font-serif text-3xl text-ink md:text-4xl">Latest contributions</h2>
-        <div className="mt-10 rounded-2xl border border-dashed border-rule p-12 text-center">
-          <p className="font-serif italic text-2xl text-ink-soft">Soon…</p>
-          <p className="mt-2 text-sm text-ink-soft">
-            The first recipes will start showing up here as families add them.
+        <div className="mt-10 rounded-2xl border border-rule bg-paper p-10 md:p-14">
+          <p className="font-serif italic text-primary">From Aunt Laura’s 2003 cookbook</p>
+          <p className="mt-3 font-serif text-2xl leading-snug text-ink md:text-3xl">
+            {federatedCount} {federatedCount === 1 ? 'recipe is' : 'recipes are'} here to start.
           </p>
+          <p className="mt-3 max-w-prose text-ink-soft">
+            The Leusch family cookbook — transcribed, photographed, and federated
+            from leuschfamilyrecipes.com — sits at the heart of this kitchen.
+            New recipes from the Sundys, Edwardses, Hongs, Quinns, and Branions
+            will arrive here too.
+          </p>
+          <div className="mt-7">
+            <Link href="/family-lines/leusch" className="btn-primary">
+              Browse Aunt Laura’s cookbook →
+            </Link>
+          </div>
         </div>
       </section>
     </div>
