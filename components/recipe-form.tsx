@@ -15,14 +15,18 @@ import { ContributorPicker } from '@/components/contributor-picker';
 
 const AUTO_SAVE_INTERVAL_MS = 30_000;
 
+export type RecipeFormMode = 'create' | 'admin_review';
+
 export function RecipeForm({
   options,
   initial,
   isAdmin,
+  mode = 'create',
 }: {
   options: FormOptions;
   initial: RecipeDraft;
   isAdmin: boolean;
+  mode?: RecipeFormMode;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<RecipeDraft>(initial);
@@ -39,8 +43,13 @@ export function RecipeForm({
     setDraft((d) => ({ ...d, [key]: value }));
   }
 
-  // Auto-save (only after the form has the required FKs).
+  // Auto-save is for the create flow only. Admin review explicitly opts out —
+  // a reviewer's mid-edit auto-save shouldn't mutate a pending recipe.
+  const enableAutoSave = mode === 'create';
+
+  // Auto-save (only after the form has the required FKs, and only for create mode).
   useEffect(() => {
+    if (!enableAutoSave) return;
     const t = setInterval(async () => {
       if (!dirtyRef.current) return;
       if (!draft.primary_family_line_id || !draft.section_id) return;
@@ -52,7 +61,7 @@ export function RecipeForm({
       }
     }, AUTO_SAVE_INTERVAL_MS);
     return () => clearInterval(t);
-  }, [draft]);
+  }, [draft, enableAutoSave]);
 
   function doSave(action: SaveAction) {
     setError(null);
@@ -68,6 +77,8 @@ export function RecipeForm({
         router.push(`/recipes/${result.slug}`);
       } else if (action === 'submit_for_review') {
         router.push('/add/thanks');
+      } else if (action === 'admin_reject') {
+        router.push('/admin/queue?rejected=1');
       }
     });
   }
@@ -243,20 +254,49 @@ export function RecipeForm({
 
       {/* Actions */}
       <div className="flex flex-wrap items-center gap-3 border-t border-rule pt-8">
-        <button type="button" onClick={() => doSave('draft')} disabled={pending} className="btn-ghost disabled:opacity-60">
-          Save as draft
-        </button>
-        {isAdmin ? (
-          <button type="button" onClick={() => doSave('publish')} disabled={pending} className="btn-primary disabled:opacity-60">
-            {pending ? 'Saving…' : 'Save and publish'}
-          </button>
+        {mode === 'admin_review' ? (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm('Reject this recipe? It will move to "rejected" status.')) {
+                  doSave('admin_reject');
+                }
+              }}
+              disabled={pending}
+              className="btn-ghost disabled:opacity-60"
+            >
+              Reject
+            </button>
+            <button type="button" onClick={() => doSave('admin_save')} disabled={pending} className="btn-ghost disabled:opacity-60">
+              Save changes
+            </button>
+            <button type="button" onClick={() => doSave('publish')} disabled={pending} className="btn-primary disabled:opacity-60">
+              {pending ? 'Publishing…' : 'Approve and publish'}
+            </button>
+          </>
         ) : (
-          <button type="button" onClick={() => doSave('submit_for_review')} disabled={pending} className="btn-primary disabled:opacity-60">
-            {pending ? 'Submitting…' : 'Submit for review'}
-          </button>
+          <>
+            <button type="button" onClick={() => doSave('draft')} disabled={pending} className="btn-ghost disabled:opacity-60">
+              Save as draft
+            </button>
+            {isAdmin ? (
+              <button type="button" onClick={() => doSave('publish')} disabled={pending} className="btn-primary disabled:opacity-60">
+                {pending ? 'Saving…' : 'Save and publish'}
+              </button>
+            ) : (
+              <button type="button" onClick={() => doSave('submit_for_review')} disabled={pending} className="btn-primary disabled:opacity-60">
+                {pending ? 'Submitting…' : 'Submit for review'}
+              </button>
+            )}
+          </>
         )}
         <span className="ml-auto text-sm text-ink-soft" aria-live="polite">
-          {savedAt ? `Saved · ${savedAt.toLocaleTimeString()}` : 'Draft auto-saves every 30 seconds.'}
+          {savedAt
+            ? `Saved · ${savedAt.toLocaleTimeString()}`
+            : enableAutoSave
+              ? 'Draft auto-saves every 30 seconds.'
+              : 'Changes save only when you click a button.'}
         </span>
       </div>
 
@@ -273,6 +313,7 @@ function humanError(code: string): string {
   switch (code) {
     case 'unauthorized': return 'You need to be signed in to save.';
     case 'admin_only': return 'Only Kate can publish directly — try “Submit for review”.';
+    case 'missing_recipe_id': return 'No recipe to update — try refreshing.';
     case 'missing_title':       return 'Add a title before saving.';
     case 'missing_family_line': return 'Pick a primary family line.';
     case 'missing_section':     return 'Pick a section.';

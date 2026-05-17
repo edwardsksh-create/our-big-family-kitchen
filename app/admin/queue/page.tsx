@@ -75,13 +75,20 @@ export default async function AdminQueuePage() {
                 <td className="py-3 text-ink-soft">
                   {new Date(r.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' })}
                 </td>
-                <td className="py-3">
-                  {r.slug ? (
-                    <Link href={`/recipes/${r.slug}`} className="text-primary underline decoration-rule underline-offset-4 hover:decoration-primary">
-                      View
+                <td className="py-3 space-x-4">
+                  <Link
+                    href={`/admin/queue/${r.id}/review`}
+                    className="text-primary underline decoration-rule underline-offset-4 hover:decoration-primary"
+                  >
+                    Review
+                  </Link>
+                  {r.slug && (
+                    <Link
+                      href={`/recipes/${r.slug}`}
+                      className="text-ink-soft underline decoration-rule underline-offset-4 hover:text-primary"
+                    >
+                      Preview
                     </Link>
-                  ) : (
-                    <span className="text-ink-soft">No slug</span>
                   )}
                 </td>
               </tr>

@@ -6,10 +6,15 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { slugify } from '@/lib/utils';
 import type { RecipeDraft } from '@/lib/recipes/draft';
 
-export type SaveAction = 'draft' | 'publish' | 'submit_for_review';
+export type SaveAction =
+  | 'draft'
+  | 'publish'
+  | 'submit_for_review'
+  | 'admin_save'      // admin keeps the recipe in its current review status, but saves edits
+  | 'admin_reject';   // admin marks pending recipe as rejected
 
 export type SaveOutcome =
-  | { ok: true; recipeId: string; slug: string; status: 'draft' | 'pending_review' | 'published' }
+  | { ok: true; recipeId: string; slug: string; status: 'draft' | 'pending_review' | 'published' | 'rejected' }
   | { ok: false; error: string };
 
 type ContributorRow = { id: string; email: string; name: string | null; role: 'admin' | 'contributor' | 'viewer' };
@@ -137,21 +142,42 @@ export async function saveRecipe(
   if (!contributor) return { ok: false, error: 'not_a_contributor' };
 
   const isAdmin = contributor.role === 'admin';
-  if (action === 'publish' && !isAdmin) return { ok: false, error: 'admin_only' };
+  if ((action === 'publish' || action === 'admin_save' || action === 'admin_reject') && !isAdmin) {
+    return { ok: false, error: 'admin_only' };
+  }
 
-  // Validation. Auto-save (draft) is permissive; publish/submit are strict.
+  // For admin actions we need an existing recipe id (we're editing an existing pending recipe).
+  if ((action === 'admin_save' || action === 'admin_reject') && !draft.id) {
+    return { ok: false, error: 'missing_recipe_id' };
+  }
+
+  // Validation. Auto-save (draft) is permissive; publish/submit/admin-save are strict.
+  const strict = action !== 'draft' && action !== 'admin_reject';
   const title = draft.title.trim();
-  if (action !== 'draft' && title.length < 2) return { ok: false, error: 'missing_title' };
-  if (action !== 'draft' && !draft.primary_family_line_id) return { ok: false, error: 'missing_family_line' };
-  if (action !== 'draft' && !draft.section_id) return { ok: false, error: 'missing_section' };
+  if (strict && title.length < 2) return { ok: false, error: 'missing_title' };
+  if (strict && !draft.primary_family_line_id) return { ok: false, error: 'missing_family_line' };
+  if (strict && !draft.section_id) return { ok: false, error: 'missing_section' };
 
   // Attribution: use whatever the form picked (may be a stub). Falls back to
   // the signed-in user when nothing's picked.
   const contributorId = draft.contributor_id || contributor.id;
 
-  const nextStatus: 'draft' | 'pending_review' | 'published' =
+  // Look up current status for admin_save (we preserve it).
+  let preservedStatus: 'draft' | 'pending_review' | 'published' | 'rejected' = 'draft';
+  if (action === 'admin_save' && draft.id) {
+    const { data: existing } = await db
+      .from('recipes')
+      .select('status')
+      .eq('id', draft.id)
+      .maybeSingle();
+    preservedStatus = (existing?.status as typeof preservedStatus) ?? 'pending_review';
+  }
+
+  const nextStatus: 'draft' | 'pending_review' | 'published' | 'rejected' =
     action === 'publish' ? 'published'
     : action === 'submit_for_review' ? 'pending_review'
+    : action === 'admin_save' ? preservedStatus
+    : action === 'admin_reject' ? 'rejected'
     : 'draft';
 
   const slug = title ? await ensureUniqueSlug(title, draft.id) : null;
@@ -194,11 +220,27 @@ export async function saveRecipe(
     recipeId = inserted.id;
   }
 
-  await Promise.all([
-    syncIngredients(recipeId!, draft.ingredients),
-    syncInstructions(recipeId!, draft.instructions),
-    syncTags(recipeId!, draft.tags),
-  ]);
+  // Skip child-table churn on pure reject — no edits needed.
+  if (action !== 'admin_reject') {
+    await Promise.all([
+      syncIngredients(recipeId!, draft.ingredients),
+      syncInstructions(recipeId!, draft.instructions),
+      syncTags(recipeId!, draft.tags),
+    ]);
+  }
+
+  if (action === 'admin_reject' || action === 'publish') {
+    // Close out any open submission for this recipe.
+    await db
+      .from('submissions')
+      .update({
+        status:      action === 'publish' ? 'approved' : 'rejected',
+        reviewed_by_id: contributor.id,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq('recipe_id_if_published', recipeId!)
+      .eq('status', 'queued');
+  }
 
   if (action === 'submit_for_review') {
     await db.from('submissions').insert({

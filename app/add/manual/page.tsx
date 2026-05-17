@@ -5,6 +5,7 @@ import { RecipeForm } from '@/components/recipe-form';
 import { emptyDraft } from '@/lib/recipes/draft';
 
 export const metadata = { title: 'Enter manually' };
+export const dynamic  = 'force-dynamic';
 
 export default async function ManualPage() {
   const session = await auth();

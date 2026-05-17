@@ -102,14 +102,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // 4) Otherwise, reject.
       return '/sign-in?error=not_invited';
     },
-    async session({ session, user }) {
-      if (session.user && user) {
-        // Augment session with contributor role for use in UI guards.
+    async session({ session }) {
+      // Augment session with contributor role for use in UI guards.
+      // We resolve by email rather than the `user` arg from NextAuth so that
+      // role/contributorId always lands on the session, even if the adapter
+      // didn't surface the user object on a given callback.
+      const email = session.user?.email;
+      if (email) {
         const db = supabaseAdmin();
         const { data } = await db
           .from('contributors')
           .select('id, role')
-          .ilike('email', session.user.email ?? '')
+          .ilike('email', email)
           .maybeSingle();
         if (data) {
           (session.user as { contributorId?: string }).contributorId = data.id;

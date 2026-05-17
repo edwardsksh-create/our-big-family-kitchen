@@ -4,6 +4,7 @@ import { fetchFormOptions } from '@/lib/recipes/form-options';
 import { AddViaPaste } from '@/components/add/add-via-paste';
 
 export const metadata = { title: 'Paste a recipe' };
+export const dynamic  = 'force-dynamic';
 
 export default async function PastePage() {
   const session = await auth();

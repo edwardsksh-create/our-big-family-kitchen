@@ -4,6 +4,7 @@ import { fetchFormOptions } from '@/lib/recipes/form-options';
 import { AddViaUrl } from '@/components/add/add-via-url';
 
 export const metadata = { title: 'Add from a URL' };
+export const dynamic  = 'force-dynamic';
 
 export default async function UrlPage() {
   const session = await auth();
