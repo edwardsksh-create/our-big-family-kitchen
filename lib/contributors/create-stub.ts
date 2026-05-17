@@ -5,9 +5,10 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import type { ContributorOption } from '@/lib/recipes/form-options';
 
 export type CreateStubInput = {
-  name:           string;
-  familyLineId:   string;
-  email?:         string;
+  name:                  string;
+  familyLineId:          string;
+  secondaryFamilyLineId?: string;
+  email?:                string;
 };
 
 export type CreateStubResult =
@@ -74,10 +75,17 @@ export async function createContributorStub(
     return { ok: false, error: 'db_insert_failed' };
   }
 
-  const { error: linkErr } = await db.from('contributor_family_lines').insert({
-    contributor_id: inserted.id,
-    family_line_id: input.familyLineId,
-  });
+  const links: { contributor_id: string; family_line_id: string; rank: 'primary' | 'secondary' }[] = [
+    { contributor_id: inserted.id, family_line_id: input.familyLineId, rank: 'primary' },
+  ];
+  if (input.secondaryFamilyLineId && input.secondaryFamilyLineId !== input.familyLineId) {
+    links.push({
+      contributor_id: inserted.id,
+      family_line_id: input.secondaryFamilyLineId,
+      rank:           'secondary',
+    });
+  }
+  const { error: linkErr } = await db.from('contributor_family_lines').insert(links);
   if (linkErr) {
     console.error('create-stub family-line link failed', linkErr);
   }

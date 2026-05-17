@@ -6,9 +6,6 @@ export const revalidate = 60;
 
 export default async function ContributorsPage() {
   const all = await fetchAllContributors();
-  // Hide pure-viewer stubs from the index unless they have any family line set
-  // (a fresh stub still appears via its family-line page).
-  const visible = all.filter((c) => c.role !== 'viewer' || c.family_lines.length > 0);
 
   return (
     <div className="mx-auto max-w-page px-6 py-16">
@@ -19,19 +16,24 @@ export default async function ContributorsPage() {
       </p>
 
       <ul className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {visible.map((c) => (
+        {all.map((c) => (
           <li key={c.id}>
             <Link
               href={`/contributors/${c.slug}`}
               className="block rounded-2xl border border-rule p-6 card-hover hover:border-ink"
             >
               <p className="font-serif text-xl text-ink">{c.name}</p>
-              <p className="label mt-2">{c.role}</p>
-              {c.family_lines.length > 0 && (
+              {(c.primary_family_line || c.secondary_family_line) && (
                 <p className="mt-2 text-sm text-ink-soft">
-                  {c.family_lines.map((f) => f.name).join(' · ')}
+                  {c.primary_family_line?.name}
+                  {c.secondary_family_line && (
+                    <span className="text-ink-soft/70"> · {c.secondary_family_line.name}</span>
+                  )}
                 </p>
               )}
+              <p className="label mt-2">
+                {c.role}{!c.joined_at && c.role === 'viewer' && ' · stub'}
+              </p>
               {c.bio && <p className="mt-3 text-sm text-ink-soft">{c.bio}</p>}
             </Link>
           </li>

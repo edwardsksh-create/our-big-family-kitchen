@@ -54,7 +54,7 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
             <NativeRecipeGrid recipes={native} />
           </div>
         </section>
-      ) : !federation && contributors.length === 0 ? (
+      ) : !federation && contributors.primary.length === 0 && contributors.secondary.length === 0 ? (
         <section className="mt-16">
           <h2 className="font-serif text-2xl text-ink">Recipes</h2>
           <div className="mt-6 rounded-2xl border border-dashed border-rule p-12 text-center">
@@ -93,25 +93,55 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
       )}
 
       {/* Family members */}
-      {contributors.length > 0 && (
-        <section className="mt-16">
-          <p className="label">Family</p>
-          <h2 className="font-serif mt-2 text-2xl text-ink">Contributors</h2>
-          <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {contributors.map((c) => (
-              <li key={c.id}>
-                <Link
-                  href={`/contributors/${c.slug}`}
-                  className="block rounded-2xl border border-rule p-5 card-hover hover:border-ink"
-                >
-                  <p className="font-serif text-lg text-ink">{c.name}</p>
-                  <p className="label mt-1 text-ink-soft">
-                    {c.role}{!c.joined_at && ' · stub'}
-                  </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
+      {(contributors.primary.length > 0 || contributors.secondary.length > 0) && (
+        <section className="mt-16 space-y-10">
+          <header>
+            <p className="label">Family</p>
+            <h2 className="font-serif mt-2 text-2xl text-ink">Contributors</h2>
+          </header>
+
+          {contributors.primary.length > 0 && (
+            <div>
+              <p className="label text-ink-soft">Primary members</p>
+              <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {contributors.primary.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      href={`/contributors/${c.slug}`}
+                      className="block rounded-2xl border border-rule p-5 card-hover hover:border-ink"
+                    >
+                      <p className="font-serif text-lg text-ink">{c.name}</p>
+                      <p className="label mt-1 text-ink-soft">
+                        {c.role}{!c.joined_at && ' · stub'}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {contributors.secondary.length > 0 && (
+            <div>
+              <p className="label text-ink-soft">By marriage or descent</p>
+              <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {contributors.secondary.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      href={`/contributors/${c.slug}`}
+                      className="block rounded-2xl border border-rule p-5 card-hover hover:border-ink"
+                    >
+                      <p className="font-serif text-lg text-ink">{c.name}</p>
+                      <p className="label mt-1 text-ink-soft">
+                        {c.role}{!c.joined_at && ' · stub'}
+                        {c.primary_family_line && ` · primary: ${c.primary_family_line.name}`}
+                      </p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       )}
     </div>

@@ -31,6 +31,11 @@ export function RecipeForm({
   const router = useRouter();
   const [draft, setDraft] = useState<RecipeDraft>(initial);
   const [contributors, setContributors] = useState<ContributorOption[]>(options.contributors);
+  // Mirror the latest contributors list in a ref so the onChange callback can
+  // read the freshest options (including any newly created stub) without
+  // re-rendering or relying on a state-update race.
+  const contributorsRef = useRef(contributors);
+  contributorsRef.current = contributors;
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +103,20 @@ export function RecipeForm({
         options={contributors}
         familyLines={options.familyLines}
         recipePrimaryFamilyLineId={draft.primary_family_line_id}
-        onChange={(id) => update('contributor_id', id)}
+        onChange={(id) => {
+          // Auto-fill the recipe's primary family line from the contributor's
+          // primary line. Picking a contributor is usually a strong signal about
+          // which line the recipe belongs to.
+          update('contributor_id', id);
+          if (id) {
+            const c = (id
+              ? contributorsRef.current.find((x) => x.id === id)
+              : undefined);
+            if (c?.primary_family_line_id) {
+              update('primary_family_line_id', c.primary_family_line_id);
+            }
+          }
+        }}
         onCreate={(c) => setContributors((prev) =>
           prev.some((x) => x.id === c.id) ? prev : [...prev, c],
         )}

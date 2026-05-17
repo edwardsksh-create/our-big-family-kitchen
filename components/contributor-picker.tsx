@@ -35,6 +35,8 @@ export function ContributorPicker({
   const [creating, setCreating]               = useState(false);
   const [stubName, setStubName]               = useState('');
   const [stubFamilyLine, setStubFamilyLine]   = useState<string>('');
+  const [stubSecondary, setStubSecondary]     = useState<string>('');
+  const [showSecondary, setShowSecondary]     = useState(false);
   const [stubEmail, setStubEmail]             = useState('');
   const [stubError, setStubError]             = useState<string | null>(null);
   const [pending, startTransition]            = useTransition();
@@ -61,6 +63,8 @@ export function ContributorPicker({
   function openCreateForm() {
     setStubName(query.trim());
     setStubFamilyLine(recipePrimaryFamilyLineId ?? '');
+    setStubSecondary('');
+    setShowSecondary(false);
     setStubEmail('');
     setStubError(null);
     setCreating(true);
@@ -74,11 +78,16 @@ export function ContributorPicker({
       setStubError('Pick a family line for this person.');
       return;
     }
+    if (showSecondary && stubSecondary && stubSecondary === stubFamilyLine) {
+      setStubError('Primary and secondary family lines must be different.');
+      return;
+    }
     startTransition(async () => {
       const result = await createContributorStub({
-        name:         stubName,
-        familyLineId: stubFamilyLine,
-        email:        stubEmail.trim() || undefined,
+        name:                  stubName,
+        familyLineId:          stubFamilyLine,
+        secondaryFamilyLineId: showSecondary && stubSecondary ? stubSecondary : undefined,
+        email:                 stubEmail.trim() || undefined,
       });
       if (!result.ok) {
         setStubError(humanError(result.error));
@@ -241,6 +250,42 @@ export function ContributorPicker({
               ))}
             </select>
           </label>
+
+          {!showSecondary ? (
+            <button
+              type="button"
+              onClick={() => setShowSecondary(true)}
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              + Add a secondary family line
+            </button>
+          ) : (
+            <label className="block">
+              <span className="label flex items-center gap-3">
+                Secondary family line
+                <button
+                  type="button"
+                  onClick={() => { setShowSecondary(false); setStubSecondary(''); }}
+                  className="font-sans text-xs lowercase tracking-normal text-ink-soft hover:text-primary"
+                >
+                  remove
+                </button>
+              </span>
+              <select
+                value={stubSecondary}
+                onChange={(e) => setStubSecondary(e.target.value)}
+                className="mt-2 w-full rounded-full border border-rule bg-paper px-5 py-3 text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink/10"
+              >
+                <option value="">— Select —</option>
+                {familyLines.map((f) => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+              <p className="mt-1 text-sm text-ink-soft">
+                For when someone belongs to two lines — e.g. an Edwards who became a Sundy by marriage.
+              </p>
+            </label>
+          )}
 
           <label className="block">
             <span className="label">Email (optional)</span>

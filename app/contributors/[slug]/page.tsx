@@ -51,6 +51,8 @@ export default async function ContributorPage({ params }: { params: { slug: stri
       primary_family_line_slug: r.primary_family_line?.slug ?? null,
     }));
 
+  const hasLineage = contributor.primary_family_line || contributor.secondary_family_line;
+
   return (
     <div className="mx-auto max-w-prose px-6 py-16">
       <p className="label mb-3">Contributor</p>
@@ -58,32 +60,52 @@ export default async function ContributorPage({ params }: { params: { slug: stri
 
       <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
         <span className="label">{contributor.role}</span>
-        {contributor.family_lines.length > 0 && (
-          <>
-            <span className="text-ink-soft">·</span>
-            <span className="text-ink-soft">
-              {contributor.family_lines.map((f, i) => (
-                <span key={f.slug}>
-                  {i > 0 && ', '}
-                  <Link href={`/family-lines/${f.slug}`} className="hover:text-primary">{f.name}</Link>
-                </span>
-              ))}
-            </span>
-          </>
-        )}
         {!contributor.joined_at && (
           <>
             <span className="text-ink-soft">·</span>
-            <span className="text-ink-soft italic">Not yet signed up</span>
+            <span className="text-ink-soft italic">Stub — not yet signed up</span>
           </>
         )}
       </div>
+
+      {hasLineage && (
+        <dl className="mt-6 grid gap-y-2 text-sm sm:grid-cols-[140px_1fr]">
+          {contributor.primary_family_line && (
+            <>
+              <dt className="label">Primary</dt>
+              <dd>
+                <Link
+                  href={`/family-lines/${contributor.primary_family_line.slug}`}
+                  className="font-serif text-lg text-ink hover:text-primary"
+                >
+                  {contributor.primary_family_line.name}
+                </Link>
+              </dd>
+            </>
+          )}
+          {contributor.secondary_family_line && (
+            <>
+              <dt className="label">Secondary</dt>
+              <dd>
+                <Link
+                  href={`/family-lines/${contributor.secondary_family_line.slug}`}
+                  className="text-ink-soft hover:text-primary"
+                >
+                  {contributor.secondary_family_line.name}
+                </Link>
+              </dd>
+            </>
+          )}
+        </dl>
+      )}
 
       {contributor.bio ? (
         <div className="prose-body mt-8 text-ink-soft">{contributor.bio}</div>
       ) : (
         <p className="mt-8 font-serif italic text-ink-soft">
-          {contributor.joined_at ? 'A bio is on the way.' : 'A stub profile — recipes can be attributed here even before they sign up.'}
+          {contributor.joined_at
+            ? 'A bio is on the way.'
+            : 'A stub profile — recipes can be attributed here even before they sign up.'}
         </p>
       )}
 

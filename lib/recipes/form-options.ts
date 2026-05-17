@@ -22,16 +22,18 @@ export type FormOptions = {
 export async function fetchFormOptions(currentEmail?: string | null): Promise<FormOptions> {
   const db = supabaseAdmin();
   const [contribRes, flRes, secRes, tagRes, cflRes] = await Promise.all([
-    db.from('contributors').select('id, email, name').neq('role', 'viewer').order('joined_at'),
+    // Include viewers — stubs are valid attribution targets even though they can't sign in.
+    db.from('contributors').select('id, email, name').order('name'),
     db.from('family_lines').select('id, slug, name').order('sort_order'),
     db.from('sections').select('id, slug, name').order('sort_order'),
     db.from('tags').select('slug, name').order('name'),
-    db.from('contributor_family_lines').select('contributor_id, family_line_id'),
+    db.from('contributor_family_lines').select('contributor_id, family_line_id, rank'),
   ]);
 
+  // Primary line lookup keyed by rank='primary' only.
   const primaryFamilyByContributor = new Map<string, string>();
   for (const row of cflRes.data ?? []) {
-    if (!primaryFamilyByContributor.has(row.contributor_id)) {
+    if (row.rank === 'primary') {
       primaryFamilyByContributor.set(row.contributor_id, row.family_line_id);
     }
   }
