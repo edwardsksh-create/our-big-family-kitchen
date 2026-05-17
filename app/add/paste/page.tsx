@@ -9,6 +9,7 @@ export default async function PastePage() {
   const session = await auth();
   if (!session?.user) redirect('/sign-in?next=/add/paste');
   const options = await fetchFormOptions(session.user.email);
+  const isAdmin = session.user.role === 'admin';
   return (
     <div className="mx-auto max-w-page px-6 py-12">
       <p className="label mb-3">Add → Paste text</p>
@@ -17,7 +18,7 @@ export default async function PastePage() {
         Paste it as messy as you like. We’ll do a first pass at structuring it and
         drop you on the review screen where you can fix anything.
       </p>
-      <AddViaPaste options={options} />
+      <AddViaPaste options={options} isAdmin={isAdmin} />
     </div>
   );
 }

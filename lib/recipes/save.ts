@@ -145,9 +145,9 @@ export async function saveRecipe(
   if (action !== 'draft' && !draft.primary_family_line_id) return { ok: false, error: 'missing_family_line' };
   if (action !== 'draft' && !draft.section_id) return { ok: false, error: 'missing_section' };
 
-  // Allow admin to publish on behalf of someone else; otherwise force self.
-  const contributorId =
-    isAdmin && draft.contributor_id ? draft.contributor_id : contributor.id;
+  // Attribution: use whatever the form picked (may be a stub). Falls back to
+  // the signed-in user when nothing's picked.
+  const contributorId = draft.contributor_id || contributor.id;
 
   const nextStatus: 'draft' | 'pending_review' | 'published' =
     action === 'publish' ? 'published'

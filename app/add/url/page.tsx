@@ -9,6 +9,7 @@ export default async function UrlPage() {
   const session = await auth();
   if (!session?.user) redirect('/sign-in?next=/add/url');
   const options = await fetchFormOptions(session.user.email);
+  const isAdmin = session.user.role === 'admin';
   return (
     <div className="mx-auto max-w-page px-6 py-12">
       <p className="label mb-3">Add → From a URL</p>
@@ -18,7 +19,7 @@ export default async function UrlPage() {
         best for sites with structured recipe data (NYT Cooking, Smitten Kitchen,
         Serious Eats, most food blogs).
       </p>
-      <AddViaUrl options={options} />
+      <AddViaUrl options={options} isAdmin={isAdmin} />
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
-import type { FormOptions } from '@/lib/recipes/form-options';
+import type { ContributorOption, FormOptions } from '@/lib/recipes/form-options';
 import {
   type IngredientRow,
   type InstructionRow,
@@ -11,6 +11,7 @@ import {
   newRowId,
 } from '@/lib/recipes/draft';
 import { saveRecipe, type SaveAction, type SaveOutcome } from '@/lib/recipes/save';
+import { ContributorPicker } from '@/components/contributor-picker';
 
 const AUTO_SAVE_INTERVAL_MS = 30_000;
 
@@ -25,6 +26,7 @@ export function RecipeForm({
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<RecipeDraft>(initial);
+  const [contributors, setContributors] = useState<ContributorOption[]>(options.contributors);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -80,14 +82,15 @@ export function RecipeForm({
         placeholder="Grandma’s sour cream coffee cake"
       />
 
-      <FieldSelect
-        label="Contributor"
-        required
-        value={draft.contributor_id ?? ''}
-        onChange={(v) => update('contributor_id', v)}
-        options={options.contributors.map((c) => ({ value: c.id, label: c.display }))}
-        disabled={!isAdmin}
-        helper={!isAdmin ? 'Recipes are saved under your name.' : undefined}
+      <ContributorPicker
+        value={draft.contributor_id}
+        options={contributors}
+        familyLines={options.familyLines}
+        recipePrimaryFamilyLineId={draft.primary_family_line_id}
+        onChange={(id) => update('contributor_id', id)}
+        onCreate={(c) => setContributors((prev) =>
+          prev.some((x) => x.id === c.id) ? prev : [...prev, c],
+        )}
       />
 
       <FieldText

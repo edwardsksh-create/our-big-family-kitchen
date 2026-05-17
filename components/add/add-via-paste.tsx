@@ -6,7 +6,7 @@ import type { FormOptions } from '@/lib/recipes/form-options';
 import { type RecipeDraft, draftFromParsed, emptyDraft } from '@/lib/recipes/draft';
 import type { ParsedRecipe } from '@/lib/recipe-parser';
 
-export function AddViaPaste({ options }: { options: FormOptions }) {
+export function AddViaPaste({ options, isAdmin }: { options: FormOptions; isAdmin: boolean }) {
   const [text, setText]       = useState('');
   const [draft, setDraft]     = useState<RecipeDraft | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,7 +60,7 @@ export function AddViaPaste({ options }: { options: FormOptions }) {
             <span className="font-serif italic">{error}</span>
           </p>
         )}
-        <RecipeForm options={options} initial={draft} isAdmin={false} />
+        <RecipeForm options={options} initial={draft} isAdmin={isAdmin} />
       </div>
     );
   }

@@ -7,7 +7,7 @@ import type { FormOptions } from '@/lib/recipes/form-options';
 import { type RecipeDraft, draftFromParsed } from '@/lib/recipes/draft';
 import type { ParsedRecipe } from '@/lib/recipe-parser';
 
-export function AddViaUrl({ options }: { options: FormOptions }) {
+export function AddViaUrl({ options, isAdmin }: { options: FormOptions; isAdmin: boolean }) {
   const router = useRouter();
   const [url, setUrl]         = useState('');
   const [draft, setDraft]     = useState<RecipeDraft | null>(null);
@@ -62,7 +62,7 @@ export function AddViaUrl({ options }: { options: FormOptions }) {
           </span>{' '}
           Review the fields before saving.
         </p>
-        <RecipeForm options={options} initial={draft} isAdmin={false} />
+        <RecipeForm options={options} initial={draft} isAdmin={isAdmin} />
       </div>
     );
   }
