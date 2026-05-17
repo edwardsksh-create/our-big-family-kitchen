@@ -4,12 +4,17 @@ import { PRIMARY_LINES, SECONDARY_LINES } from '@/lib/family-lines';
 import { SECTIONS } from '@/lib/sections';
 import { FamilyLineCard } from '@/components/family-line-card';
 import { SectionCard } from '@/components/section-card';
+import { NativeRecipeGrid } from '@/components/native-recipe-card';
 import { fetchFederatedCount } from '@/lib/queries/federated';
+import { fetchRecentPublishedRecipes } from '@/lib/queries/recipes';
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 export default async function HomePage() {
-  const federatedCount = await fetchFederatedCount();
+  const [federatedCount, recent] = await Promise.all([
+    fetchFederatedCount(),
+    fetchRecentPublishedRecipes(6),
+  ]);
 
   return (
     <div className="mx-auto max-w-page px-6">
@@ -40,6 +45,44 @@ export default async function HomePage() {
             className="object-cover"
           />
         </div>
+      </section>
+
+      {/* Latest contributions — moved up to surface new native recipes */}
+      <section className="py-16 md:py-20">
+        <h2 className="font-serif text-3xl text-ink md:text-4xl">Latest contributions</h2>
+
+        {recent.length > 0 ? (
+          <div className="mt-8 space-y-10">
+            <NativeRecipeGrid recipes={recent} />
+            <div className="rounded-2xl border border-rule bg-paper p-8 md:p-10">
+              <p className="font-serif italic text-primary">Plus, from Aunt Laura’s 2003 cookbook</p>
+              <p className="mt-2 max-w-prose text-ink-soft">
+                {federatedCount} more recipes from the Leusch archive — federated from{' '}
+                leuschfamilyrecipes.com.
+              </p>
+              <Link href="/family-lines/leusch" className="btn-primary mt-5 inline-flex">
+                Browse Aunt Laura’s cookbook →
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-10 rounded-2xl border border-rule bg-paper p-10 md:p-14">
+            <p className="font-serif italic text-primary">From Aunt Laura’s 2003 cookbook</p>
+            <p className="mt-3 font-serif text-2xl leading-snug text-ink md:text-3xl">
+              {federatedCount} {federatedCount === 1 ? 'recipe is' : 'recipes are'} here to start.
+            </p>
+            <p className="mt-3 max-w-prose text-ink-soft">
+              The Leusch family cookbook — federated from leuschfamilyrecipes.com — sits at the heart
+              of this kitchen. New recipes from the Sundys, Edwardses, Hongs, Quinns, and Branions
+              will arrive here too.
+            </p>
+            <div className="mt-7">
+              <Link href="/family-lines/leusch" className="btn-primary">
+                Browse Aunt Laura’s cookbook →
+              </Link>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Family lines */}
@@ -73,28 +116,6 @@ export default async function HomePage() {
           {SECTIONS.map((section) => (
             <SectionCard key={section.slug} section={section} />
           ))}
-        </div>
-      </section>
-
-      {/* Latest contributions */}
-      <section className="py-16 md:py-20">
-        <h2 className="font-serif text-3xl text-ink md:text-4xl">Latest contributions</h2>
-        <div className="mt-10 rounded-2xl border border-rule bg-paper p-10 md:p-14">
-          <p className="font-serif italic text-primary">From Aunt Laura’s 2003 cookbook</p>
-          <p className="mt-3 font-serif text-2xl leading-snug text-ink md:text-3xl">
-            {federatedCount} {federatedCount === 1 ? 'recipe is' : 'recipes are'} here to start.
-          </p>
-          <p className="mt-3 max-w-prose text-ink-soft">
-            The Leusch family cookbook — transcribed, photographed, and federated
-            from leuschfamilyrecipes.com — sits at the heart of this kitchen.
-            New recipes from the Sundys, Edwardses, Hongs, Quinns, and Branions
-            will arrive here too.
-          </p>
-          <div className="mt-7">
-            <Link href="/family-lines/leusch" className="btn-primary">
-              Browse Aunt Laura’s cookbook →
-            </Link>
-          </div>
         </div>
       </section>
     </div>

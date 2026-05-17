@@ -2,9 +2,11 @@ import { notFound } from 'next/navigation';
 import { SECTIONS, sectionBySlug, SECTION_BG, SECTION_TEXT } from '@/lib/sections';
 import { cn } from '@/lib/utils';
 import { fetchFederatedRecipesForSection } from '@/lib/queries/federated';
+import { fetchPublishedRecipesForSection } from '@/lib/queries/recipes';
 import { FederatedRecipeGrid } from '@/components/federated-recipe-list';
+import { NativeRecipeGrid } from '@/components/native-recipe-card';
 
-export const revalidate = 300;
+export const revalidate = 60;
 
 export function generateStaticParams() {
   return SECTIONS.map((s) => ({ slug: s.slug }));
@@ -19,7 +21,10 @@ export default async function SectionPage({ params }: { params: { slug: string }
   const section = sectionBySlug(params.slug);
   if (!section) notFound();
 
-  const federated = await fetchFederatedRecipesForSection(section.slug);
+  const [federated, native] = await Promise.all([
+    fetchFederatedRecipesForSection(section.slug),
+    fetchPublishedRecipesForSection(section.slug),
+  ]);
 
   return (
     <div>
@@ -31,24 +36,28 @@ export default async function SectionPage({ params }: { params: { slug: string }
       </header>
 
       <div className="mx-auto max-w-page space-y-16 px-6 py-16">
-        {/* Future: "Recipes from our families" block goes here once native
-            recipes exist in this section. */}
+        {native.length > 0 && (
+          <section>
+            <p className="label">Recipes from our families</p>
+            <h2 className="font-serif mt-2 text-2xl text-ink">{native.length} {native.length === 1 ? 'recipe' : 'recipes'}</h2>
+            <div className="mt-6">
+              <NativeRecipeGrid recipes={native} />
+            </div>
+          </section>
+        )}
 
         {federated.length > 0 ? (
           <section>
-            <div className="mb-6 flex items-baseline gap-3">
-              <p className="label">Federated</p>
-            </div>
-            <h2 className="font-serif text-2xl text-ink">From Aunt Laura’s 2003 cookbook</h2>
+            <p className="label">Federated</p>
+            <h2 className="font-serif mt-2 text-2xl text-ink">From Aunt Laura’s 2003 cookbook</h2>
             <p className="mt-2 max-w-prose text-sm text-ink-soft">
-              {federated.length} {federated.length === 1 ? 'recipe' : 'recipes'} — each links to
-              the full version at leuschfamilyrecipes.com.
+              {federated.length} {federated.length === 1 ? 'recipe' : 'recipes'} — each links to the full version at leuschfamilyrecipes.com.
             </p>
             <div className="mt-6">
               <FederatedRecipeGrid recipes={federated} />
             </div>
           </section>
-        ) : (
+        ) : native.length === 0 ? (
           <section>
             <h2 className="font-serif text-2xl text-ink">Recipes</h2>
             <div className="mt-6 rounded-2xl border border-dashed border-rule p-12 text-center">
@@ -58,7 +67,7 @@ export default async function SectionPage({ params }: { params: { slug: string }
               </p>
             </div>
           </section>
-        )}
+        ) : null}
       </div>
     </div>
   );

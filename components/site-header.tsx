@@ -4,6 +4,7 @@ import { SearchBar } from '@/components/search-bar';
 
 export async function SiteHeader() {
   const session = await auth();
+  const role = session?.user?.role;
 
   return (
     <header className="border-b border-rule bg-paper/90 backdrop-blur supports-[backdrop-filter]:bg-paper/70 sticky top-0 z-30">
@@ -21,6 +22,12 @@ export async function SiteHeader() {
           <Link href="/family-lines/leusch" className="hover:text-primary transition-colors hidden md:inline">Families</Link>
           <Link href="/contributors"        className="hover:text-primary transition-colors hidden md:inline">Contributors</Link>
           <Link href="/about"               className="hover:text-primary transition-colors hidden lg:inline">About</Link>
+          {session?.user && (
+            <Link href="/add" className="rounded-full bg-primary px-3 py-1.5 text-paper transition-colors hover:bg-ink">+ Add</Link>
+          )}
+          {role === 'admin' && (
+            <Link href="/admin/queue" className="hover:text-primary transition-colors hidden lg:inline">Queue</Link>
+          )}
           {session?.user ? (
             <Link href="/sign-out" className="hover:text-primary transition-colors">Sign out</Link>
           ) : (

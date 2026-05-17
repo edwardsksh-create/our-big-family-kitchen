@@ -41,3 +41,7 @@ supabase/.temp
 
 # claude code local prefs
 .claude/settings.local.json
+
+# Private recipe sources (handwritten family recipes, copyrighted articles).
+# Stays on disk locally; never goes in git.
+import-queue/
