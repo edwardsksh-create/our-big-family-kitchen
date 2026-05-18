@@ -2,16 +2,19 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import Image from 'next/image';
+import { Plus, Trash2, ArrowUp, ArrowDown, AlertCircle } from 'lucide-react';
 import type { ContributorOption, FormOptions } from '@/lib/recipes/form-options';
 import {
   type IngredientRow,
   type InstructionRow,
+  type PhotoEntry,
   type RecipeDraft,
   newRowId,
 } from '@/lib/recipes/draft';
 import { saveRecipe, type SaveAction, type SaveOutcome } from '@/lib/recipes/save';
 import { ContributorPicker } from '@/components/contributor-picker';
+import { PhotoUploader } from '@/components/photo-uploader';
 
 const AUTO_SAVE_INTERVAL_MS = 30_000;
 
@@ -92,14 +95,61 @@ export function RecipeForm({
     });
   }
 
+  const lowConfidence = (f: 'title' | 'suggested_section' | 'overall') => {
+    const c = draft.field_confidence?.[f];
+    return c === 'low' || c === 'medium';
+  };
+
   return (
     <div className="mt-10 space-y-10">
+      {/* Source photo carousel — present after photo intake. */}
+      {draft.source_photos && draft.source_photos.length > 0 && (
+        <div>
+          <p className="label mb-2">Source photos</p>
+          <ul className="flex gap-3 overflow-x-auto pb-2">
+            {draft.source_photos.map((p, i) => (
+              <li key={p.public_url} className="shrink-0">
+                <a
+                  href={p.public_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block overflow-hidden rounded-2xl border border-rule"
+                  title="Open full size"
+                >
+                  <div className="relative h-32 w-24">
+                    <Image
+                      src={p.public_url}
+                      alt={`Source photo ${i + 1}`}
+                      fill
+                      sizes="96px"
+                      className="object-cover"
+                    />
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+          {draft.notes_to_reviewer && (
+            <p className="mt-2 rounded-xl border border-rule bg-paper p-3 text-sm text-ink-soft">
+              <AlertCircle size={14} className="mr-1 inline align-text-bottom text-primary" />
+              <span className="font-serif italic">From the parser:</span> {draft.notes_to_reviewer}
+            </p>
+          )}
+        </div>
+      )}
+
       <FieldText
         label="Title"
         required
         value={draft.title}
         onChange={(v) => update('title', v)}
         placeholder="Grandma’s sour cream coffee cake"
+        flagLowConfidence={lowConfidence('title')}
+        flagText={
+          draft.alternate_titles && draft.alternate_titles.length > 0
+            ? `Or try: ${draft.alternate_titles.slice(0, 2).join(' · ')}`
+            : undefined
+        }
       />
 
       <ContributorPicker
@@ -158,6 +208,7 @@ export function RecipeForm({
         value={draft.section_id ?? ''}
         onChange={(v) => update('section_id', v)}
         options={options.sections.map((s) => ({ value: s.id, label: s.name }))}
+        flagLowConfidence={lowConfidence('suggested_section')}
       />
 
       <FieldTextarea
@@ -266,12 +317,87 @@ export function RecipeForm({
         </div>
       </div>
 
-      {/* Photos placeholder */}
-      <div className="rounded-2xl border border-dashed border-rule p-6 text-center">
-        <p className="label">Photos</p>
-        <p className="mt-2 font-serif italic text-ink-soft">
-          Photo upload coming soon — for now, recipes are text only.
+      {/* Kitchen notes — surfaces AI-extracted margin annotations and lets the
+          user add/edit/remove them. */}
+      <div>
+        <p className="label">Notes from the kitchen</p>
+        <p className="mt-1 text-sm text-ink-soft">
+          Margin notes, personal tips, anything the cook added around the recipe.
         </p>
+        <ul className="mt-3 space-y-2">
+          {(draft.kitchen_notes ?? []).map((note, i) => (
+            <li key={i} className="flex items-start gap-2">
+              <textarea
+                value={note}
+                rows={2}
+                onChange={(e) => {
+                  const next = [...(draft.kitchen_notes ?? [])];
+                  next[i] = e.target.value;
+                  update('kitchen_notes', next);
+                }}
+                className="flex-1 rounded-2xl border border-rule bg-paper px-4 py-2 text-sm italic text-ink-soft outline-none focus:border-ink focus:ring-2 focus:ring-ink/10"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  const next = [...(draft.kitchen_notes ?? [])];
+                  next.splice(i, 1);
+                  update('kitchen_notes', next);
+                }}
+                className="mt-1 rounded-full p-1 text-ink-soft hover:text-primary"
+                aria-label="Remove note"
+              >
+                <Trash2 size={14} />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <button
+          type="button"
+          onClick={() => update('kitchen_notes', [...(draft.kitchen_notes ?? []), ''])}
+          className="mt-3 inline-flex items-center gap-2 text-sm text-primary hover:underline"
+        >
+          <Plus size={14} /> Add a note
+        </button>
+      </div>
+
+      {/* Source photos — only present when the recipe came in via photo intake.
+          Add/remove is handled by the PhotoUploader; we don't allow adding new
+          sources after the fact (a recipe's sources are its intake artifact). */}
+      {(draft.source_photos?.length ?? 0) > 0 && (
+        <div>
+          <p className="label mb-1">Source photos</p>
+          <p className="text-sm text-ink-soft">
+            Photos of the original card or page this recipe came from.
+          </p>
+          <div className="mt-3">
+            <PhotoUploader
+              kind="source"
+              compact
+              photos={draft.source_photos ?? []}
+              onChange={(next: PhotoEntry[]) => update('source_photos', next)}
+              maxPhotos={5}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Finished-dish photos — addable on intake AND on edit (once the recipe
+          has an id). */}
+      <div>
+        <p className="label mb-1">Finished-dish photos</p>
+        <p className="text-sm text-ink-soft">
+          Photos of the cooked dish. The first one becomes the recipe&rsquo;s hero image.
+        </p>
+        <div className="mt-3">
+          <PhotoUploader
+            kind="dish"
+            compact
+            photos={draft.dish_photos ?? []}
+            onChange={(next: PhotoEntry[]) => update('dish_photos', next)}
+            recipeId={draft.id}
+          />
+        </div>
       </div>
 
       {/* Actions */}
@@ -377,7 +503,7 @@ function humanError(code: string): string {
 // --- Small field primitives -----------------------------------------------
 
 function FieldText({
-  label, value, onChange, placeholder, helper, required,
+  label, value, onChange, placeholder, helper, required, flagLowConfidence, flagText,
 }: {
   label: string;
   value: string;
@@ -385,6 +511,8 @@ function FieldText({
   placeholder?: string;
   helper?: string;
   required?: boolean;
+  flagLowConfidence?: boolean;
+  flagText?: string;
 }) {
   return (
     <label className="block">
@@ -394,8 +522,19 @@ function FieldText({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="mt-2 w-full rounded-full border border-rule bg-paper px-5 py-3 text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink/10"
+        className={
+          'mt-2 w-full rounded-full border bg-paper px-5 py-3 text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink/10 ' +
+          (flagLowConfidence ? 'border-primary' : 'border-rule')
+        }
       />
+      {flagLowConfidence && (
+        <p className="mt-1 flex items-center gap-1 text-sm text-primary">
+          <AlertCircle size={12} aria-hidden="true" />
+          <span className="font-serif italic">
+            {flagText ?? 'Please double-check this'}
+          </span>
+        </p>
+      )}
       {helper && <p className="mt-1 text-sm text-ink-soft">{helper}</p>}
     </label>
   );
@@ -425,7 +564,7 @@ function FieldTextarea({
 }
 
 function FieldSelect({
-  label, value, onChange, options, required, disabled, helper, allowBlank,
+  label, value, onChange, options, required, disabled, helper, allowBlank, flagLowConfidence,
 }: {
   label: string;
   value: string;
@@ -435,6 +574,7 @@ function FieldSelect({
   disabled?: boolean;
   helper?: string;
   allowBlank?: boolean;
+  flagLowConfidence?: boolean;
 }) {
   return (
     <label className="block">
@@ -443,13 +583,22 @@ function FieldSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="mt-2 w-full rounded-full border border-rule bg-paper px-5 py-3 text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink/10 disabled:opacity-60"
+        className={
+          'mt-2 w-full rounded-full border bg-paper px-5 py-3 text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink/10 disabled:opacity-60 ' +
+          (flagLowConfidence ? 'border-primary' : 'border-rule')
+        }
       >
         {(allowBlank || !value) && <option value="">— Select —</option>}
         {options.map((o) => (
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
+      {flagLowConfidence && (
+        <p className="mt-1 flex items-center gap-1 text-sm text-primary">
+          <AlertCircle size={12} aria-hidden="true" />
+          <span className="font-serif italic">Please double-check this</span>
+        </p>
+      )}
       {helper && <p className="mt-1 text-sm text-ink-soft">{helper}</p>}
     </label>
   );

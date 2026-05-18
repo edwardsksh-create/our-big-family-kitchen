@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { type RecipeDraft, newRowId } from '@/lib/recipes/draft';
+import { type RecipeDraft, type PhotoEntry, newRowId } from '@/lib/recipes/draft';
+import { publicUrl } from '@/lib/storage/photos';
 
 export type RecipeForEdit = {
   draft:  RecipeDraft;
@@ -12,17 +13,35 @@ export async function fetchRecipeForEdit(id: string): Promise<RecipeForEdit | nu
     .from('recipes')
     .select(`
       id, title, slug, story, originally_from, status, contributor_id,
-      primary_family_line_id, secondary_family_line_id, section_id
+      primary_family_line_id, secondary_family_line_id, section_id, kitchen_notes
     `)
     .eq('id', id)
     .maybeSingle();
   if (!row) return null;
 
-  const [{ data: ings }, { data: instrs }, { data: tagJoins }] = await Promise.all([
+  const [{ data: ings }, { data: instrs }, { data: tagJoins }, { data: photos }] = await Promise.all([
     db.from('ingredients').select('sub_header, item_text, sort_order').eq('recipe_id', id).order('sort_order'),
     db.from('instructions').select('sub_header, body, sort_order').eq('recipe_id', id).order('sort_order'),
     db.from('recipe_tags').select('tag:tags!recipe_tags_tag_id_fkey(name)').eq('recipe_id', id),
+    db.from('photos').select('id, url, storage_path, caption, photo_type, sort_order').eq('recipe_id', id).order('sort_order'),
   ]);
+
+  type PhotoRow = {
+    id: string;
+    url: string | null;
+    storage_path: string | null;
+    caption: string | null;
+    photo_type: 'source' | 'dish';
+    sort_order: number;
+  };
+
+  const allPhotos: PhotoEntry[] = ((photos ?? []) as PhotoRow[]).map((p) => ({
+    id:           p.id,
+    storage_path: p.storage_path ?? '',
+    public_url:   p.storage_path ? publicUrl(p.storage_path) : (p.url ?? ''),
+    photo_type:   p.photo_type,
+    caption:      p.caption ?? undefined,
+  })).filter((p) => p.public_url);
 
   const draft: RecipeDraft = {
     id:                       row.id,
@@ -46,6 +65,9 @@ export async function fetchRecipeForEdit(id: string): Promise<RecipeForEdit | nu
     tags: ((tagJoins ?? []) as unknown as { tag: { name: string } | null }[])
       .map((j) => j.tag?.name)
       .filter(Boolean) as string[],
+    kitchen_notes: (row.kitchen_notes as string[] | null) ?? [],
+    source_photos: allPhotos.filter((p) => p.photo_type === 'source'),
+    dish_photos:   allPhotos.filter((p) => p.photo_type === 'dish'),
   };
 
   if (draft.ingredients.length === 0) {

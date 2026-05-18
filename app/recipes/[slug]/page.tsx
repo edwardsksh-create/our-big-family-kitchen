@@ -1,8 +1,10 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { SECTION_BG, SECTION_TEXT, type SectionColorToken } from '@/lib/sections';
+import { publicUrl } from '@/lib/storage/photos';
 import { cn, slugify } from '@/lib/utils';
 
 export const revalidate = 60;
@@ -17,11 +19,21 @@ type RecipeRow = {
   published_at: string | null;
   created_at: string;
   last_edited_at: string | null;
+  kitchen_notes: string[] | null;
   contributor:           { id: string; name: string | null; email: string } | null;
   last_edited_by:        { id: string; name: string | null; email: string } | null;
   primary_family_line:   { slug: string; name: string } | null;
   secondary_family_line: { slug: string; name: string } | null;
   section:               { slug: string; name: string; color_token: SectionColorToken } | null;
+};
+
+type PhotoRow = {
+  id: string;
+  url: string | null;
+  storage_path: string | null;
+  caption: string | null;
+  photo_type: 'source' | 'dish';
+  sort_order: number;
 };
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
@@ -49,7 +61,7 @@ export default async function RecipePage({
   const { data } = await db
     .from('recipes')
     .select(`
-      id, title, slug, story, originally_from, status, published_at, created_at, last_edited_at,
+      id, title, slug, story, originally_from, status, published_at, created_at, last_edited_at, kitchen_notes,
       contributor:contributors!recipes_contributor_id_fkey ( id, name, email ),
       last_edited_by:contributors!recipes_last_edited_by_id_fkey ( id, name, email ),
       primary_family_line:family_lines!recipes_primary_family_line_id_fkey ( slug, name ),
@@ -74,11 +86,23 @@ export default async function RecipePage({
   // row) can't edit even their own attributions until they sign up.
   const canEdit = isAdmin || isOwner;
 
-  const [{ data: ingredients }, { data: instructions }, { data: tagJoins }] = await Promise.all([
+  const [{ data: ingredients }, { data: instructions }, { data: tagJoins }, { data: photoRows }] = await Promise.all([
     db.from('ingredients').select('sub_header, item_text, sort_order').eq('recipe_id', recipe.id).order('sort_order'),
     db.from('instructions').select('sub_header, body, sort_order').eq('recipe_id', recipe.id).order('sort_order'),
     db.from('recipe_tags').select('tag:tags!recipe_tags_tag_id_fkey(slug, name)').eq('recipe_id', recipe.id),
+    db.from('photos').select('id, url, storage_path, caption, photo_type, sort_order').eq('recipe_id', recipe.id).order('sort_order'),
   ]);
+
+  const photos = ((photoRows ?? []) as PhotoRow[]).map((p) => ({
+    id: p.id,
+    url: p.storage_path ? publicUrl(p.storage_path) : (p.url ?? ''),
+    caption: p.caption,
+    photo_type: p.photo_type,
+  })).filter((p) => p.url);
+  const dishPhotos   = photos.filter((p) => p.photo_type === 'dish');
+  const sourcePhotos = photos.filter((p) => p.photo_type === 'source');
+  const heroPhoto    = dishPhotos[0] ?? null;
+  const kitchenNotes = (recipe.kitchen_notes ?? []).filter((n) => n.trim().length > 0);
 
   const contributor = recipe.contributor;
   const lastEditedBy = recipe.last_edited_by;
@@ -121,6 +145,27 @@ export default async function RecipePage({
         <div className="recipe-flash mb-8 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
           <span className="font-serif italic">Pending review</span> — Kate will take a look.
         </div>
+      )}
+
+      {/* Hero finished-dish photo (first one if multiple). */}
+      {heroPhoto && (
+        <figure className="mb-8 overflow-hidden rounded-2xl border border-rule" data-no-print>
+          <div className="relative aspect-[16/10] w-full">
+            <Image
+              src={heroPhoto.url}
+              alt={heroPhoto.caption || recipe.title}
+              fill
+              priority
+              sizes="(min-width: 768px) 80vw, 100vw"
+              className="object-cover"
+            />
+          </div>
+          {dishPhotos.length > 1 && (
+            <figcaption className="px-4 py-2 text-sm text-ink-soft">
+              {dishPhotos.length} photos of this dish
+            </figcaption>
+          )}
+        </figure>
       )}
 
       {/* Breadcrumb */}
@@ -240,6 +285,50 @@ export default async function RecipePage({
           ))}
         </ol>
       </section>
+
+      {kitchenNotes.length > 0 && (
+        <section className="recipe-notes mt-12">
+          <h2 className="font-serif text-2xl text-ink">Notes from the kitchen</h2>
+          <ul className="mt-4 space-y-3 text-ink-soft">
+            {kitchenNotes.map((note, idx) => (
+              <li key={idx} className="font-serif italic">
+                {note}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Collapsible "View original" section — quiet styling so casual readers
+          stay with the typed version; family who want the handwriting can tap. */}
+      {sourcePhotos.length > 0 && (
+        <details className="mt-12 group" data-no-print>
+          <summary className="cursor-pointer list-none font-serif italic text-sm text-ink-soft hover:text-primary">
+            View original
+            <span className="ml-1 transition-transform group-open:rotate-90 inline-block">→</span>
+          </summary>
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-ink-soft">The original recipe ({sourcePhotos.length} {sourcePhotos.length === 1 ? 'photo' : 'photos'}). Tap to open full size.</p>
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {sourcePhotos.map((p, i) => (
+                <li key={p.id}>
+                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-2xl border border-rule">
+                    <div className="relative aspect-[4/5] w-full">
+                      <Image
+                        src={p.url}
+                        alt={p.caption || `Source photo ${i + 1}`}
+                        fill
+                        sizes="(min-width: 1024px) 30vw, 50vw"
+                        className="object-cover"
+                      />
+                    </div>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </details>
+      )}
 
       <footer className="hairline mt-16 space-y-1 pt-6 text-sm italic text-ink-soft">
         {contributor && (

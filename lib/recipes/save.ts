@@ -71,6 +71,64 @@ async function syncInstructions(recipeId: string, rows: RecipeDraft['instruction
   );
 }
 
+async function syncPhotos(
+  recipeId: string,
+  contributorId: string,
+  source: { id?: string; storage_path: string; public_url: string; caption?: string }[],
+  dish:   { id?: string; storage_path: string; public_url: string; caption?: string }[],
+) {
+  const db = supabaseAdmin();
+  // Wholesale-replace approach keyed on storage_path: any existing photo
+  // whose storage_path isn't in the incoming sets gets removed (so the user
+  // can delete photos by omitting them from the draft).
+  const keepPaths = new Set<string>([
+    ...source.map((p) => p.storage_path),
+    ...dish.map((p) => p.storage_path),
+  ]);
+  const { data: existing } = await db
+    .from('photos')
+    .select('id, storage_path')
+    .eq('recipe_id', recipeId);
+  const removeIds = (existing ?? [])
+    .filter((p) => p.storage_path && !keepPaths.has(p.storage_path))
+    .map((p) => p.id);
+  if (removeIds.length > 0) {
+    await db.from('photos').delete().in('id', removeIds);
+  }
+
+  // Upsert by storage_path. The DB doesn't have a unique constraint on
+  // storage_path (it's nullable), so we do a per-photo check.
+  let order = 0;
+  for (const list of [source, dish] as const) {
+    const photoType = list === source ? 'source' : 'dish';
+    for (const photo of list) {
+      const { data: hit } = await db
+        .from('photos')
+        .select('id')
+        .eq('recipe_id', recipeId)
+        .eq('storage_path', photo.storage_path)
+        .maybeSingle();
+      if (hit) {
+        await db
+          .from('photos')
+          .update({ caption: photo.caption ?? null, sort_order: order, photo_type: photoType })
+          .eq('id', hit.id);
+      } else {
+        await db.from('photos').insert({
+          recipe_id:      recipeId,
+          contributor_id: contributorId,
+          url:            photo.public_url,
+          storage_path:   photo.storage_path,
+          caption:        photo.caption ?? null,
+          photo_type:     photoType,
+          sort_order:     order,
+        });
+      }
+      order += 1;
+    }
+  }
+}
+
 async function syncTags(recipeId: string, names: string[]) {
   const db = supabaseAdmin();
   const cleaned = Array.from(
@@ -229,6 +287,7 @@ export async function saveRecipe(
     story:                    draft.story?.trim() || null,
     status:                   nextStatus,
     published_at:             nextPublishedAt,
+    kitchen_notes:            (draft.kitchen_notes ?? []).map((n) => n.trim()).filter(Boolean),
   };
 
   // Track who last edited the recipe (only on mutations that touch content).
@@ -268,6 +327,7 @@ export async function saveRecipe(
       syncIngredients(recipeId!, draft.ingredients),
       syncInstructions(recipeId!, draft.instructions),
       syncTags(recipeId!, draft.tags),
+      syncPhotos(recipeId!, contributor.id, draft.source_photos ?? [], draft.dish_photos ?? []),
     ]);
   }
 
