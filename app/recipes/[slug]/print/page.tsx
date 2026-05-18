@@ -130,7 +130,7 @@ export default async function RecipePrintPage({ params }: { params: { slug: stri
         </section>
 
         <footer className="print-footer mt-12 text-center text-xs italic text-ink-soft print:mt-8">
-          From Our Big Family Kitchen · our-big-family-kitchen.vercel.app
+          From Our Big Family Kitchen · bigfamilykitchen.com
         </footer>
       </div>
     </>

@@ -78,7 +78,7 @@ and emailing a link.
 Useful for testing or for a pre-deploy snapshot:
 
 ```bash
-curl -X GET https://our-big-family-kitchen.vercel.app/api/cron/backup \
+curl -X GET https://bigfamilykitchen.com/api/cron/backup \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 

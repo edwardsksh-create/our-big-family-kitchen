@@ -170,7 +170,7 @@ async function notifyAdminOfSubmission(args: {
   const apiKey      = process.env.RESEND_API_KEY;
   const adminEmail  = process.env.ADMIN_EMAIL;
   const fromAddress = process.env.EMAIL_FROM || 'onboarding@resend.dev';
-  const base        = process.env.NEXTAUTH_URL || 'https://our-big-family-kitchen.vercel.app';
+  const base        = process.env.NEXTAUTH_URL || 'https://bigfamilykitchen.com';
   if (!apiKey || !adminEmail) return;
 
   const resend = new Resend(apiKey);
