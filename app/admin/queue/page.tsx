@@ -6,6 +6,9 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 export const metadata = { title: 'Admin queue' };
 export const dynamic   = 'force-dynamic';
 
+const FLAG_TAG_SLUGS = new Set(['needs-instructions']);
+const BULK_TAG_SLUG  = 'bulk-import';
+
 export default async function AdminQueuePage() {
   const session = await auth();
   if (!session?.user) redirect('/sign-in?next=/admin/queue');
@@ -25,7 +28,8 @@ export default async function AdminQueuePage() {
     .select(`
       id, title, slug, created_at,
       contributor:contributors!recipes_contributor_id_fkey ( name, email ),
-      section:sections!recipes_section_id_fkey ( name )
+      section:sections!recipes_section_id_fkey ( name ),
+      tags:recipe_tags ( tag:tags!recipe_tags_tag_id_fkey ( slug, name ) )
     `)
     .eq('status', 'pending_review')
     .order('created_at', { ascending: true });
@@ -37,6 +41,7 @@ export default async function AdminQueuePage() {
     created_at: string;
     contributor: { name: string | null; email: string } | null;
     section:     { name: string } | null;
+    tags:        { tag: { slug: string; name: string } | null }[];
   };
   const rows = (data ?? []) as unknown as Row[];
 
@@ -60,39 +65,68 @@ export default async function AdminQueuePage() {
               <th className="py-3">Title</th>
               <th className="py-3">Contributor</th>
               <th className="py-3">Section</th>
+              <th className="py-3">Flags</th>
               <th className="py-3">Submitted</th>
               <th className="py-3" />
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} className="border-b border-rule">
-                <td className="py-3 font-serif text-ink">{r.title}</td>
-                <td className="py-3 text-ink-soft">
-                  {r.contributor?.name ?? r.contributor?.email ?? '—'}
-                </td>
-                <td className="py-3 text-ink-soft">{r.section?.name ?? '—'}</td>
-                <td className="py-3 text-ink-soft">
-                  {new Date(r.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' })}
-                </td>
-                <td className="py-3 space-x-4">
-                  <Link
-                    href={`/admin/queue/${r.id}/review`}
-                    className="text-primary underline decoration-rule underline-offset-4 hover:decoration-primary"
-                  >
-                    Review
-                  </Link>
-                  {r.slug && (
+            {rows.map((r) => {
+              const tagSlugs = r.tags.map((t) => t.tag?.slug).filter(Boolean) as string[];
+              const flags = tagSlugs.filter((s) => FLAG_TAG_SLUGS.has(s));
+              const isBulk = tagSlugs.includes(BULK_TAG_SLUG);
+              return (
+                <tr key={r.id} className="border-b border-rule">
+                  <td className="py-3 font-serif text-ink">
+                    {r.title}
+                    {isBulk && (
+                      <span className="ml-2 align-middle rounded-full bg-card-mauve px-2 py-0.5 font-sans text-[10px] uppercase tracking-[0.12em] text-paper">
+                        bulk
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-3 text-ink-soft">
+                    {r.contributor?.name ?? r.contributor?.email ?? '—'}
+                  </td>
+                  <td className="py-3 text-ink-soft">{r.section?.name ?? '—'}</td>
+                  <td className="py-3">
+                    {flags.length === 0 ? (
+                      <span className="text-ink-soft">—</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {flags.map((slug) => (
+                          <span
+                            key={slug}
+                            className="rounded-full bg-card-burgundy px-2 py-0.5 font-sans text-[10px] uppercase tracking-[0.12em] text-paper"
+                          >
+                            {slug.replace(/-/g, ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3 text-ink-soft">
+                    {new Date(r.created_at).toLocaleDateString('en-US', { dateStyle: 'medium' })}
+                  </td>
+                  <td className="py-3 space-x-4">
                     <Link
-                      href={`/recipes/${r.slug}`}
-                      className="text-ink-soft underline decoration-rule underline-offset-4 hover:text-primary"
+                      href={`/admin/queue/${r.id}/review`}
+                      className="text-primary underline decoration-rule underline-offset-4 hover:decoration-primary"
                     >
-                      Preview
+                      Review
                     </Link>
-                  )}
-                </td>
-              </tr>
-            ))}
+                    {r.slug && (
+                      <Link
+                        href={`/recipes/${r.slug}`}
+                        className="text-ink-soft underline decoration-rule underline-offset-4 hover:text-primary"
+                      >
+                        Preview
+                      </Link>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
