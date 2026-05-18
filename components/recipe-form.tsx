@@ -15,18 +15,20 @@ import { ContributorPicker } from '@/components/contributor-picker';
 
 const AUTO_SAVE_INTERVAL_MS = 30_000;
 
-export type RecipeFormMode = 'create' | 'admin_review';
+export type RecipeFormMode = 'create' | 'admin_review' | 'edit';
 
 export function RecipeForm({
   options,
   initial,
   isAdmin,
   mode = 'create',
+  cancelHref,
 }: {
   options: FormOptions;
   initial: RecipeDraft;
   isAdmin: boolean;
   mode?: RecipeFormMode;
+  cancelHref?: string; // where the Cancel button (edit mode) returns to
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<RecipeDraft>(initial);
@@ -48,8 +50,8 @@ export function RecipeForm({
     setDraft((d) => ({ ...d, [key]: value }));
   }
 
-  // Auto-save is for the create flow only. Admin review explicitly opts out —
-  // a reviewer's mid-edit auto-save shouldn't mutate a pending recipe.
+  // Auto-save is for the create flow only. Admin review and edit explicitly
+  // opt out — silent auto-save mustn't mutate a pending or published recipe.
   const enableAutoSave = mode === 'create';
 
   // Auto-save (only after the form has the required FKs, and only for create mode).
@@ -84,6 +86,8 @@ export function RecipeForm({
         router.push('/add/thanks');
       } else if (action === 'admin_reject') {
         router.push('/admin/queue?rejected=1');
+      } else if ((action === 'edit' || action === 'unpublish') && result.slug) {
+        router.push(`/recipes/${result.slug}`);
       }
     });
   }
@@ -293,6 +297,34 @@ export function RecipeForm({
               {pending ? 'Publishing…' : 'Approve and publish'}
             </button>
           </>
+        ) : mode === 'edit' ? (
+          <>
+            <button
+              type="button"
+              onClick={() => cancelHref ? router.push(cancelHref) : router.back()}
+              disabled={pending}
+              className="btn-ghost disabled:opacity-60"
+            >
+              Cancel
+            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Unpublish this recipe? It will go back to draft status and disappear from the site.')) {
+                    doSave('unpublish');
+                  }
+                }}
+                disabled={pending}
+                className="btn-ghost disabled:opacity-60"
+              >
+                Unpublish (set to draft)
+              </button>
+            )}
+            <button type="button" onClick={() => doSave('edit')} disabled={pending} className="btn-primary disabled:opacity-60">
+              {pending ? 'Saving…' : 'Save changes'}
+            </button>
+          </>
         ) : (
           <>
             <button type="button" onClick={() => doSave('draft')} disabled={pending} className="btn-ghost disabled:opacity-60">
@@ -329,9 +361,10 @@ export function RecipeForm({
 
 function humanError(code: string): string {
   switch (code) {
-    case 'unauthorized': return 'You need to be signed in to save.';
-    case 'admin_only': return 'Only Kate can publish directly — try “Submit for review”.';
-    case 'missing_recipe_id': return 'No recipe to update — try refreshing.';
+    case 'unauthorized':       return 'You need to be signed in to save.';
+    case 'admin_only':         return 'Only Kate can do that — try “Submit for review”.';
+    case 'not_recipe_owner':   return 'Only the recipe’s contributor or an admin can edit this recipe.';
+    case 'missing_recipe_id':  return 'No recipe to update — try refreshing.';
     case 'missing_title':       return 'Add a title before saving.';
     case 'missing_family_line': return 'Pick a primary family line.';
     case 'missing_section':     return 'Pick a section.';

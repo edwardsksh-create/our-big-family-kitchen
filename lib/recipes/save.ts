@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { Resend } from 'resend';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
@@ -11,7 +12,9 @@ export type SaveAction =
   | 'publish'
   | 'submit_for_review'
   | 'admin_save'      // admin keeps the recipe in its current review status, but saves edits
-  | 'admin_reject';   // admin marks pending recipe as rejected
+  | 'admin_reject'    // admin marks pending recipe as rejected
+  | 'edit'            // admin or original contributor editing a published/draft recipe; status preserved
+  | 'unpublish';      // admin pulls a published recipe back to draft
 
 export type SaveOutcome =
   | { ok: true; recipeId: string; slug: string; status: 'draft' | 'pending_review' | 'published' | 'rejected' }
@@ -142,17 +145,30 @@ export async function saveRecipe(
   if (!contributor) return { ok: false, error: 'not_a_contributor' };
 
   const isAdmin = contributor.role === 'admin';
-  if ((action === 'publish' || action === 'admin_save' || action === 'admin_reject') && !isAdmin) {
+  if ((action === 'publish' || action === 'admin_save' || action === 'admin_reject' || action === 'unpublish') && !isAdmin) {
     return { ok: false, error: 'admin_only' };
   }
 
-  // For admin actions we need an existing recipe id (we're editing an existing pending recipe).
-  if ((action === 'admin_save' || action === 'admin_reject') && !draft.id) {
+  // For actions that mutate an existing recipe we need an id.
+  if ((action === 'admin_save' || action === 'admin_reject' || action === 'edit' || action === 'unpublish') && !draft.id) {
     return { ok: false, error: 'missing_recipe_id' };
   }
 
-  // Validation. Auto-save (draft) is permissive; publish/submit/admin-save are strict.
-  const strict = action !== 'draft' && action !== 'admin_reject';
+  // For 'edit', the caller must be admin OR the recipe's original contributor.
+  if (action === 'edit' && !isAdmin && draft.id) {
+    const { data: existing } = await db
+      .from('recipes')
+      .select('contributor_id')
+      .eq('id', draft.id)
+      .maybeSingle();
+    if (!existing || existing.contributor_id !== contributor.id) {
+      return { ok: false, error: 'not_recipe_owner' };
+    }
+  }
+
+  // Validation. Auto-save (draft) is permissive; publish/submit/admin-save/edit are strict.
+  // Reject and unpublish don't need full validation — we're not displaying the recipe publicly.
+  const strict = action !== 'draft' && action !== 'admin_reject' && action !== 'unpublish';
   const title = draft.title.trim();
   if (strict && title.length < 2) return { ok: false, error: 'missing_title' };
   if (strict && !draft.primary_family_line_id) return { ok: false, error: 'missing_family_line' };
@@ -162,27 +178,47 @@ export async function saveRecipe(
   // the signed-in user when nothing's picked.
   const contributorId = draft.contributor_id || contributor.id;
 
-  // Look up current status for admin_save (we preserve it).
-  let preservedStatus: 'draft' | 'pending_review' | 'published' | 'rejected' = 'draft';
-  if (action === 'admin_save' && draft.id) {
+  // Look up current row state for admin_save / edit / unpublish — we preserve
+  // status (for admin_save and edit) and published_at (for edit).
+  let existingStatus: 'draft' | 'pending_review' | 'published' | 'rejected' = 'draft';
+  let existingPublishedAt: string | null = null;
+  let existingSlug: string | null = null;
+  if (draft.id && (action === 'admin_save' || action === 'edit' || action === 'unpublish')) {
     const { data: existing } = await db
       .from('recipes')
-      .select('status')
+      .select('status, published_at, slug')
       .eq('id', draft.id)
       .maybeSingle();
-    preservedStatus = (existing?.status as typeof preservedStatus) ?? 'pending_review';
+    existingStatus      = (existing?.status as typeof existingStatus) ?? 'draft';
+    existingPublishedAt = existing?.published_at ?? null;
+    existingSlug        = existing?.slug ?? null;
   }
 
   const nextStatus: 'draft' | 'pending_review' | 'published' | 'rejected' =
     action === 'publish' ? 'published'
     : action === 'submit_for_review' ? 'pending_review'
-    : action === 'admin_save' ? preservedStatus
+    : action === 'admin_save' ? existingStatus
     : action === 'admin_reject' ? 'rejected'
+    : action === 'edit' ? existingStatus
+    : action === 'unpublish' ? 'draft'
     : 'draft';
 
   const slug = title ? await ensureUniqueSlug(title, draft.id) : null;
 
-  const baseRow = {
+  // published_at: set on first publish; preserve on edits of a published row;
+  // clear when unpublishing or moving away from published.
+  let nextPublishedAt: string | null;
+  if (nextStatus !== 'published') {
+    nextPublishedAt = null;
+  } else if (action === 'edit') {
+    nextPublishedAt = existingPublishedAt ?? new Date().toISOString();
+  } else if (action === 'publish' && existingPublishedAt) {
+    nextPublishedAt = existingPublishedAt;
+  } else {
+    nextPublishedAt = new Date().toISOString();
+  }
+
+  const baseRow: Record<string, unknown> = {
     title:                    title || 'Untitled recipe',
     slug,
     contributor_id:           contributorId,
@@ -192,8 +228,14 @@ export async function saveRecipe(
     section_id:               draft.section_id ?? null,
     story:                    draft.story?.trim() || null,
     status:                   nextStatus,
-    published_at:             nextStatus === 'published' ? new Date().toISOString() : null,
+    published_at:             nextPublishedAt,
   };
+
+  // Track who last edited the recipe (only on mutations that touch content).
+  if (action === 'edit' || action === 'admin_save' || action === 'publish' || action === 'unpublish') {
+    baseRow.last_edited_by_id = contributor.id;
+    baseRow.last_edited_at    = new Date().toISOString();
+  }
 
   let recipeId = draft.id;
   if (recipeId) {
@@ -220,8 +262,8 @@ export async function saveRecipe(
     recipeId = inserted.id;
   }
 
-  // Skip child-table churn on pure reject — no edits needed.
-  if (action !== 'admin_reject') {
+  // Skip child-table churn on pure reject / unpublish — no content changes.
+  if (action !== 'admin_reject' && action !== 'unpublish') {
     await Promise.all([
       syncIngredients(recipeId!, draft.ingredients),
       syncInstructions(recipeId!, draft.instructions),
@@ -252,9 +294,17 @@ export async function saveRecipe(
     });
     await notifyAdminOfSubmission({
       recipeId:        recipeId!,
-      title:           baseRow.title,
+      title:           (baseRow.title as string),
       contributorName: contributor.name || contributor.email,
     });
+  }
+
+  // Bust the cached pages that show this recipe so the edit lands immediately.
+  if (slug) revalidatePath(`/recipes/${slug}`);
+  if (existingSlug && existingSlug !== slug) revalidatePath(`/recipes/${existingSlug}`);
+  if (action === 'edit' || action === 'publish' || action === 'unpublish') {
+    revalidatePath('/');
+    revalidatePath('/recipes');
   }
 
   return { ok: true, recipeId: recipeId!, slug: slug ?? '', status: nextStatus };
