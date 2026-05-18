@@ -1,13 +1,13 @@
 import { createClient as createSupabaseClient, SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
 
 // Service-role client — for trusted server-side reads/writes only.
-// Never expose this to the browser.
-//
-// We type as SupabaseClient<any> until we generate Database types via the
-// Supabase CLI. Once `supabase gen types typescript` is wired, swap this in.
-let _adminClient: SupabaseClient<any, 'public', any> | undefined;
+// Never expose this to the browser. The Database generic comes from
+// `supabase gen types typescript --linked > types/supabase.ts` — rerun
+// after any new migration so this file's types stay accurate.
+let _adminClient: SupabaseClient<Database, 'public'> | undefined;
 
-export function supabaseAdmin(): SupabaseClient<any, 'public', any> {
+export function supabaseAdmin(): SupabaseClient<Database, 'public'> {
   if (_adminClient) return _adminClient;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -19,7 +19,7 @@ export function supabaseAdmin(): SupabaseClient<any, 'public', any> {
     );
   }
 
-  _adminClient = createSupabaseClient<any, 'public', any>(url, serviceRoleKey, {
+  _adminClient = createSupabaseClient<Database, 'public'>(url, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     db:   { schema: 'public' },
   });

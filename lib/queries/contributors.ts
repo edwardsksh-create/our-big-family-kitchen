@@ -48,7 +48,9 @@ export async function fetchAllContributors(): Promise<ContributorSummary[]> {
       name,
       email:        isStubEmail(c.email) ? '' : c.email,
       bio:          c.bio,
-      role:         c.role,
+      // role is a text column with a CHECK constraint enforcing the union;
+      // narrowing here is safe in practice.
+      role:         c.role as ContributorSummary['role'],
       slug:         slugify(name),
       joined_at:    c.joined_at,
       primary_family_line:   primaryBy.get(c.id)   ?? null,

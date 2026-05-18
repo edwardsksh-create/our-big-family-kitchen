@@ -77,5 +77,5 @@ export async function fetchRecipeForEdit(id: string): Promise<RecipeForEdit | nu
     draft.instructions = [{ id: newRowId(), sub_header: '', body: '' }];
   }
 
-  return { draft, status: row.status };
+  return { draft, status: row.status as RecipeForEdit['status'] };
 }

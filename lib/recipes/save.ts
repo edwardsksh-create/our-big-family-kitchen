@@ -6,6 +6,10 @@ import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { slugify } from '@/lib/utils';
 import type { RecipeDraft } from '@/lib/recipes/draft';
+import type { Database } from '@/types/supabase';
+
+type RecipeInsert = Database['public']['Tables']['recipes']['Insert'];
+type RecipeUpdate = Database['public']['Tables']['recipes']['Update'];
 
 export type SaveAction =
   | 'draft'
@@ -199,7 +203,8 @@ export async function saveRecipe(
     .select('id, email, name, role')
     .ilike('email', session.user.email)
     .maybeSingle();
-  const contributor: ContributorRow | null = contributorRow;
+  // role is a text column with a CHECK constraint enforcing the union.
+  const contributor = contributorRow as unknown as ContributorRow | null;
   if (!contributor) return { ok: false, error: 'not_a_contributor' };
 
   const isAdmin = contributor.role === 'admin';
@@ -298,7 +303,7 @@ export async function saveRecipe(
 
   let recipeId = draft.id;
   if (recipeId) {
-    const { error } = await db.from('recipes').update(baseRow).eq('id', recipeId);
+    const { error } = await db.from('recipes').update(baseRow as RecipeUpdate).eq('id', recipeId);
     if (error) {
       console.error('recipe update failed:', error);
       return { ok: false, error: 'db_update_failed' };
@@ -311,7 +316,7 @@ export async function saveRecipe(
     }
     const { data: inserted, error } = await db
       .from('recipes')
-      .insert(baseRow)
+      .insert(baseRow as RecipeInsert)
       .select('id')
       .single();
     if (error || !inserted) {

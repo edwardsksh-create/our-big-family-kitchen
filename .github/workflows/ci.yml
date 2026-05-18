@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Build-time placeholders so the Next.js build doesn't crash on missing env.
+  # CI never makes real API calls — these are only here to satisfy module-load
+  # checks in lib/supabase/server.ts and similar.
+  NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_placeholder
+  SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role
+  NEXTAUTH_SECRET: placeholder-nextauth-secret-32-bytes
+  AUTH_SECRET: placeholder-nextauth-secret-32-bytes
+  AUTH_TRUST_HOST: 'true'
+  EMAIL_FROM: 'onboarding@resend.dev'
+  ADMIN_EMAIL: edwards.ksh@gmail.com
+  RESEND_API_KEY: placeholder
+  ANTHROPIC_API_KEY: placeholder
+  CRON_SECRET: placeholder
+
+jobs:
+  typecheck-and-build:
+    name: Type check + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install
+        run: npm ci --legacy-peer-deps
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Build
+        run: npm run build
+
+  unit:
+    name: Unit tests (vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install
+        run: npm ci --legacy-peer-deps
+      - name: Run unit tests
+        run: npm run test:unit
+
+  playwright:
+    name: Playwright smoke tests
+    runs-on: ubuntu-latest
+    needs: typecheck-and-build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install
+        run: npm ci --legacy-peer-deps
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Run Playwright tests against production
+        env:
+          PLAYWRIGHT_BASE_URL: https://bigfamilykitchen.com
+        run: npx playwright test --project="desktop chrome"
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
