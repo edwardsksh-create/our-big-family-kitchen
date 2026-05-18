@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { fetchAllFederatedRecipes } from '@/lib/queries/federated';
-import { fetchRecentPublishedRecipes } from '@/lib/queries/recipes';
+import { fetchRecentPublishedRecipes, fetchIngredientTextByRecipe } from '@/lib/queries/recipes';
 import { toSearchableItems, nativeRecipeToSearchableItem, rank } from '@/lib/search';
 
 export const revalidate = 60;
@@ -19,9 +19,10 @@ export async function GET(req: Request) {
     fetchAllFederatedRecipes(),
     fetchRecentPublishedRecipes(200),
   ]);
+  const ingredients = await fetchIngredientTextByRecipe(native.map((r) => r.id));
   const items = [
     ...toSearchableItems(federated),
-    ...native.map(nativeRecipeToSearchableItem),
+    ...native.map((r) => nativeRecipeToSearchableItem(r, ingredients)),
   ];
   const results = rank(items, q, 8).map((r) => ({
     id:          r.id,

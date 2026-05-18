@@ -48,13 +48,17 @@ export function toSearchableItems(recipes: FederatedRecipe[]): SearchableItem[] 
   }));
 }
 
-// Build the same shape from a native recipe. The token blob is title +
-// contributor — enough for the autocomplete to find the recipe by name or
-// the cook's name, without us needing to also fetch ingredient text.
-// (We can enrich this later if ingredient-substring queries become a
-// common pattern.)
-export function nativeRecipeToSearchableItem(r: NativeRecipeSummary): SearchableItem {
+// Build the same shape from a native recipe. The token blob includes
+// title + contributor + (optionally) ingredient text — callers that fetch
+// ingredients in bulk via fetchIngredientTextByRecipe() can pass the map to
+// enable ingredient-substring matching ("kuchen" matches a native recipe
+// that has "kuchen dough" as an ingredient).
+export function nativeRecipeToSearchableItem(
+  r: NativeRecipeSummary,
+  ingredientsByRecipe?: Map<string, string>,
+): SearchableItem {
   const contributor = r.contributor_name ?? '';
+  const ingredients = ingredientsByRecipe?.get(r.id) ?? '';
   return {
     kind:         'native',
     id:           r.id,
@@ -63,7 +67,7 @@ export function nativeRecipeToSearchableItem(r: NativeRecipeSummary): Searchable
     sectionSlug:  r.section_slug,
     href:         `/recipes/${r.slug}`,
     external:     false,
-    tokens:       `${r.title} ${contributor}`.toLowerCase(),
+    tokens:       `${r.title} ${contributor} ${ingredients}`.toLowerCase().trim(),
   };
 }
 

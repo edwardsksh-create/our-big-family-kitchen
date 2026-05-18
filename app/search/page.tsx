@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { fetchAllFederatedRecipes } from '@/lib/queries/federated';
-import { fetchRecentPublishedRecipes } from '@/lib/queries/recipes';
+import { fetchRecentPublishedRecipes, fetchIngredientTextByRecipe } from '@/lib/queries/recipes';
 import {
   toSearchableItems,
   nativeRecipeToSearchableItem,
@@ -50,9 +50,10 @@ async function Results({ query }: { query: string }) {
     fetchAllFederatedRecipes(),
     fetchRecentPublishedRecipes(500),
   ]);
+  const ingredients = await fetchIngredientTextByRecipe(native.map((r) => r.id));
   const items = [
     ...toSearchableItems(federated),
-    ...native.map(nativeRecipeToSearchableItem),
+    ...native.map((r) => nativeRecipeToSearchableItem(r, ingredients)),
   ];
   const results = rank(items, query);
   const grouped = groupResultsBySection(results, SECTIONS);

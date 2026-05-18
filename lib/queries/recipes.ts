@@ -69,6 +69,28 @@ export async function fetchPublishedRecipesForSection(sectionSlug: string): Prom
   return ((data ?? []) as unknown as RawRow[]).map(toSummary).filter(Boolean) as NativeRecipeSummary[];
 }
 
+// Bulk-fetch ingredient text per recipe for search-token enrichment.
+// One round trip — keyed by recipe_id, joined to one string per recipe.
+export async function fetchIngredientTextByRecipe(
+  recipeIds: string[],
+): Promise<Map<string, string>> {
+  if (recipeIds.length === 0) return new Map();
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from('ingredients')
+    .select('recipe_id, item_text')
+    .in('recipe_id', recipeIds);
+  const acc = new Map<string, string[]>();
+  for (const row of data ?? []) {
+    const arr = acc.get(row.recipe_id as string) ?? [];
+    arr.push(row.item_text as string);
+    acc.set(row.recipe_id as string, arr);
+  }
+  const joined = new Map<string, string>();
+  for (const [id, items] of acc) joined.set(id, items.join(' '));
+  return joined;
+}
+
 export async function fetchPublishedRecipesForFamilyLine(familyLineSlug: string): Promise<NativeRecipeSummary[]> {
   const db = supabaseAdmin();
   const { data: fl } = await db.from('family_lines').select('id').eq('slug', familyLineSlug).maybeSingle();
