@@ -26,7 +26,10 @@ export async function SiteHeader() {
             <Link href="/add" className="rounded-full bg-primary px-3 py-1.5 text-paper transition-colors hover:bg-ink">+ Add</Link>
           )}
           {role === 'admin' && (
-            <Link href="/admin/queue" className="hover:text-primary transition-colors hidden lg:inline">Queue</Link>
+            <>
+              <Link href="/admin/queue"        className="hover:text-primary transition-colors hidden lg:inline">Queue</Link>
+              <Link href="/admin/contributors" className="hover:text-primary transition-colors hidden lg:inline">People</Link>
+            </>
           )}
           {session?.user ? (
             <Link href="/sign-out" className="hover:text-primary transition-colors">Sign out</Link>

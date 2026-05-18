@@ -299,6 +299,37 @@ export default async function RecipePage({
         </section>
       )}
 
+      {/* Additional dish photos in a small grid below the recipe body — only
+          when there are extras beyond the hero. */}
+      {dishPhotos.length > 1 && (
+        <section className="mt-12" data-no-print>
+          <p className="label">More photos of this dish</p>
+          <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {dishPhotos.slice(1).map((p, i) => (
+              <li key={p.id}>
+                <a
+                  href={p.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block overflow-hidden rounded-2xl border border-rule"
+                  title="Open full size"
+                >
+                  <div className="relative aspect-[4/3] w-full">
+                    <Image
+                      src={p.url}
+                      alt={p.caption || `${recipe.title} photo ${i + 2}`}
+                      fill
+                      sizes="(min-width: 1024px) 30vw, 50vw"
+                      className="object-cover"
+                    />
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {/* Collapsible "View original" section — quiet styling so casual readers
           stay with the typed version; family who want the handwriting can tap. */}
       {sourcePhotos.length > 0 && (

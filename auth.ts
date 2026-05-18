@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import Resend from 'next-auth/providers/resend';
 import { SupabaseAdapter } from '@auth/supabase-adapter';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { magicLinkHtml, magicLinkText } from '@/lib/auth/magic-link-email';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -15,6 +16,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Resend({
       apiKey: process.env.RESEND_API_KEY,
       from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+      // Custom branded email overrides NextAuth's default plain-text template.
+      // We POST to Resend's REST API directly so we control subject + HTML.
+      async sendVerificationRequest({ identifier, url, provider }) {
+        const host = new URL(url).host;
+        const apiKey = (provider as { apiKey?: string }).apiKey
+          ?? process.env.RESEND_API_KEY!;
+        const from = (provider as { from?: string }).from
+          ?? process.env.EMAIL_FROM
+          ?? 'onboarding@resend.dev';
+
+        const res = await fetch('https://api.resend.com/emails', {
+          method:  'POST',
+          headers: {
+            authorization:  `Bearer ${apiKey}`,
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            from,
+            to:      identifier,
+            subject: 'Sign in to Our Big Family Kitchen',
+            html:    magicLinkHtml({ url, host }),
+            text:    magicLinkText({ url, host }),
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.text().catch(() => '');
+          throw new Error(`Resend email send failed (${res.status}): ${body}`);
+        }
+      },
     }),
   ],
   session: { strategy: 'database' },
