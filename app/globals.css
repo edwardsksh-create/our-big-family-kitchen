@@ -71,3 +71,74 @@ h1, h2, h3, h4, h5, h6 {
     @apply transition-transform duration-300 ease-out-soft hover:-translate-y-0.5;
   }
 }
+
+/* --------------------------------------------------------------------- */
+/* Print styles                                                          */
+/*                                                                       */
+/* Used both by /recipes/[slug]/print (clean by construction) and by    */
+/* Cmd+P from /recipes/[slug] (we have to strip the page chrome).        */
+/* --------------------------------------------------------------------- */
+@media print {
+  @page {
+    size: letter;
+    margin: 0.75in;
+  }
+
+  /* Hide site chrome and any element explicitly opted out of printing. */
+  body > header,
+  body > footer,
+  [data-no-print],
+  .no-print {
+    display: none !important;
+  }
+
+  /* Hide the recipe page's edit/print buttons and breadcrumb hairline,
+     but keep the breadcrumb itself (Section > Recipe) for context. */
+  .recipe-actions,
+  .recipe-flash {
+    display: none !important;
+  }
+
+  /* Reset to print-friendly colours. */
+  html, body {
+    background: #fff !important;
+    color: #1a1a1a !important;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 11pt;
+    line-height: 1.45;
+  }
+
+  main {
+    background: #fff !important;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-serif), Georgia, serif;
+    color: #8D2842 !important;
+  }
+
+  h1 { font-size: 22pt; line-height: 1.15; margin-bottom: 0.25rem; }
+  h2 { font-size: 14pt; margin-top: 1rem; }
+
+  a, a:hover { color: inherit !important; text-decoration: none !important; }
+
+  /* Keep ingredient and instruction blocks together where the page allows. */
+  .recipe-ingredients,
+  .recipe-instructions {
+    page-break-inside: avoid;
+    break-inside: avoid-page;
+  }
+  .recipe-instructions ol li,
+  .print-keep {
+    page-break-inside: avoid;
+    break-inside: avoid-page;
+  }
+
+  /* No animations or shadows on paper. */
+  *, *::before, *::after {
+    transition: none !important;
+    animation: none !important;
+    box-shadow: none !important;
+  }
+}
+

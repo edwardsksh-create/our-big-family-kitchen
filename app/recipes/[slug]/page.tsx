@@ -104,7 +104,7 @@ export default async function RecipePage({
   return (
     <article className="mx-auto max-w-prose px-6 py-12">
       {flashNotAllowed && (
-        <div className="mb-8 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
+        <div className="recipe-flash mb-8 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
           <span className="font-serif italic">
             Only the recipe’s contributor or an admin can edit this recipe.
           </span>
@@ -113,12 +113,12 @@ export default async function RecipePage({
 
       {/* Status banners */}
       {recipe.status === 'draft' && (
-        <div className="mb-8 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
+        <div className="recipe-flash mb-8 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
           <span className="font-serif italic">This recipe is a draft</span> — only you and Kate can see it.
         </div>
       )}
       {recipe.status === 'pending_review' && (
-        <div className="mb-8 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
+        <div className="recipe-flash mb-8 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
           <span className="font-serif italic">Pending review</span> — Kate will take a look.
         </div>
       )}
@@ -140,17 +140,25 @@ export default async function RecipePage({
         )}
       </nav>
 
-      {/* Edit link — appears just below the breadcrumb when permitted. */}
-      {canEdit && (
-        <p className="mb-4 text-sm">
+      {/* Edit + Print actions — hidden in print. */}
+      <p className="recipe-actions mb-4 flex flex-wrap items-center gap-4 text-sm" data-no-print>
+        {canEdit && (
           <Link
             href={`/recipes/${params.slug}/edit`}
             className="font-serif italic text-ink-soft hover:text-primary"
           >
             Edit this recipe →
           </Link>
-        </p>
-      )}
+        )}
+        <a
+          href={`/recipes/${params.slug}/print`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-serif italic text-ink-soft hover:text-primary"
+        >
+          Print this recipe →
+        </a>
+      </p>
 
       <h1 className="font-serif text-4xl leading-tight text-primary md:text-5xl">{recipe.title}</h1>
 
@@ -205,11 +213,11 @@ export default async function RecipePage({
         </div>
       )}
 
-      <section className="mt-12">
+      <section className="recipe-ingredients mt-12">
         <h2 className="font-serif text-2xl text-ink">Ingredients</h2>
         <ul className="mt-4 space-y-1 text-ink-soft">
           {(ingredients ?? []).map((i, idx) => (
-            <li key={idx}>
+            <li key={idx} className="print-keep">
               {i.sub_header && (
                 <p className="mt-4 font-serif text-base italic text-primary">{i.sub_header}</p>
               )}
@@ -219,11 +227,11 @@ export default async function RecipePage({
         </ul>
       </section>
 
-      <section className="mt-12">
+      <section className="recipe-instructions mt-12">
         <h2 className="font-serif text-2xl text-ink">Method</h2>
         <ol className="mt-4 list-decimal space-y-4 pl-5 text-ink-soft">
           {(instructions ?? []).map((i, idx) => (
-            <li key={idx}>
+            <li key={idx} className="print-keep">
               {i.sub_header && (
                 <p className="mb-1 -ml-5 font-serif text-base italic text-primary">{i.sub_header}</p>
               )}
