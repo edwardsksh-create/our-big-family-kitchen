@@ -7,20 +7,39 @@ import type { FormOptions } from '@/lib/recipes/form-options';
 import { type RecipeDraft, draftFromParsed } from '@/lib/recipes/draft';
 import type { ParsedRecipe } from '@/lib/recipe-parser';
 
+type FailureReason =
+  | 'http_forbidden'
+  | 'http_not_found'
+  | 'http_server_error'
+  | 'http_other'
+  | 'timeout'
+  | 'network_error'
+  | 'parse_failed';
+
+type Failure = { reason: FailureReason; url: string; status?: number };
+
+const FAILURE_HEADLINES: Record<FailureReason, string> = {
+  http_forbidden:    'This site doesn’t allow automatic fetching.',
+  http_not_found:    'We couldn’t find that page.',
+  http_server_error: 'That site seems to be having issues right now.',
+  http_other:        'We couldn’t reach that page.',
+  timeout:           'We couldn’t reach that page in time.',
+  network_error:     'We couldn’t reach that page.',
+  parse_failed:      'We fetched the page but couldn’t find a recipe in it.',
+};
+
 export function AddViaUrl({ options, isAdmin }: { options: FormOptions; isAdmin: boolean }) {
   const router = useRouter();
   const [url, setUrl]         = useState('');
   const [draft, setDraft]     = useState<RecipeDraft | null>(null);
   const [via, setVia]         = useState<'jsonld' | 'ai-fallback' | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState<string | null>(null);
-  const [canPasteInstead, setCanPasteInstead] = useState(false);
+  const [failure, setFailure] = useState<Failure | null>(null);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    setError(null);
-    setCanPasteInstead(false);
+    setFailure(null);
     try {
       const res = await fetch('/api/recipes/parse-url', {
         method:  'POST',
@@ -28,9 +47,12 @@ export function AddViaUrl({ options, isAdmin }: { options: FormOptions; isAdmin:
         body:    JSON.stringify({ url }),
       });
       const body = await res.json();
-      if (!res.ok) {
-        setError(body.message || 'We couldn’t reach that page.');
-        setCanPasteInstead(true);
+      if (!res.ok || !body.ok) {
+        setFailure({
+          reason: (body.error as FailureReason) ?? 'http_other',
+          url,
+          status: body.status,
+        });
         return;
       }
       const { recipe, via: viaResp, sourceUrl } = body as {
@@ -46,8 +68,9 @@ export function AddViaUrl({ options, isAdmin }: { options: FormOptions; isAdmin:
       }
       setVia(viaResp);
       setDraft(next);
-    } catch (err) {
-      setError((err as Error).message);
+    } catch {
+      // Network failure between the browser and our server (very rare).
+      setFailure({ reason: 'network_error', url });
     } finally {
       setLoading(false);
     }
@@ -63,6 +86,40 @@ export function AddViaUrl({ options, isAdmin }: { options: FormOptions; isAdmin:
           Review the fields before saving.
         </p>
         <RecipeForm options={options} initial={draft} isAdmin={isAdmin} />
+      </div>
+    );
+  }
+
+  if (failure) {
+    return (
+      <div className="mt-10 rounded-2xl border border-rule bg-paper p-8 md:p-10">
+        <p className="label">Couldn’t fetch</p>
+        <h2 className="font-serif mt-2 text-2xl text-ink md:text-3xl">
+          {FAILURE_HEADLINES[failure.reason]}
+        </h2>
+        <p className="mt-3 max-w-prose text-ink-soft">
+          Some sites block automated requests. You can paste the recipe text
+          instead, and we’ll save the URL as the source.
+        </p>
+        <p className="mt-2 max-w-prose text-sm text-ink-soft break-all font-mono">
+          {failure.url}
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => router.push(`/add/paste?originally_from=${encodeURIComponent(failure.url)}`)}
+            className="btn-primary"
+          >
+            Paste recipe text →
+          </button>
+          <button
+            type="button"
+            onClick={() => { setFailure(null); setUrl(''); }}
+            className="btn-ghost"
+          >
+            Try a different URL
+          </button>
+        </div>
       </div>
     );
   }
@@ -85,20 +142,6 @@ export function AddViaUrl({ options, isAdmin }: { options: FormOptions; isAdmin:
           {loading ? 'Fetching…' : 'Fetch recipe →'}
         </button>
       </div>
-      {error && (
-        <div className="rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
-          <p className="font-serif italic">{error}</p>
-          {canPasteInstead && (
-            <button
-              type="button"
-              onClick={() => router.push(`/add/paste?from=${encodeURIComponent(url)}`)}
-              className="mt-3 inline-flex items-center text-primary underline decoration-rule underline-offset-4 hover:decoration-primary"
-            >
-              Paste the recipe text instead →
-            </button>
-          )}
-        </div>
-      )}
     </form>
   );
 }

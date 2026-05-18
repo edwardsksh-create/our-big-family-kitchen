@@ -29,12 +29,22 @@ export async function POST(req: Request) {
 
   const result = await fetchRecipeFromUrl(url.toString());
   if (!result.ok) {
+    // Structured log so we can spot which sites are commonly failing.
+    console.error(JSON.stringify({
+      event:  'url_fetch_failed',
+      url:    url.toString(),
+      reason: result.reason,
+      status: result.status,
+    }));
     return NextResponse.json(
-      { error: result.reason, message: result.message, status: result.status },
-      { status: result.reason === 'fetch_failed' ? 502 : 422 },
+      { error: result.reason, status: result.status },
+      // Always 200 — client uses the JSON body to decide what to render.
+      { status: 200 },
     );
   }
+
   return NextResponse.json({
+    ok:        true,
     recipe:    result.recipe,
     via:       result.via,
     sourceUrl: result.sourceUrl,

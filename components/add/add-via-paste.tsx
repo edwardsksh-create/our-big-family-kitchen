@@ -6,7 +6,15 @@ import type { FormOptions } from '@/lib/recipes/form-options';
 import { type RecipeDraft, draftFromParsed, emptyDraft } from '@/lib/recipes/draft';
 import type { ParsedRecipe } from '@/lib/recipe-parser';
 
-export function AddViaPaste({ options, isAdmin }: { options: FormOptions; isAdmin: boolean }) {
+export function AddViaPaste({
+  options,
+  isAdmin,
+  originallyFromUrl,
+}: {
+  options: FormOptions;
+  isAdmin: boolean;
+  originallyFromUrl?: string | null;
+}) {
   const [text, setText]       = useState('');
   const [draft, setDraft]     = useState<RecipeDraft | null>(null);
   const [loading, setLoading] = useState(false);
@@ -30,6 +38,7 @@ export function AddViaPaste({ options, isAdmin }: { options: FormOptions; isAdmi
         // Soft-fail: drop into manual mode with raw text pre-filled in story.
         const fallback = emptyDraft();
         fallback.story = text;
+        if (originallyFromUrl) fallback.originally_from = originallyFromUrl;
         if (options.currentContributor) {
           fallback.contributor_id         = options.currentContributor.id;
           fallback.primary_family_line_id = options.currentContributor.primary_family_line_id ?? undefined;
@@ -40,6 +49,9 @@ export function AddViaPaste({ options, isAdmin }: { options: FormOptions; isAdmi
       }
       const { recipe } = (await res.json()) as { recipe: ParsedRecipe };
       const next = draftFromParsed(recipe);
+      // If we arrived here from a failed /add/url with a source URL,
+      // that URL is the authoritative origin — override any AI extraction.
+      if (originallyFromUrl) next.originally_from = originallyFromUrl;
       if (options.currentContributor) {
         next.contributor_id         = options.currentContributor.id;
         next.primary_family_line_id = options.currentContributor.primary_family_line_id ?? undefined;

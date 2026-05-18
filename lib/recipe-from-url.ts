@@ -1,36 +1,62 @@
 import * as cheerio from 'cheerio';
 import { parseRecipeFromText, type ParsedRecipe } from '@/lib/recipe-parser';
 
-export type FromUrlResult =
-  | { ok: true; recipe: ParsedRecipe; via: 'jsonld' | 'ai-fallback'; sourceUrl: string }
-  | { ok: false; reason: 'fetch_failed' | 'parse_failed'; status?: number; message: string };
+export type FromUrlFailureReason =
+  | 'http_forbidden'      // 403 — common when a site blocks automated requests
+  | 'http_not_found'      // 404 / 410
+  | 'http_server_error'   // 5xx
+  | 'http_other'          // 4xx/3xx we didn't classify above (rare)
+  | 'timeout'             // AbortController fired
+  | 'network_error'       // DNS/TLS/etc.
+  | 'parse_failed';       // fetched OK but no recipe schema and AI fallback failed too
 
-const USER_AGENT =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36 ourbigfamilykitchen/1.0';
+export type FromUrlResult =
+  | { ok: true;  recipe: ParsedRecipe; via: 'jsonld' | 'ai-fallback'; sourceUrl: string }
+  | { ok: false; reason: FromUrlFailureReason; status?: number };
+
+// A real Chrome desktop UA — getting past most simple bot blockers requires
+// looking like a browser, not just sending *some* User-Agent.
+const BROWSER_HEADERS = {
+  'user-agent':
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
+    '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  accept:
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,' +
+    'image/webp,image/apng,*/*;q=0.8',
+  'accept-language': 'en-US,en;q=0.9',
+  'accept-encoding': 'gzip, deflate, br',
+  'upgrade-insecure-requests': '1',
+};
+
+// 10 s is long enough for slow blogs, short enough to give up on stalled sites.
+const FETCH_TIMEOUT_MS = 10_000;
 
 export async function fetchRecipeFromUrl(url: string): Promise<FromUrlResult> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
   let html: string;
+  let status: number | undefined;
   try {
     const res = await fetch(url, {
-      headers: { 'user-agent': USER_AGENT, 'accept': 'text/html,application/xhtml+xml' },
+      headers:  BROWSER_HEADERS,
       redirect: 'follow',
-      cache: 'no-store',
+      cache:    'no-store',
+      signal:   controller.signal,
     });
+    status = res.status;
     if (!res.ok) {
-      return {
-        ok: false,
-        reason: 'fetch_failed',
-        status: res.status,
-        message: `That page returned ${res.status} ${res.statusText}.`,
-      };
+      return { ok: false, reason: classifyHttpStatus(res.status), status: res.status };
     }
     html = await res.text();
   } catch (err) {
-    return {
-      ok: false,
-      reason: 'fetch_failed',
-      message: (err as Error).message || 'We couldn’t reach that page.',
-    };
+    const e = err as { name?: string };
+    if (e?.name === 'AbortError') {
+      return { ok: false, reason: 'timeout' };
+    }
+    return { ok: false, reason: 'network_error' };
+  } finally {
+    clearTimeout(timeout);
   }
 
   // 1) Try JSON-LD Recipe schema.
@@ -42,22 +68,21 @@ export async function fetchRecipeFromUrl(url: string): Promise<FromUrlResult> {
   // 2) Fall back to AI parsing of the page's visible text.
   const text = extractVisibleText(html);
   if (text.length < 80) {
-    return {
-      ok: false,
-      reason: 'parse_failed',
-      message: 'That page didn’t look like it had a recipe.',
-    };
+    return { ok: false, reason: 'parse_failed', status };
   }
   try {
     const ai = await parseRecipeFromText(text);
     return { ok: true, recipe: ai, via: 'ai-fallback', sourceUrl: url };
-  } catch (err) {
-    return {
-      ok: false,
-      reason: 'parse_failed',
-      message: (err as Error).message || 'We couldn’t parse this page.',
-    };
+  } catch {
+    return { ok: false, reason: 'parse_failed', status };
   }
+}
+
+function classifyHttpStatus(status: number): FromUrlFailureReason {
+  if (status === 403) return 'http_forbidden';
+  if (status === 404 || status === 410) return 'http_not_found';
+  if (status >= 500 && status <= 599) return 'http_server_error';
+  return 'http_other';
 }
 
 // ---- JSON-LD extraction --------------------------------------------------
@@ -108,10 +133,6 @@ function authorString(author: unknown): string | null {
 function instructionsToSteps(
   ins: unknown,
 ): { sub_header: string | null; body: string }[] {
-  // Recipe instructions can be:
-  //  - a single string (sometimes with line breaks)
-  //  - an array of strings
-  //  - an array of HowToStep / HowToSection objects
   if (typeof ins === 'string') {
     return ins
       .split(/\n+|(?<=\.)\s+(?=[A-Z])/g)
@@ -154,8 +175,6 @@ function instructionsToSteps(
 function ingredientsToGroups(
   ings: unknown,
 ): { sub_header: string | null; items: string[] }[] {
-  // recipeIngredient is usually a flat string[]. Some sites use HowToSection
-  // groupings, but those are rare in JSON-LD — flat is the norm.
   if (!ings) return [];
   const items = asArray<unknown>(ings)
     .map((x) => (typeof x === 'string' ? x.trim() : ''))
@@ -174,7 +193,6 @@ function extractJsonLdRecipe(html: string): ParsedRecipe | null {
     try {
       parsed = JSON.parse(raw);
     } catch {
-      // Some sites embed multiple JSON objects in one tag separated by newlines.
       const cleaned = raw.trim().replace(/^\s*\[|\]\s*$/g, '');
       try {
         parsed = JSON.parse(`[${cleaned}]`);
@@ -205,8 +223,6 @@ function extractJsonLdRecipe(html: string): ParsedRecipe | null {
   }
   return null;
 }
-
-// ---- Visible text extraction for AI fallback ----------------------------
 
 function extractVisibleText(html: string): string {
   const $ = cheerio.load(html);
