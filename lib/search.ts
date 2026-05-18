@@ -1,19 +1,15 @@
-// Weighted full-text search over federated recipes.
-//
-// Phase 2 only federated recipes are indexed. The shape below
-// (SearchableItem) is deliberately union-able with native recipes so a
-// future iteration can mix native and federated results without changing
-// the ranking code.
+// Weighted full-text search across federated *and* native recipes.
 
 import type { FederatedRecipe } from '@/lib/federated';
+import type { NativeRecipeSummary } from '@/lib/queries/recipes';
 
 export type SearchableItem = {
-  kind: 'federated';
+  kind: 'federated' | 'native';
   id: string;
   title: string;
   contributor: string | null;
   sectionSlug: string | null;
-  href: string;          // external (federated) or internal (native, future)
+  href: string;          // external (federated) or internal (native) URL
   external: boolean;
   tokens: string;        // already-lowercased blob
 };
@@ -50,6 +46,25 @@ export function toSearchableItems(recipes: FederatedRecipe[]): SearchableItem[] 
     external:     true,
     tokens:       (r.search_tokens ?? '').toLowerCase(),
   }));
+}
+
+// Build the same shape from a native recipe. The token blob is title +
+// contributor — enough for the autocomplete to find the recipe by name or
+// the cook's name, without us needing to also fetch ingredient text.
+// (We can enrich this later if ingredient-substring queries become a
+// common pattern.)
+export function nativeRecipeToSearchableItem(r: NativeRecipeSummary): SearchableItem {
+  const contributor = r.contributor_name ?? '';
+  return {
+    kind:         'native',
+    id:           r.id,
+    title:        r.title,
+    contributor:  contributor || null,
+    sectionSlug:  r.section_slug,
+    href:         `/recipes/${r.slug}`,
+    external:     false,
+    tokens:       `${r.title} ${contributor}`.toLowerCase(),
+  };
 }
 
 function normalize(q: string): string[] {

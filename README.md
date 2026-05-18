@@ -36,3 +36,16 @@ supabase db push
 
 Scaffolding, schema, magic-link sign-in, placeholder browsing. Recipe submission,
 admin tooling, comments, and federation come in subsequent phases.
+
+## End-to-end tests
+
+Smoke tests for public pages, auth gates, and the API surface live in
+`tests/e2e/`. They run against a base URL (default: `https://bigfamilykitchen.com`).
+
+```bash
+# Test the live prod site
+npm run test:e2e
+
+# Test against local dev
+PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:e2e
+```

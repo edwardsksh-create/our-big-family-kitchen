@@ -96,3 +96,43 @@ export async function deletePhotoByPath(storagePath: string): Promise<void> {
 export function publicUrl(storagePath: string): string {
   return publicUrlFor(storagePath);
 }
+
+// List every object under sources/_inbox/. Storage's list API is shallow per
+// folder, so we walk the per-session subfolders.
+export async function listInboxObjects(): Promise<{ path: string; created_at: string }[]> {
+  const c = client();
+  const out: { path: string; created_at: string }[] = [];
+  // First, list the per-session folders under sources/_inbox/.
+  const { data: sessions, error: sessErr } = await c
+    .storage
+    .from(PHOTO_BUCKET)
+    .list('sources/_inbox', { limit: 1000, sortBy: { column: 'name', order: 'asc' } });
+  if (sessErr) throw new Error(`list sessions failed: ${sessErr.message}`);
+  for (const folder of sessions ?? []) {
+    // Each folder shows up as a row with id === null (Supabase folder convention).
+    if (folder.id) continue;
+    const { data: files, error: fileErr } = await c
+      .storage
+      .from(PHOTO_BUCKET)
+      .list(`sources/_inbox/${folder.name}`, { limit: 1000 });
+    if (fileErr) continue;
+    for (const f of files ?? []) {
+      if (!f.id) continue; // skip nested folders if any
+      out.push({
+        path:       `sources/_inbox/${folder.name}/${f.name}`,
+        created_at: f.created_at ?? new Date(0).toISOString(),
+      });
+    }
+  }
+  return out;
+}
+
+export async function deletePhotoPaths(paths: string[]): Promise<{ deleted: number; failed: string[] }> {
+  if (paths.length === 0) return { deleted: 0, failed: [] };
+  const c = client();
+  // Supabase's remove() accepts a batch.
+  const { data, error } = await c.storage.from(PHOTO_BUCKET).remove(paths);
+  if (error) return { deleted: 0, failed: paths };
+  const deleted = (data ?? []).length;
+  return { deleted, failed: [] };
+}
