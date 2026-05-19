@@ -24,6 +24,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'too_many' }, { status: 400 });
   }
 
+  // Only accept photos we ourselves stored — these URLs get handed to Claude's
+  // vision API to fetch. Refusing arbitrary URLs stops this endpoint from being
+  // used as a fetch proxy.
+  const allowedPrefix =
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/recipe-photos/`;
+  if (!urls.every((u) => u.startsWith(allowedPrefix))) {
+    return NextResponse.json({ error: 'bad_photo_url' }, { status: 400 });
+  }
+
   try {
     const result = await parseRecipeFromPhotoUrls({ photoUrls: urls });
     return NextResponse.json({ ok: true, ...result });

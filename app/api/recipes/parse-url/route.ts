@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { fetchRecipeFromUrl } from '@/lib/recipe-from-url';
+import { checkFetchTarget } from '@/lib/url-safety';
 
 export const maxDuration = 60;
 
@@ -23,8 +24,16 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'bad_url' }, { status: 400 });
   }
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    return NextResponse.json({ error: 'bad_protocol' }, { status: 400 });
+
+  // SSRF guard: refuse to fetch private / loopback / link-local / metadata
+  // addresses. Resolves the hostname and checks every returned IP.
+  const safety = await checkFetchTarget(url.toString());
+  if (!safety.ok) {
+    if (safety.reason === 'private_address') {
+      console.error(JSON.stringify({ event: 'url_fetch_blocked', url: url.toString() }));
+      return NextResponse.json({ error: 'blocked_address' }, { status: 422 });
+    }
+    return NextResponse.json({ error: safety.reason }, { status: 400 });
   }
 
   const result = await fetchRecipeFromUrl(url.toString());
