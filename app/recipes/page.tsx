@@ -21,7 +21,7 @@ export default async function RecipesIndexPage() {
         <div className="mt-12 rounded-2xl border border-dashed border-rule p-12 text-center">
           <p className="font-serif italic text-2xl text-ink-soft">No native recipes yet.</p>
           <p className="mt-2 text-sm text-ink-soft">
-            Aunt Laura’s {federatedCount} federated recipes are{' '}
+            Aunt Laura’s {federatedCount} recipes from the original collection are{' '}
             <Link href="/family-lines/leusch" className="text-primary underline decoration-rule underline-offset-4">here</Link>.
           </p>
         </div>
@@ -29,7 +29,7 @@ export default async function RecipesIndexPage() {
         <div className="mt-10 space-y-10">
           <NativeRecipeGrid recipes={recipes} />
           <p className="text-sm text-ink-soft">
-            Looking for the Leusch archive? Aunt Laura’s {federatedCount} federated recipes are{' '}
+            Looking for the Leusch archive? Aunt Laura’s {federatedCount} recipes from the original collection are{' '}
             <Link href="/family-lines/leusch" className="text-primary underline decoration-rule underline-offset-4">here</Link>.
           </p>
         </div>
