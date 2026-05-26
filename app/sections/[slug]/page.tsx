@@ -1,5 +1,5 @@
-import { notFound } from 'next/navigation';
-import { SECTIONS, sectionBySlug, SECTION_BG, SECTION_TEXT } from '@/lib/sections';
+import { notFound, redirect } from 'next/navigation';
+import { SECTIONS, sectionBySlug, SECTION_BG, SECTION_TEXT, LEGACY_SECTION_REDIRECTS } from '@/lib/sections';
 import { cn } from '@/lib/utils';
 import { fetchFederatedRecipesForSection } from '@/lib/queries/federated';
 import { fetchPublishedRecipesForSection } from '@/lib/queries/recipes';
@@ -18,6 +18,9 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
 }
 
 export default async function SectionPage({ params }: { params: { slug: string } }) {
+  const legacyTarget = LEGACY_SECTION_REDIRECTS[params.slug];
+  if (legacyTarget) redirect(`/sections/${legacyTarget}`);
+
   const section = sectionBySlug(params.slug);
   if (!section) notFound();
 

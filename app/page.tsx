@@ -110,7 +110,7 @@ export default async function HomePage() {
       <section className="py-16 md:py-20">
         <div className="mb-10 flex items-baseline justify-between">
           <h2 className="font-serif text-3xl text-ink md:text-4xl">Browse by section</h2>
-          <p className="label hidden md:block">A meal-day in 13 colors</p>
+          <p className="label hidden md:block">A meal-day in 16 colors</p>
         </div>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {SECTIONS.map((section) => (

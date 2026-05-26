@@ -16,20 +16,40 @@ export type Section = {
 };
 
 export const SECTIONS: Section[] = [
-  { slug: 'breakfast',         name: 'Breakfast',          color: 'blush'    },
-  { slug: 'drinks',            name: 'Drinks',             color: 'gold'     },
-  { slug: 'appetizers',        name: 'Appetizers',         color: 'rose'     },
-  { slug: 'soups',             name: 'Soups',              color: 'burgundy' },
-  { slug: 'salad-dressings',   name: 'Salad Dressings',    color: 'olive'    },
-  { slug: 'salads',            name: 'Salads',             color: 'mauve'    },
-  { slug: 'sandwiches',        name: 'Sandwiches',         color: 'sky'      },
-  { slug: 'starches',          name: 'Starches',           color: 'slate'    },
-  { slug: 'vegetables',        name: 'Vegetables',         color: 'navy'     },
-  { slug: 'fish-entrees',      name: 'Fish Entrées',       color: 'slate'    },
-  { slug: 'meat-entrees',      name: 'Meat Entrées',       color: 'burgundy' },
-  { slug: 'cookies-and-candy', name: 'Cookies and Candy',  color: 'rose'     },
-  { slug: 'desserts',          name: 'Desserts',           color: 'gold'     },
+  { slug: 'breakfast-and-brunch',       name: 'Breakfast & Brunch',         color: 'blush'    },
+  { slug: 'drinks',                     name: 'Drinks',                     color: 'gold'     },
+  { slug: 'appetizers-and-snacks',      name: 'Appetizers & Snacks',        color: 'rose'     },
+  { slug: 'soups-and-stews',            name: 'Soups & Stews',              color: 'burgundy' },
+  { slug: 'chili',                      name: 'Chili',                      color: 'mauve'    },
+  { slug: 'salads-and-dressings',       name: 'Salads & Dressings',         color: 'olive'    },
+  { slug: 'sandwiches',                 name: 'Sandwiches',                 color: 'sky'      },
+  { slug: 'pasta-and-noodles',          name: 'Pasta & Noodles',            color: 'gold'     },
+  { slug: 'mains-chicken-turkey',       name: 'Mains: Chicken & Turkey',    color: 'rose'     },
+  { slug: 'mains-beef-pork-lamb',       name: 'Mains: Beef, Pork & Lamb',   color: 'burgundy' },
+  { slug: 'mains-fish-seafood',         name: 'Mains: Fish & Seafood',      color: 'slate'    },
+  { slug: 'mains-vegetarian',           name: 'Mains: Vegetarian',          color: 'olive'    },
+  { slug: 'sides-vegetables',           name: 'Sides: Vegetables',          color: 'navy'     },
+  { slug: 'sides-potatoes-rice-grains', name: 'Sides: Potatoes, Rice & Grains', color: 'slate' },
+  { slug: 'breads',                     name: 'Breads',                     color: 'gold'     },
+  { slug: 'desserts',                   name: 'Desserts',                   color: 'rose'     },
 ];
+
+// Old → new slug mapping used for /sections/[old-slug] redirects and the
+// deterministic part of the 13→16 section migration. Recipes in
+// `meat-entrees`, `soups`, `starches`, and `breakfast` were recategorized
+// per-recipe by AI rather than by this table.
+export const LEGACY_SECTION_REDIRECTS: Record<string, string> = {
+  'breakfast':         'breakfast-and-brunch',
+  'appetizers':        'appetizers-and-snacks',
+  'soups':             'soups-and-stews',
+  'salad-dressings':   'salads-and-dressings',
+  'salads':            'salads-and-dressings',
+  'vegetables':        'sides-vegetables',
+  'starches':          'sides-potatoes-rice-grains',
+  'fish-entrees':      'mains-fish-seafood',
+  'meat-entrees':      'mains-beef-pork-lamb',
+  'cookies-and-candy': 'desserts',
+};
 
 export const SECTION_BG: Record<SectionColorToken, string> = {
   blush:    'bg-card-blush',
