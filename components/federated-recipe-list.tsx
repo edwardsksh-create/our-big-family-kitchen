@@ -35,7 +35,6 @@ export function FederatedRecipesBySection({
   return (
     <section className="space-y-12">
       <header>
-        <p className="label">Federated</p>
         <h2 className="font-serif text-3xl text-ink md:text-4xl">{heading}</h2>
         {subheading && <p className="mt-2 font-serif italic text-ink-soft">{subheading}</p>}
         <p className="mt-2 text-sm text-ink-soft">

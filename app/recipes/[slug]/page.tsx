@@ -5,6 +5,7 @@ import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { SECTION_BG, SECTION_TEXT, type SectionColorToken } from '@/lib/sections';
 import { publicUrl } from '@/lib/storage/photos';
+import { publicStatusNotes } from '@/lib/recipes/status-notes';
 import { cn, slugify } from '@/lib/utils';
 
 export const revalidate = 60;
@@ -242,15 +243,22 @@ export default async function RecipePage({
         )}
       </div>
 
-      {tags.length > 0 && (
-        <ul className="mt-4 flex flex-wrap gap-2">
-          {tags.map((t) => (
-            <li key={t.slug} className="rounded-full bg-paper border border-rule px-3 py-1 text-xs text-ink-soft">
-              {t.name}
-            </li>
-          ))}
-        </ul>
-      )}
+      {(() => {
+        const notes = publicStatusNotes(tags.map((t) => t.slug));
+        if (notes.length === 0) return null;
+        return (
+          <div className="mt-6 space-y-3" data-no-print>
+            {notes.map((note, i) => (
+              <p
+                key={i}
+                className="rounded-xl border border-rule bg-cream/30 px-4 py-3 text-sm leading-relaxed text-ink-soft"
+              >
+                <span className="font-serif italic">{note}</span>
+              </p>
+            ))}
+          </div>
+        );
+      })()}
 
       {recipe.story && (
         <div className="prose-body mt-10 max-w-prose text-lg font-serif italic text-ink-soft">
