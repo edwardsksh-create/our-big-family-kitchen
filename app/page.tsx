@@ -2,17 +2,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { SECTIONS } from '@/lib/sections';
 import { SectionCard } from '@/components/section-card';
-import { NativeRecipeGrid } from '@/components/native-recipe-card';
 import { fetchFederatedCount } from '@/lib/queries/federated';
-import { fetchRecentPublishedRecipes } from '@/lib/queries/recipes';
 
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [federatedCount, recent] = await Promise.all([
-    fetchFederatedCount(),
-    fetchRecentPublishedRecipes(6),
-  ]);
+  const federatedCount = await fetchFederatedCount();
 
   return (
     <div className="mx-auto max-w-page px-6">
@@ -58,19 +53,6 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
-
-      {/* Recently added */}
-      {recent.length > 0 && (
-        <section className="py-16 md:py-20">
-          <h2 className="font-serif text-3xl text-ink md:text-4xl">Recently added</h2>
-          <p className="mt-3 max-w-prose text-ink-soft">
-            The newest recipes, notes, and remembered favorites added to the kitchen.
-          </p>
-          <div className="mt-8">
-            <NativeRecipeGrid recipes={recent} />
-          </div>
-        </section>
-      )}
 
       {/* From Aunt Laura’s archive */}
       {federatedCount > 0 && (
