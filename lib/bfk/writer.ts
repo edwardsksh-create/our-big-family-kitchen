@@ -136,11 +136,11 @@ export async function writeRecipe(
     warnings.push(`"${title}" has no instructions — admin should add them.`);
   }
 
-  // Tags: always add 'bulk-import'; add 'needs-instructions' when configured
-  // or when the parser returned zero steps.
-  const tagSlugs: { slug: string; name: string }[] = [
-    { slug: 'bulk-import', name: 'bulk import' },
-  ];
+  // Add 'needs-instructions' when the BFK file declares the recipe is
+  // ingredient-only or the parser returned zero steps. We used to also tag
+  // every BFK import with 'bulk-import', but Kate retired that tag — the
+  // contributor + originally_from fields already carry the provenance.
+  const tagSlugs: { slug: string; name: string }[] = [];
   const noSteps = parsed.instruction_steps.length === 0;
   if (ctx.rule.needsInstructions || noSteps) {
     tagSlugs.push({ slug: 'needs-instructions', name: 'needs instructions' });

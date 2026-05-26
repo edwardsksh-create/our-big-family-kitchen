@@ -17,8 +17,28 @@ import { ContributorPicker } from '@/components/contributor-picker';
 import { PhotoUploader } from '@/components/photo-uploader';
 
 const AUTO_SAVE_INTERVAL_MS = 30_000;
+const ADVANCE_DELAY_MS = 1500;
 
 export type RecipeFormMode = 'create' | 'admin_review' | 'edit';
+
+export type QueueContext = {
+  sort:   'newest' | 'confidence';
+  pos:    number;        // 1-based position in the session
+  total:  number;        // session total
+  nextId: string | null; // next recipe to load, or null at end
+};
+
+function nextHref(ctx: QueueContext): string {
+  if (!ctx.nextId) {
+    return `/admin/queue?session_complete=true&n=${ctx.pos}`;
+  }
+  return (
+    `/admin/queue/${ctx.nextId}/review` +
+    `?sort=${encodeURIComponent(ctx.sort)}` +
+    `&pos=${ctx.pos + 1}` +
+    `&total=${ctx.total}`
+  );
+}
 
 export function RecipeForm({
   options,
@@ -26,12 +46,17 @@ export function RecipeForm({
   isAdmin,
   mode = 'create',
   cancelHref,
+  queueContext,
 }: {
   options: FormOptions;
   initial: RecipeDraft;
   isAdmin: boolean;
   mode?: RecipeFormMode;
   cancelHref?: string; // where the Cancel button (edit mode) returns to
+  // Present in mode='admin_review' when the page was opened from the
+  // queue. Enables auto-advance, the Skip button, and the "Recipe N of M"
+  // hand-off via URL.
+  queueContext?: QueueContext | null;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<RecipeDraft>(initial);
@@ -45,6 +70,29 @@ export function RecipeForm({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState('');
+
+  // Auto-advance toast state. When set, a banner shows and a timer fires
+  // ADVANCE_DELAY_MS later. The "Stay on this page" link cancels the timer.
+  const [advance, setAdvance] = useState<{
+    verb: 'Approved' | 'Rejected' | 'Skipped';
+    href: string;
+  } | null>(null);
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!advance) return;
+    advanceTimer.current = setTimeout(() => {
+      router.push(advance.href);
+    }, ADVANCE_DELAY_MS);
+    return () => {
+      if (advanceTimer.current) clearTimeout(advanceTimer.current);
+      advanceTimer.current = null;
+    };
+  }, [advance, router]);
+  function cancelAdvance() {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+    advanceTimer.current = null;
+    setAdvance(null);
+  }
 
   // Track whether the draft is dirty for auto-save.
   const dirtyRef = useRef(false);
@@ -83,6 +131,17 @@ export function RecipeForm({
       }
       setDraft((d) => ({ ...d, id: result.recipeId }));
       setSavedAt(new Date());
+
+      // In a queue review session, Approve / Reject advance to the next
+      // pending recipe instead of bouncing to /recipes/[slug] or /admin/queue.
+      if (queueContext && (action === 'publish' || action === 'admin_reject')) {
+        setAdvance({
+          verb: action === 'publish' ? 'Approved' : 'Rejected',
+          href: nextHref(queueContext),
+        });
+        return;
+      }
+
       if (action === 'publish' && result.slug) {
         router.push(`/recipes/${result.slug}`);
       } else if (action === 'submit_for_review') {
@@ -92,7 +151,13 @@ export function RecipeForm({
       } else if ((action === 'edit' || action === 'unpublish') && result.slug) {
         router.push(`/recipes/${result.slug}`);
       }
+      // admin_save: no redirect — savedAt timestamp acts as the toast.
     });
+  }
+
+  function doSkip() {
+    if (!queueContext) return;
+    setAdvance({ verb: 'Skipped', href: nextHref(queueContext) });
   }
 
   const lowConfidence = (f: 'title' | 'suggested_section' | 'overall') => {
@@ -400,6 +465,29 @@ export function RecipeForm({
         </div>
       </div>
 
+      {/* Auto-advance toast (admin review queue sessions). Sits above the
+          action row so the user's eye finds it without scrolling. */}
+      {advance && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-2xl border border-rule bg-card-blush/40 px-5 py-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="font-serif text-ink">
+              {advance.verb} — loading next…
+            </p>
+            <button
+              type="button"
+              onClick={cancelAdvance}
+              className="text-sm text-primary underline decoration-rule underline-offset-4 hover:decoration-primary"
+            >
+              Stay on this page
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex flex-wrap items-center gap-3 border-t border-rule pt-8">
         {mode === 'admin_review' ? (
@@ -411,15 +499,26 @@ export function RecipeForm({
                   doSave('admin_reject');
                 }
               }}
-              disabled={pending}
+              disabled={pending || !!advance}
               className="btn-ghost disabled:opacity-60"
             >
               Reject
             </button>
-            <button type="button" onClick={() => doSave('admin_save')} disabled={pending} className="btn-ghost disabled:opacity-60">
+            <button type="button" onClick={() => doSave('admin_save')} disabled={pending || !!advance} className="btn-ghost disabled:opacity-60">
               Save changes
             </button>
-            <button type="button" onClick={() => doSave('publish')} disabled={pending} className="btn-primary disabled:opacity-60">
+            {queueContext && (
+              <button
+                type="button"
+                onClick={doSkip}
+                disabled={pending || !!advance}
+                className="btn-ghost disabled:opacity-60"
+                title="Don't save, don't change status — just load the next recipe."
+              >
+                Skip
+              </button>
+            )}
+            <button type="button" onClick={() => doSave('publish')} disabled={pending || !!advance} className="btn-primary disabled:opacity-60">
               {pending ? 'Publishing…' : 'Approve and publish'}
             </button>
           </>

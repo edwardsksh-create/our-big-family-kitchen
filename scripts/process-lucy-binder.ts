@@ -357,10 +357,13 @@ async function main() {
         : photos.map((_, i) => i + 1);
       const recipePhotoPaths = photoIndices.map((n) => photos[n - 1].path);
 
-      // Tags
+      // Tags — narrow set; the queue's flag system reads from these.
+      // Provenance/category indicator is the "Lucy's recipe collection" tag;
+      // bulk-import and multi-recipe used to be applied here but Kate retired
+      // them (the collection tag + the notes_to_reviewer split-explanation
+      // already convey what the queue needs).
       const tagSlugs: { slug: string; name: string }[] = [
-        { slug: 'bulk-import', name: 'bulk import' },
-        { slug: 'bulk-lucy',   name: 'bulk: Lucy binder' },
+        { slug: 'lucys-recipe-collection', name: "Lucy's recipe collection" },
       ];
       const noInstructions = rec.instructions.length === 0;
       if (noInstructions) {
@@ -369,9 +372,6 @@ async function main() {
       }
       if (rec.overall_confidence === 'low') {
         tagSlugs.push({ slug: 'low-confidence', name: 'low confidence' });
-      }
-      if (rec.is_multiple_recipes) {
-        tagSlugs.push({ slug: 'multi-recipe', name: 'multi-recipe' });
       }
       if (isDup) {
         tagSlugs.push({ slug: 'possible-duplicate', name: 'possible duplicate' });
