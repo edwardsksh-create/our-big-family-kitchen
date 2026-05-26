@@ -32,9 +32,7 @@ export default async function SearchPage({
 
       {!query ? (
         <p className="mt-6 max-w-prose text-ink-soft">
-          Type a recipe name, an ingredient, or a contributor to find it.
-          Recipes from our families and from Aunt Laura’s 2003 cookbook are
-          both searched.
+          Results across the kitchen.
         </p>
       ) : (
         <Suspense fallback={<p className="mt-10 text-ink-soft">Searching…</p>}>
@@ -75,7 +73,7 @@ async function Results({ query }: { query: string }) {
   const nativeCount    = results.filter((r) => r.kind === 'native').length;
   const federatedCount = results.length - nativeCount;
   const summaryParts: string[] = [];
-  if (nativeCount > 0)    summaryParts.push(`${nativeCount} from our families`);
+  if (nativeCount > 0)    summaryParts.push(`${nativeCount} from this collection`);
   if (federatedCount > 0) summaryParts.push(`${federatedCount} from Aunt Laura’s 2003 cookbook`);
   const summary = summaryParts.join(' · ');
 

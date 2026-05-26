@@ -1,4 +1,4 @@
-import { PRIMARY_LINES, SECONDARY_LINES } from '@/lib/family-lines';
+import { FAMILY_LINES } from '@/lib/family-lines';
 import { FamilyLineCard } from '@/components/family-line-card';
 import { fetchMemberNamesByFamilyLine } from '@/lib/queries/contributors';
 
@@ -11,33 +11,18 @@ export default async function FamilyLinesIndexPage() {
 
   return (
     <div className="mx-auto max-w-page px-6 py-16">
-      <p className="label mb-3">Six lines, one table</p>
+      <p className="label mb-3">Family lines</p>
       <h1 className="font-serif text-4xl leading-tight text-ink md:text-5xl">
-        Family lines
+        Follow the recipes through the family.
       </h1>
       <p className="mt-4 max-w-prose text-lg text-ink-soft">
-        The branches of family that share this kitchen. Pick a line to see whose
-        recipes live there.
+        Find recipes connected to each branch, along with the people who helped
+        save, share, or remember them.
       </p>
 
       <section className="mt-12">
-        <p className="label mb-5">Primary lines</p>
-        <div className="grid gap-5 md:grid-cols-2">
-          {PRIMARY_LINES.map((line) => (
-            <FamilyLineCard
-              key={line.slug}
-              line={line}
-              members={membersByLine[line.slug] ?? []}
-              size="large"
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-12">
-        <p className="label mb-5">And more recently</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {SECONDARY_LINES.map((line) => (
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {FAMILY_LINES.map((line) => (
             <FamilyLineCard
               key={line.slug}
               line={line}

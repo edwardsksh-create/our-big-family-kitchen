@@ -21,7 +21,7 @@ export function FamilyLineCard({
         size === 'large' ? 'p-8' : 'p-5',
       )}
     >
-      <p className="label mb-2">{line.type === 'primary' ? 'Family line' : 'Recently joined'}</p>
+      <p className="label mb-2">Family line</p>
       <h3
         className={cn(
           'font-serif',

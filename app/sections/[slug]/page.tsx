@@ -49,8 +49,7 @@ export default async function SectionPage({ params }: { params: { slug: string }
       <div className="mx-auto max-w-page space-y-16 px-6 py-16">
         {native.length > 0 && (
           <section>
-            <p className="label">Recipes from our families</p>
-            <h2 className="font-serif mt-2 text-2xl text-ink">{native.length} {native.length === 1 ? 'recipe' : 'recipes'}</h2>
+            <h2 className="font-serif text-2xl text-ink">{native.length} {native.length === 1 ? 'recipe' : 'recipes'}</h2>
             <div className="mt-6">
               <NativeRecipeGrid recipes={native} />
             </div>
@@ -73,7 +72,7 @@ export default async function SectionPage({ params }: { params: { slug: string }
             <div className="mt-6 rounded-2xl border border-dashed border-rule p-12 text-center">
               <p className="font-serif italic text-2xl text-ink-soft">No recipes yet.</p>
               <p className="mt-2 text-sm text-ink-soft">
-                The first {section.name.toLowerCase()} recipes will appear here.
+                This section is waiting for its first recipe.
               </p>
             </div>
           </section>
