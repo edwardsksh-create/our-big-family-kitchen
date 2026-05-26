@@ -1,13 +1,13 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { Printer } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { sectionBySlug, type SectionColorToken } from '@/lib/sections';
-import { FAMILY_TEXT, familyLineBySlug } from '@/lib/family-lines';
 import { publicUrl } from '@/lib/storage/photos';
 import { publicStatusNotes } from '@/lib/recipes/status-notes';
-import { cn, slugify } from '@/lib/utils';
+import { slugify } from '@/lib/utils';
 
 export const revalidate = 60;
 
@@ -128,9 +128,6 @@ export default async function RecipePage({
   const flashNotAllowed = searchParams.msg === 'not_allowed';
 
   const statusNotes = publicStatusNotes(tags.map((t) => t.slug));
-  const familyLineColorClass = recipe.primary_family_line
-    ? FAMILY_TEXT[familyLineBySlug(recipe.primary_family_line.slug)?.color ?? 'burgundy']
-    : '';
   // Section display name is sourced from lib/sections.ts (canonical "and" copy)
   // rather than the DB row, which may still hold legacy "&" punctuation.
   const sectionDisplayName = recipe.section
@@ -211,17 +208,10 @@ export default async function RecipePage({
           href={`/recipes/${params.slug}/print`}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-serif italic text-ink-soft hover:text-primary"
+          className="inline-flex items-center gap-1.5 font-serif italic text-ink-soft hover:text-primary"
         >
-          Print recipe →
-        </a>
-        <a
-          href={`/recipes/${params.slug}/print?style=full`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-serif italic text-ink-soft hover:text-primary"
-        >
-          Print with story →
+          <Printer size={14} aria-hidden="true" />
+          Print recipe
         </a>
       </p>
 
@@ -244,38 +234,15 @@ export default async function RecipePage({
           )}
         </div>
 
-        {/* At a glance — col-2 row-1 on md+, stacked on mobile right after byline */}
+        {/* At a glance — col-2, anchored top, spans full grid height so col-1
+            content packs immediately under the byline (no blank gap). */}
         <aside
-          className="mt-6 rounded-2xl border border-rule bg-cream/30 px-5 py-4 md:col-start-2 md:row-start-1 md:mt-0"
+          className="mt-6 rounded-2xl border border-rule bg-cream/30 px-5 py-4 md:col-start-2 md:row-start-1 md:row-span-full md:mt-0 md:self-start"
           aria-label="At a glance"
           data-no-print
         >
           <p className="label mb-3 text-ink-soft">At a glance</p>
           <dl className="space-y-3 text-sm">
-            {recipe.primary_family_line && (
-              <div>
-                <dt className="label text-[10px] text-ink-soft/70">Family line</dt>
-                <dd className="mt-0.5">
-                  <Link
-                    href={`/family-lines/${recipe.primary_family_line.slug}`}
-                    className={cn('font-serif text-base hover:opacity-80', familyLineColorClass)}
-                  >
-                    {recipe.primary_family_line.name}
-                  </Link>
-                  {recipe.secondary_family_line && (
-                    <span className="text-ink-soft">
-                      {' · '}
-                      <Link
-                        href={`/family-lines/${recipe.secondary_family_line.slug}`}
-                        className="hover:text-primary"
-                      >
-                        {recipe.secondary_family_line.name}
-                      </Link>
-                    </span>
-                  )}
-                </dd>
-              </div>
-            )}
             {recipe.section && (
               <div>
                 <dt className="label text-[10px] text-ink-soft/70">Section</dt>
@@ -324,15 +291,6 @@ export default async function RecipePage({
                 </p>
               ))}
             </div>
-          )}
-
-          {recipe.story && (
-            <section className="mt-10">
-              <h2 className="font-serif text-2xl text-ink">Family note</h2>
-              <div className="prose-body mt-4 text-lg leading-relaxed text-ink-soft">
-                <p>{recipe.story}</p>
-              </div>
-            </section>
           )}
 
       <section className="recipe-ingredients mt-12">
@@ -407,6 +365,15 @@ export default async function RecipePage({
         </section>
       )}
 
+      {recipe.story && (
+        <section className="mt-16">
+          <h2 className="font-serif text-2xl text-ink">Family note</h2>
+          <div className="prose-body mt-4 text-lg leading-relaxed text-ink-soft">
+            <p>{recipe.story}</p>
+          </div>
+        </section>
+      )}
+
       {sourcePhotos.length > 0 && (
         <section className="mt-16">
           <h2 className="font-serif text-2xl text-ink">Original page</h2>
@@ -440,13 +407,6 @@ export default async function RecipePage({
           </ul>
         </section>
       )}
-
-      <section className="mt-16" data-no-print>
-        <h2 className="font-serif text-2xl text-ink">Family notes</h2>
-        <p className="mt-3 font-serif italic text-ink-soft">
-          Be the first to add a note — coming soon.
-        </p>
-      </section>
 
       <footer className="hairline mt-16 space-y-1 pt-6 text-xs italic text-ink-soft/70">
         {contributor && (
