@@ -1,11 +1,11 @@
-import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { notFound } from 'next/navigation';
-import { FAMILY_LINES, familyLineBySlug } from '@/lib/family-lines';
+import { FAMILY_LINES, familyLineBySlug, FAMILY_TEXT } from '@/lib/family-lines';
 import { fetchFederatedCount } from '@/lib/queries/federated';
 import { fetchPublishedRecipesForFamilyLine } from '@/lib/queries/recipes';
 import { fetchContributorsForFamilyLine } from '@/lib/queries/contributors';
 import { NativeRecipeGrid } from '@/components/native-recipe-card';
+import { cn } from '@/lib/utils';
 
 export const revalidate = 60;
 
@@ -21,7 +21,7 @@ export function generateStaticParams() {
 
 export function generateMetadata({ params }: { params: { slug: string } }) {
   const line = familyLineBySlug(params.slug);
-  return { title: line ? `The ${line.name} family` : 'Family line' };
+  return { title: line ? `${line.name} family recipes` : 'Family line' };
 }
 
 export default async function FamilyLinePage({ params }: { params: { slug: string } }) {
@@ -35,38 +35,48 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
     federation ? fetchFederatedCount() : Promise.resolve(0),
   ]);
 
+  const memberNames = [
+    ...contributors.primary.map((c) => c.name),
+    ...contributors.secondary.map((c) => c.name),
+  ];
+  const uniqueNames = [...new Set(memberNames)].sort();
+  const colorClass = FAMILY_TEXT[line.color];
+
   return (
     <div className="mx-auto max-w-page px-6 py-16">
-      <p className="label mb-3">{line.type === 'primary' ? 'Family line' : 'Recently joined'}</p>
-      <h1 className="font-serif text-5xl leading-tight text-ink md:text-6xl">
-        The {line.name} family
+      <p className="label mb-3">Family line</p>
+      <h1 className={cn('font-serif text-5xl leading-tight md:text-6xl', colorClass)}>
+        {line.name} family recipes
       </h1>
-      <p className="mt-6 max-w-prose text-lg text-ink-soft">{line.blurb}</p>
+      <p className="mt-6 max-w-prose text-lg text-ink-soft">
+        A collection of recipes connected to this branch of the family.
+      </p>
 
-      {/* Native recipes for this line */}
-      {native.length > 0 ? (
-        <section className="mt-16">
-          <p className="label">Recipes from our families</p>
-          <h2 className="font-serif mt-2 text-2xl text-ink">
-            {native.length} {native.length === 1 ? 'recipe' : 'recipes'}
-          </h2>
+      <p className="mt-8 max-w-prose text-base text-ink-soft">
+        <span className="label mr-2 text-ink-soft">People included here:</span>
+        {uniqueNames.length > 0 ? uniqueNames.join(', ') : 'Members coming soon.'}
+      </p>
+
+      {/* Recipes from this line */}
+      <section className="mt-16">
+        <h2 className={cn('font-serif text-3xl md:text-4xl', colorClass)}>
+          Recipes from this line
+        </h2>
+        {native.length > 0 ? (
           <div className="mt-6">
             <NativeRecipeGrid recipes={native} />
           </div>
-        </section>
-      ) : !federation && contributors.primary.length === 0 && contributors.secondary.length === 0 ? (
-        <section className="mt-16">
-          <h2 className="font-serif text-2xl text-ink">Recipes</h2>
+        ) : (
           <div className="mt-6 rounded-2xl border border-dashed border-rule p-12 text-center">
             <p className="font-serif italic text-2xl text-ink-soft">No recipes yet.</p>
             <p className="mt-2 text-sm text-ink-soft">
               The first {line.name} recipes will appear here as they’re added.
             </p>
           </div>
-        </section>
-      ) : null}
+        )}
+      </section>
 
-      {/* Federated banner */}
+      {/* Federated banner — Leusch only */}
       {federation && federatedCount > 0 && (
         <section className="mt-16">
           <a
@@ -89,57 +99,6 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
             </span>
             <span className="sr-only">Opens at leuschfamilyrecipes.com in a new tab.</span>
           </a>
-        </section>
-      )}
-
-      {/* Family members */}
-      {(contributors.primary.length > 0 || contributors.secondary.length > 0) && (
-        <section className="mt-16 space-y-10">
-          <header>
-            <p className="label">Family</p>
-            <h2 className="font-serif mt-2 text-2xl text-ink">Contributors</h2>
-          </header>
-
-          {contributors.primary.length > 0 && (
-            <div>
-              <p className="label text-ink-soft">Primary members</p>
-              <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {contributors.primary.map((c) => (
-                  <li key={c.id}>
-                    <Link
-                      href={`/contributors/${c.slug}`}
-                      className="block rounded-2xl border border-rule p-5 card-hover hover:border-ink"
-                    >
-                      <p className="font-serif text-lg text-ink">{c.name}</p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {contributors.secondary.length > 0 && (
-            <div>
-              <p className="label text-ink-soft">By marriage or descent</p>
-              <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {contributors.secondary.map((c) => (
-                  <li key={c.id}>
-                    <Link
-                      href={`/contributors/${c.slug}`}
-                      className="block rounded-2xl border border-rule p-5 card-hover hover:border-ink"
-                    >
-                      <p className="font-serif text-lg text-ink">{c.name}</p>
-                      {c.primary_family_line && (
-                        <p className="label mt-1 text-ink-soft">
-                          Primary: {c.primary_family_line.name}
-                        </p>
-                      )}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </section>
       )}
     </div>
