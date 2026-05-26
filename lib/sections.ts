@@ -80,18 +80,38 @@ export function sectionBySlug(slug: string): Section | undefined {
   return SECTIONS.find((s) => s.slug === slug);
 }
 
-// Body copy shown under each section heading. Missing slugs render no body.
+// Body copy shown under each section heading.
 export const SECTION_BLURBS: Record<string, string> = {
   'breakfast-and-brunch':
     'For holiday mornings, slow weekends, overnight guests, and the family recipes that somehow count as both breakfast and dinner.',
-  'desserts':
-    'Cakes, cookies, pies, holiday sweets, and the recipes people ask for before they leave the party.',
-  'soups-and-stews':
-    'Big pots, cold nights, sick days, Sunday simmering, and the soups that taste even better tomorrow.',
+  'drinks':
+    'For party pitchers, holiday punches, porch drinks, cozy mugs, and the family favorites people ask for by name.',
   'appetizers-and-snacks':
     'The things that disappear first: party bites, porch snacks, holiday nibbles, and recipes made for passing around.',
+  'soups-and-stews':
+    'Big pots, cold nights, sick days, Sunday simmering, and the soups that taste even better tomorrow.',
   'chili':
     'Family chili recipes, game-day pots, freezer favorites, and the versions everyone quietly thinks are the best.',
+  'salads-and-dressings':
+    'Fresh bowls, picnic sides, old-school salads, homemade dressings, and the recipes that somehow always end up on the table.',
+  'sandwiches':
+    'Lunches, leftovers, party trays, picnic staples, and the sandwiches people remember long after the meal.',
+  'pasta-and-noodles':
+    'Comforting casseroles, weeknight pastas, family sauces, noodle dishes, and the recipes that make a regular dinner feel like something more.',
+  'mains-chicken-turkey':
+    'Weeknight dinners, Sunday suppers, holiday birds, and the chicken and turkey recipes families make on repeat.',
+  'mains-beef-pork-lamb':
+    'Roasts, chops, meatballs, stews, grills, and the hearty main dishes that anchor the meal.',
+  'mains-fish-seafood':
+    'Seafood suppers, special-occasion dishes, coastal favorites, and the fish recipes worth remembering.',
+  'mains-vegetarian':
+    'Meatless mains, garden-grown dinners, hearty casseroles, and the vegetable-forward recipes that can hold the center of the plate.',
+  'sides-vegetables':
+    'The green things, roasted things, buttery things, and family vegetable sides that make the plate feel complete.',
   'sides-potatoes-rice-grains':
     'The supporting players that sometimes steal the whole meal.',
+  'breads':
+    'Biscuits, rolls, quick breads, holiday loaves, and the recipes people reach for before the basket is empty.',
+  'desserts':
+    'Cakes, cookies, pies, holiday sweets, and the recipes people ask for before they leave the party.',
 };
