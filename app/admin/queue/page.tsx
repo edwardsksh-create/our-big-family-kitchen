@@ -6,10 +6,26 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 export const metadata = { title: 'Admin queue' };
 export const dynamic   = 'force-dynamic';
 
-const FLAG_TAG_SLUGS = new Set(['needs-instructions']);
-const BULK_TAG_SLUG  = 'bulk-import';
+const FLAG_TAG_SLUGS = new Set([
+  'needs-instructions',
+  'low-confidence',
+  'multi-recipe',
+  'possible-duplicate',
+]);
+const BULK_TAG_SLUGS = new Set(['bulk-import']);
 
-export default async function AdminQueuePage() {
+type SortKey = 'newest' | 'confidence' | 'multi';
+const VALID_SORTS: SortKey[] = ['newest', 'confidence', 'multi'];
+
+function parseSort(raw: string | undefined): SortKey {
+  return raw && (VALID_SORTS as string[]).includes(raw) ? (raw as SortKey) : 'newest';
+}
+
+export default async function AdminQueuePage({
+  searchParams,
+}: {
+  searchParams: { sort?: string };
+}) {
   const session = await auth();
   if (!session?.user) redirect('/sign-in?next=/admin/queue');
   if (session.user.role !== 'admin') {
@@ -22,6 +38,7 @@ export default async function AdminQueuePage() {
     );
   }
 
+  const sort = parseSort(searchParams.sort);
   const db = supabaseAdmin();
   const { data } = await db
     .from('recipes')
@@ -31,8 +48,7 @@ export default async function AdminQueuePage() {
       section:sections!recipes_section_id_fkey ( name ),
       tags:recipe_tags ( tag:tags!recipe_tags_tag_id_fkey ( slug, name ) )
     `)
-    .eq('status', 'pending_review')
-    .order('created_at', { ascending: true });
+    .eq('status', 'pending_review');
 
   type Row = {
     id: string;
@@ -45,15 +61,83 @@ export default async function AdminQueuePage() {
   };
   const rows = (data ?? []) as unknown as Row[];
 
+  // In-JS sort. The default 'newest' shows newest first (DB query is unordered
+  // — we sort here to keep all sort variants in one place).
+  const rowsWithTags = rows.map((r) => {
+    const slugs = r.tags.map((t) => t.tag?.slug).filter(Boolean) as string[];
+    return {
+      ...r,
+      tagSlugs: slugs,
+      isLowConf:    slugs.includes('low-confidence'),
+      isMulti:      slugs.includes('multi-recipe'),
+      isDup:        slugs.includes('possible-duplicate'),
+    };
+  });
+
+  function sortRows<T extends typeof rowsWithTags[number]>(arr: T[]): T[] {
+    const newestFirst = (a: T, b: T) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    switch (sort) {
+      case 'confidence': {
+        return [...arr].sort((a, b) => {
+          const a1 = a.isLowConf ? 0 : 1;
+          const b1 = b.isLowConf ? 0 : 1;
+          if (a1 !== b1) return a1 - b1;
+          return newestFirst(a, b);
+        });
+      }
+      case 'multi': {
+        return [...arr].sort((a, b) => {
+          const a1 = a.isMulti ? 0 : 1;
+          const b1 = b.isMulti ? 0 : 1;
+          if (a1 !== b1) return a1 - b1;
+          return newestFirst(a, b);
+        });
+      }
+      case 'newest':
+      default:
+        return [...arr].sort(newestFirst);
+    }
+  }
+
+  const sortedRows = sortRows(rowsWithTags);
+
+  const sortOptions: { value: SortKey; label: string }[] = [
+    { value: 'newest',     label: 'Newest first' },
+    { value: 'confidence', label: 'Confidence: lowest first' },
+    { value: 'multi',      label: 'Multi-recipe candidates' },
+  ];
+
   return (
     <div className="mx-auto max-w-page px-6 py-16">
       <p className="label mb-3">Admin</p>
-      <h1 className="font-serif text-4xl text-ink md:text-5xl">Review queue</h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-4">
+        <h1 className="font-serif text-4xl text-ink md:text-5xl">Review queue</h1>
+        <form method="get" className="flex items-center gap-2">
+          <label htmlFor="sort" className="label">Sort</label>
+          <select
+            id="sort"
+            name="sort"
+            defaultValue={sort}
+            className="rounded-md border border-rule bg-paper px-3 py-1.5 font-sans text-sm text-ink shadow-sm"
+          >
+            {sortOptions.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            className="rounded-md border border-rule px-3 py-1.5 font-sans text-sm text-ink-soft hover:text-ink"
+          >
+            Apply
+          </button>
+        </form>
+      </div>
       <p className="mt-3 max-w-prose text-ink-soft">
         Recipes contributors have submitted for review. Open one to review and publish.
       </p>
 
-      {rows.length === 0 ? (
+      {sortedRows.length === 0 ? (
         <div className="mt-12 rounded-2xl border border-dashed border-rule p-12 text-center">
           <p className="font-serif italic text-2xl text-ink-soft">Queue is empty.</p>
           <p className="mt-2 text-sm text-ink-soft">Nothing waiting on you right now.</p>
@@ -71,10 +155,10 @@ export default async function AdminQueuePage() {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
-              const tagSlugs = r.tags.map((t) => t.tag?.slug).filter(Boolean) as string[];
+            {sortedRows.map((r) => {
+              const tagSlugs = r.tagSlugs;
               const flags = tagSlugs.filter((s) => FLAG_TAG_SLUGS.has(s));
-              const isBulk = tagSlugs.includes(BULK_TAG_SLUG);
+              const isBulk = tagSlugs.some((s) => BULK_TAG_SLUGS.has(s));
               return (
                 <tr key={r.id} className="border-b border-rule">
                   <td className="py-3 font-serif text-ink">

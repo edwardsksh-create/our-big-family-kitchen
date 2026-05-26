@@ -40,7 +40,12 @@ export type UploadKind = 'source' | 'dish';
 
 export type UploadTarget =
   | { kind: 'source'; sessionId: string }    // sources/_inbox/<session>/<uuid>.ext
-  | { kind: 'dish';   recipeId:  string };   // dishes/<recipeId>/<uuid>.ext
+  | { kind: 'dish';   recipeId:  string }    // dishes/<recipeId>/<uuid>.ext
+  // Bulk-imported originals, grouped under a named collection (e.g.
+  // 'bulk_lucy' for the Aunt Lucy binder). Photos live alongside a recipe
+  // they were attributed to, but they're filed in `sources/_<collection>/`
+  // rather than the dishes/ tree so we can sweep them like other intake.
+  | { kind: 'bulk';   collection: string; recipeId: string };
 
 function extensionFor(mime: string): string {
   switch (mime) {
@@ -70,6 +75,8 @@ export async function uploadPhoto(
   const storagePath =
     target.kind === 'source'
       ? `sources/_inbox/${target.sessionId}/${uuid}.${ext}`
+      : target.kind === 'bulk'
+      ? `sources/_${target.collection}/${target.recipeId}/${uuid}.${ext}`
       : `dishes/${target.recipeId}/${uuid}.${ext}`;
 
   const { error } = await client()
