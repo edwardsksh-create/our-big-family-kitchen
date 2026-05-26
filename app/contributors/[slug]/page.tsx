@@ -4,6 +4,8 @@ import { fetchContributorBySlug } from '@/lib/queries/contributors';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { NativeRecipeSummary } from '@/lib/queries/recipes';
 import { NativeRecipeGrid } from '@/components/native-recipe-card';
+import { SECTIONS, SECTION_HEADING_TEXT } from '@/lib/sections';
+import { cn } from '@/lib/utils';
 
 export const revalidate = 60;
 
@@ -97,10 +99,31 @@ export default async function ContributorPage({ params }: { params: { slug: stri
 
       <h2 className="font-serif mt-16 text-2xl text-ink">Recipes</h2>
       {recipes.length === 0 ? (
-        <p className="mt-3 font-serif italic text-ink-soft">None yet.</p>
+        <p className="mt-3 font-serif italic text-ink-soft">No recipes published yet.</p>
       ) : (
-        <div className="mt-6">
-          <NativeRecipeGrid recipes={recipes} />
+        <div className="mt-8 space-y-12">
+          {SECTIONS.map((section) => {
+            const inSection = recipes.filter((r) => r.section_slug === section.slug);
+            if (inSection.length === 0) return null;
+            return (
+              <section key={section.slug}>
+                <h3
+                  className={cn(
+                    'font-serif text-2xl md:text-3xl',
+                    SECTION_HEADING_TEXT[section.color],
+                  )}
+                >
+                  {section.name}
+                </h3>
+                <p className="label mt-1 text-ink-soft">
+                  {inSection.length} {inSection.length === 1 ? 'recipe' : 'recipes'}
+                </p>
+                <div className="mt-5">
+                  <NativeRecipeGrid recipes={inSection} />
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
     </div>
