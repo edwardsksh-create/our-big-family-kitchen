@@ -23,9 +23,12 @@ test.describe('public pages render', () => {
     await expect(page.getByText(/Aunt Laura/i).first()).toBeVisible();
   });
 
-  test('/sections/breakfast renders without error', async ({ page }) => {
+  test('/sections/breakfast redirects to breakfast-and-brunch and renders', async ({ page }) => {
     await page.goto('/sections/breakfast');
-    await expect(page.getByRole('heading', { name: 'Breakfast' })).toBeVisible();
+    await expect(page).toHaveURL(/\/sections\/breakfast-and-brunch$/);
+    await expect(
+      page.getByRole('heading', { name: 'Breakfast & Brunch', level: 1 }),
+    ).toBeVisible();
   });
 
   test('/contributors lists at least one contributor', async ({ page }) => {
