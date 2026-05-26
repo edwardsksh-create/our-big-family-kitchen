@@ -31,7 +31,7 @@ export const SECTIONS: Section[] = [
   { slug: 'sides-vegetables',           name: 'Sides: Vegetables',            color: 'gold'     },
   { slug: 'sides-potatoes-rice-grains', name: 'Sides: Potatoes, Rice and Grains', color: 'olive' },
   { slug: 'breads',                     name: 'Breads',                       color: 'sky'      },
-  { slug: 'desserts',                   name: 'Desserts',                     color: 'navy'     },
+  { slug: 'desserts',                   name: 'Desserts',                     color: 'mauve'    },
 ];
 
 // Old → new slug mapping used for /sections/[old-slug] redirects and the
