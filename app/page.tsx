@@ -18,7 +18,7 @@ export default async function HomePage() {
     <div className="mx-auto max-w-page px-6">
       {/* Hero */}
       <section className="grid gap-10 py-16 md:grid-cols-[1.1fr_1fr] md:items-center md:gap-16 md:py-24">
-        <div>
+        <div className="order-2 md:order-1">
           <p className="label mb-4">A living family cookbook</p>
           <h1 className="font-serif text-4xl leading-[1.05] tracking-tight text-ink md:text-6xl">
             The recipes we make, remember, and pass around.
@@ -34,10 +34,10 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="relative aspect-[5/6] overflow-hidden rounded-3xl border border-rule">
+        <div className="relative order-1 aspect-[7/5] overflow-hidden rounded-3xl border border-rule md:order-2">
           <Image
-            src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&w=1200&q=80"
-            alt="A warm kitchen counter at the start of dinner."
+            src="/hero/leusch-sisters-thanksgiving.jpg"
+            alt="Nancy, Laura, and Annie in the Quinn kitchen on Thanksgiving, 1980s."
             fill
             priority
             sizes="(min-width: 768px) 40vw, 100vw"
