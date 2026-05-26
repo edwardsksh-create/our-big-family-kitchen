@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { PRIMARY_LINES, SECONDARY_LINES } from '@/lib/family-lines';
+import { FAMILY_LINES } from '@/lib/family-lines';
 import { SECTIONS } from '@/lib/sections';
 import { FamilyLineCard } from '@/components/family-line-card';
 import { SectionCard } from '@/components/section-card';
@@ -49,37 +49,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Family lines */}
-      <section className="py-16 md:py-20">
-        <div className="mb-10 flex items-baseline justify-between">
-          <h2 className="font-serif text-3xl text-ink md:text-4xl">Browse by family line</h2>
-          <p className="label hidden md:block">Six lines, one table</p>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2">
-          {PRIMARY_LINES.map((line) => (
-            <FamilyLineCard
-              key={line.slug}
-              line={line}
-              members={membersByLine[line.slug] ?? []}
-              size="large"
-            />
-          ))}
-        </div>
-
-        <p className="label mt-12 mb-5">And more recently</p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {SECONDARY_LINES.map((line) => (
-            <FamilyLineCard
-              key={line.slug}
-              line={line}
-              members={membersByLine[line.slug] ?? []}
-              size="small"
-            />
-          ))}
-        </div>
-      </section>
-
       {/* Sections */}
       <section className="py-16 md:py-20">
         <div className="mb-10 flex items-baseline justify-between">
@@ -102,6 +71,24 @@ export default async function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Family lines — demoted below sections + latest */}
+      <section className="py-12 md:py-16">
+        <div className="mb-6 flex items-baseline justify-between">
+          <h2 className="font-serif text-2xl text-ink md:text-3xl">Browse by family</h2>
+          <p className="label hidden md:block">Six lines, one table</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {FAMILY_LINES.map((line) => (
+            <FamilyLineCard
+              key={line.slug}
+              line={line}
+              members={membersByLine[line.slug] ?? []}
+              size="small"
+            />
+          ))}
+        </div>
+      </section>
 
       {/* Federated archive — quieter reference, well below the hero */}
       {federatedCount > 0 && (
