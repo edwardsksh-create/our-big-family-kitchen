@@ -319,9 +319,12 @@ export default async function RecipePage({
           )}
 
           {recipe.story && (
-            <div className="prose-body mt-10 text-lg font-serif italic text-ink-soft">
-              <p>{recipe.story}</p>
-            </div>
+            <section className="mt-10">
+              <h2 className="font-serif text-2xl text-ink">Family note</h2>
+              <div className="prose-body mt-4 text-lg leading-relaxed text-ink-soft">
+                <p>{recipe.story}</p>
+              </div>
+            </section>
           )}
 
       <section className="recipe-ingredients mt-12">
