@@ -50,3 +50,8 @@ supabase/.temp
 # Private recipe sources (handwritten family recipes, copyrighted articles).
 # Stays on disk locally; never goes in git.
 import-queue/
+
+# One-off / scratch scripts under scripts/ — convention is leading underscore.
+# Used for direct DB pokes, data-fix backfills, ad-hoc inspections. Stays
+# local; permanent helpers should drop the underscore.
+scripts/_*
