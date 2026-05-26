@@ -213,7 +213,15 @@ export default async function RecipePage({
           rel="noopener noreferrer"
           className="font-serif italic text-ink-soft hover:text-primary"
         >
-          Print this recipe →
+          Print recipe →
+        </a>
+        <a
+          href={`/recipes/${params.slug}/print?style=full`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-serif italic text-ink-soft hover:text-primary"
+        >
+          Print with story →
         </a>
       </p>
 
