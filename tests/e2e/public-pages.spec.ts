@@ -27,7 +27,7 @@ test.describe('public pages render', () => {
     await page.goto('/sections/breakfast');
     await expect(page).toHaveURL(/\/sections\/breakfast-and-brunch$/);
     await expect(
-      page.getByRole('heading', { name: 'Breakfast & Brunch', level: 1 }),
+      page.getByRole('heading', { name: 'Breakfast and Brunch', level: 1 }),
     ).toBeVisible();
   });
 
