@@ -1,14 +1,18 @@
 import Link from 'next/link';
-import type { FamilyLine } from '@/lib/family-lines';
+import { type FamilyLine, FAMILY_TEXT } from '@/lib/family-lines';
 import { cn } from '@/lib/utils';
 
 export function FamilyLineCard({
   line,
+  members,
   size = 'large',
 }: {
   line: FamilyLine;
+  members?: string[];
   size?: 'large' | 'small';
 }) {
+  const colorClass = FAMILY_TEXT[line.color];
+
   return (
     <Link
       href={`/family-lines/${line.slug}`}
@@ -20,20 +24,35 @@ export function FamilyLineCard({
       <p className="label mb-2">{line.type === 'primary' ? 'Family line' : 'Recently joined'}</p>
       <h3
         className={cn(
-          'font-serif text-ink',
+          'font-serif',
+          colorClass,
           size === 'large' ? 'text-3xl md:text-4xl' : 'text-2xl',
         )}
       >
         {line.name}
       </h3>
-      <p
-        className={cn(
-          'mt-3 text-ink-soft',
-          size === 'large' ? 'text-base' : 'text-sm',
-        )}
-      >
-        {line.blurb}
-      </p>
+
+      {members && members.length > 0 ? (
+        <p
+          className={cn(
+            'mt-3',
+            colorClass,
+            size === 'large' ? 'text-base' : 'text-sm',
+          )}
+        >
+          {members.join(', ')}
+        </p>
+      ) : (
+        <p
+          className={cn(
+            'mt-3 text-ink-soft italic',
+            size === 'large' ? 'text-base' : 'text-sm',
+          )}
+        >
+          No members yet
+        </p>
+      )}
+
       <p className="mt-6 label text-primary transition-transform duration-300 group-hover:translate-x-1">
         Browse →
       </p>

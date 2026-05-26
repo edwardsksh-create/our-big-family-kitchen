@@ -7,13 +7,15 @@ import { SectionCard } from '@/components/section-card';
 import { NativeRecipeGrid } from '@/components/native-recipe-card';
 import { fetchFederatedCount } from '@/lib/queries/federated';
 import { fetchRecentPublishedRecipes } from '@/lib/queries/recipes';
+import { fetchMemberNamesByFamilyLine } from '@/lib/queries/contributors';
 
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [federatedCount, recent] = await Promise.all([
+  const [federatedCount, recent, membersByLine] = await Promise.all([
     fetchFederatedCount(),
     fetchRecentPublishedRecipes(6),
+    fetchMemberNamesByFamilyLine(),
   ]);
 
   return (
@@ -30,8 +32,8 @@ export default async function HomePage() {
             and the new weeknight dinners can sit on the same shelf.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/family-lines/leusch" className="btn-primary">Browse Aunt Laura’s cookbook</Link>
-            <Link href="/recipes"             className="btn-ghost">All recipes</Link>
+            <Link href="/recipes"      className="btn-primary">All recipes</Link>
+            <Link href="/family-lines" className="btn-ghost">Browse by family</Link>
           </div>
         </div>
 
@@ -47,44 +49,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Latest contributions — moved up to surface new native recipes */}
-      <section className="py-16 md:py-20">
-        <h2 className="font-serif text-3xl text-ink md:text-4xl">Latest contributions</h2>
-
-        {recent.length > 0 ? (
-          <div className="mt-8 space-y-10">
-            <NativeRecipeGrid recipes={recent} />
-            <div className="rounded-2xl border border-rule bg-paper p-8 md:p-10">
-              <p className="font-serif italic text-primary">Plus, from Aunt Laura’s 2003 cookbook</p>
-              <p className="mt-2 max-w-prose text-ink-soft">
-                {federatedCount} more recipes from the Leusch archive — federated from{' '}
-                leuschfamilyrecipes.com.
-              </p>
-              <Link href="/family-lines/leusch" className="btn-primary mt-5 inline-flex">
-                Browse Aunt Laura’s cookbook →
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-10 rounded-2xl border border-rule bg-paper p-10 md:p-14">
-            <p className="font-serif italic text-primary">From Aunt Laura’s 2003 cookbook</p>
-            <p className="mt-3 font-serif text-2xl leading-snug text-ink md:text-3xl">
-              {federatedCount} {federatedCount === 1 ? 'recipe is' : 'recipes are'} here to start.
-            </p>
-            <p className="mt-3 max-w-prose text-ink-soft">
-              The Leusch family cookbook — federated from leuschfamilyrecipes.com — sits at the heart
-              of this kitchen. New recipes from the Sundys, Edwardses, Hongs, Quinns, and Branions
-              will arrive here too.
-            </p>
-            <div className="mt-7">
-              <Link href="/family-lines/leusch" className="btn-primary">
-                Browse Aunt Laura’s cookbook →
-              </Link>
-            </div>
-          </div>
-        )}
-      </section>
-
       {/* Family lines */}
       <section className="py-16 md:py-20">
         <div className="mb-10 flex items-baseline justify-between">
@@ -94,14 +58,24 @@ export default async function HomePage() {
 
         <div className="grid gap-5 md:grid-cols-2">
           {PRIMARY_LINES.map((line) => (
-            <FamilyLineCard key={line.slug} line={line} size="large" />
+            <FamilyLineCard
+              key={line.slug}
+              line={line}
+              members={membersByLine[line.slug] ?? []}
+              size="large"
+            />
           ))}
         </div>
 
         <p className="label mt-12 mb-5">And more recently</p>
         <div className="grid gap-4 sm:grid-cols-2">
           {SECONDARY_LINES.map((line) => (
-            <FamilyLineCard key={line.slug} line={line} size="small" />
+            <FamilyLineCard
+              key={line.slug}
+              line={line}
+              members={membersByLine[line.slug] ?? []}
+              size="small"
+            />
           ))}
         </div>
       </section>
@@ -118,6 +92,32 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      {/* Latest contributions */}
+      {recent.length > 0 && (
+        <section className="py-16 md:py-20">
+          <h2 className="font-serif text-3xl text-ink md:text-4xl">Latest contributions</h2>
+          <div className="mt-8">
+            <NativeRecipeGrid recipes={recent} />
+          </div>
+        </section>
+      )}
+
+      {/* Federated archive — quieter reference, well below the hero */}
+      {federatedCount > 0 && (
+        <section className="pb-20 md:pb-24">
+          <div className="rounded-2xl border border-rule bg-paper p-6 md:p-8">
+            <p className="font-serif italic text-primary">From the archive</p>
+            <p className="mt-2 max-w-prose text-ink-soft">
+              {federatedCount} more recipes from the Leusch archive — federated from{' '}
+              leuschfamilyrecipes.com.
+            </p>
+            <Link href="/family-lines/leusch" className="mt-4 inline-flex label text-primary hover:underline">
+              Browse Aunt Laura’s original collection of family recipes →
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

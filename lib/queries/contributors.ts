@@ -78,3 +78,19 @@ export async function fetchContributorsForFamilyLine(
     secondary: all.filter((c) => c.secondary_family_line?.slug === familyLineSlug),
   };
 }
+
+// Map of family-line slug → contributor display names (primary + secondary,
+// deduplicated, alphabetized). Used by home-page family-line cards.
+export async function fetchMemberNamesByFamilyLine(): Promise<Record<string, string[]>> {
+  const all = await fetchAllContributors();
+  const bySlug: Record<string, Set<string>> = {};
+  for (const c of all) {
+    for (const fl of [c.primary_family_line, c.secondary_family_line]) {
+      if (!fl) continue;
+      (bySlug[fl.slug] ??= new Set()).add(c.name);
+    }
+  }
+  return Object.fromEntries(
+    Object.entries(bySlug).map(([slug, names]) => [slug, [...names].sort()]),
+  );
+}
