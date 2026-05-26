@@ -399,35 +399,38 @@ export default async function RecipePage({
         </section>
       )}
 
-      {/* Collapsible "View original" section — quiet styling so casual readers
-          stay with the typed version; family who want the handwriting can tap. */}
       {sourcePhotos.length > 0 && (
-        <details className="mt-12 group" data-no-print>
-          <summary className="cursor-pointer list-none font-serif italic text-sm text-ink-soft hover:text-primary">
-            View original
-            <span className="ml-1 transition-transform group-open:rotate-90 inline-block">→</span>
-          </summary>
-          <div className="mt-4 space-y-3">
-            <p className="text-sm text-ink-soft">The original recipe ({sourcePhotos.length} {sourcePhotos.length === 1 ? 'photo' : 'photos'}). Tap to open full size.</p>
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {sourcePhotos.map((p, i) => (
-                <li key={p.id}>
-                  <a href={p.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-2xl border border-rule">
-                    <div className="relative aspect-[4/5] w-full">
-                      <Image
-                        src={p.url}
-                        alt={p.caption || `Source photo ${i + 1}`}
-                        fill
-                        sizes="(min-width: 1024px) 30vw, 50vw"
-                        className="object-cover"
-                      />
-                    </div>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </details>
+        <section className="mt-16">
+          <h2 className="font-serif text-2xl text-ink">Original page</h2>
+          <p className="mt-2 text-ink-soft">
+            {tags.some((t) => t.slug === 'lucys-recipe-collection')
+              ? "Photographed from Lucy's collection."
+              : 'Photographed from the original.'}
+          </p>
+          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {sourcePhotos.map((p, i) => (
+              <li key={p.id}>
+                <a
+                  href={p.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block overflow-hidden rounded-2xl border border-rule"
+                  title="Open full size"
+                >
+                  <div className="relative aspect-[4/5] w-full">
+                    <Image
+                      src={p.url}
+                      alt={p.caption || `Original page ${i + 1}`}
+                      fill
+                      sizes="(min-width: 1024px) 30vw, 50vw"
+                      className="object-cover"
+                    />
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <footer className="hairline mt-16 space-y-1 pt-6 text-sm italic text-ink-soft">
