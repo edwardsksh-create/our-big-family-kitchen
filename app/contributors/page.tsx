@@ -10,9 +10,11 @@ export default async function ContributorsPage() {
   return (
     <div className="mx-auto max-w-page px-6 py-16">
       <p className="label mb-3">Contributors</p>
-      <h1 className="font-serif text-4xl text-ink md:text-5xl">The cooks</h1>
+      <h1 className="font-serif text-4xl text-ink md:text-5xl">The cooks, keepers, and rememberers.</h1>
       <p className="mt-3 max-w-prose text-ink-soft">
-        Everyone who has cooked, written, photographed, or remembered.
+        Some people cooked the recipes. Some wrote them down. Some scanned,
+        photographed, adapted, or simply remembered where they came from. They
+        all belong here.
       </p>
 
       <ul className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -31,9 +33,6 @@ export default async function ContributorsPage() {
                   )}
                 </p>
               )}
-              <p className="label mt-2">
-                {c.role}{!c.joined_at && c.role === 'viewer' && ' · stub'}
-              </p>
               {c.bio && <p className="mt-3 text-sm text-ink-soft">{c.bio}</p>}
             </Link>
           </li>

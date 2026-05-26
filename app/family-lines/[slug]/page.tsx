@@ -111,9 +111,6 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
                       className="block rounded-2xl border border-rule p-5 card-hover hover:border-ink"
                     >
                       <p className="font-serif text-lg text-ink">{c.name}</p>
-                      <p className="label mt-1 text-ink-soft">
-                        {c.role}{!c.joined_at && ' · stub'}
-                      </p>
                     </Link>
                   </li>
                 ))}
@@ -132,10 +129,11 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
                       className="block rounded-2xl border border-rule p-5 card-hover hover:border-ink"
                     >
                       <p className="font-serif text-lg text-ink">{c.name}</p>
-                      <p className="label mt-1 text-ink-soft">
-                        {c.role}{!c.joined_at && ' · stub'}
-                        {c.primary_family_line && ` · primary: ${c.primary_family_line.name}`}
-                      </p>
+                      {c.primary_family_line && (
+                        <p className="label mt-1 text-ink-soft">
+                          Primary: {c.primary_family_line.name}
+                        </p>
+                      )}
                     </Link>
                   </li>
                 ))}

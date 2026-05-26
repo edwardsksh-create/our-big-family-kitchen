@@ -79,3 +79,19 @@ export const SECTION_TEXT: Record<SectionColorToken, string> = {
 export function sectionBySlug(slug: string): Section | undefined {
   return SECTIONS.find((s) => s.slug === slug);
 }
+
+// Body copy shown under each section heading. Missing slugs render no body.
+export const SECTION_BLURBS: Record<string, string> = {
+  'breakfast-and-brunch':
+    'For holiday mornings, slow weekends, overnight guests, and the family recipes that somehow count as both breakfast and dinner.',
+  'desserts':
+    'Cakes, cookies, pies, holiday sweets, and the recipes people ask for before they leave the party.',
+  'soups-and-stews':
+    'Big pots, cold nights, sick days, Sunday simmering, and the soups that taste even better tomorrow.',
+  'appetizers-and-snacks':
+    'The things that disappear first: party bites, porch snacks, holiday nibbles, and recipes made for passing around.',
+  'chili':
+    'Family chili recipes, game-day pots, freezer favorites, and the versions everyone quietly thinks are the best.',
+  'sides-potatoes-rice-grains':
+    'The supporting players that sometimes steal the whole meal.',
+};

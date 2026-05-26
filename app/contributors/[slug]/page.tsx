@@ -58,16 +58,6 @@ export default async function ContributorPage({ params }: { params: { slug: stri
       <p className="label mb-3">Contributor</p>
       <h1 className="font-serif text-4xl text-ink md:text-5xl">{contributor.name}</h1>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-        <span className="label">{contributor.role}</span>
-        {!contributor.joined_at && (
-          <>
-            <span className="text-ink-soft">·</span>
-            <span className="text-ink-soft italic">Stub — not yet signed up</span>
-          </>
-        )}
-      </div>
-
       {hasLineage && (
         <dl className="mt-6 grid gap-y-2 text-sm sm:grid-cols-[140px_1fr]">
           {contributor.primary_family_line && (
@@ -102,11 +92,7 @@ export default async function ContributorPage({ params }: { params: { slug: stri
       {contributor.bio ? (
         <div className="prose-body mt-8 text-ink-soft">{contributor.bio}</div>
       ) : (
-        <p className="mt-8 font-serif italic text-ink-soft">
-          {contributor.joined_at
-            ? 'A bio is on the way.'
-            : 'A stub profile — recipes can be attributed here even before they sign up.'}
-        </p>
+        <p className="mt-8 font-serif italic text-ink-soft">A bio is on the way.</p>
       )}
 
       <h2 className="font-serif mt-16 text-2xl text-ink">Recipes</h2>

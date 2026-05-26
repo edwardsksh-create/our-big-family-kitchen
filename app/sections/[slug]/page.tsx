@@ -1,5 +1,5 @@
 import { notFound, redirect } from 'next/navigation';
-import { SECTIONS, sectionBySlug, SECTION_BG, SECTION_TEXT, LEGACY_SECTION_REDIRECTS } from '@/lib/sections';
+import { SECTIONS, sectionBySlug, SECTION_BG, SECTION_TEXT, SECTION_BLURBS, LEGACY_SECTION_REDIRECTS } from '@/lib/sections';
 import { cn } from '@/lib/utils';
 import { fetchFederatedRecipesForSection } from '@/lib/queries/federated';
 import { fetchPublishedRecipesForSection } from '@/lib/queries/recipes';
@@ -35,6 +35,14 @@ export default async function SectionPage({ params }: { params: { slug: string }
         <div className="mx-auto max-w-page px-6 py-20">
           <p className="label" style={{ color: 'inherit', opacity: 0.7 }}>Section</p>
           <h1 className="font-serif mt-3 text-5xl leading-tight md:text-6xl">{section.name}</h1>
+          {SECTION_BLURBS[section.slug] && (
+            <p
+              className="mt-6 max-w-prose text-lg"
+              style={{ color: 'inherit', opacity: 0.88 }}
+            >
+              {SECTION_BLURBS[section.slug]}
+            </p>
+          )}
         </div>
       </header>
 
