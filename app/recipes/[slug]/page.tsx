@@ -441,6 +441,13 @@ export default async function RecipePage({
         </section>
       )}
 
+      <section className="mt-16" data-no-print>
+        <h2 className="font-serif text-2xl text-ink">Family notes</h2>
+        <p className="mt-3 font-serif italic text-ink-soft">
+          Be the first to add a note — coming soon.
+        </p>
+      </section>
+
       <footer className="hairline mt-16 space-y-1 pt-6 text-xs italic text-ink-soft/70">
         {contributor && (
           <p>
