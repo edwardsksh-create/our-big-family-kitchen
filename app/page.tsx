@@ -1,21 +1,17 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { FAMILY_LINES } from '@/lib/family-lines';
 import { SECTIONS } from '@/lib/sections';
-import { FamilyLineCard } from '@/components/family-line-card';
 import { SectionCard } from '@/components/section-card';
 import { NativeRecipeGrid } from '@/components/native-recipe-card';
 import { fetchFederatedCount } from '@/lib/queries/federated';
 import { fetchRecentPublishedRecipes } from '@/lib/queries/recipes';
-import { fetchMemberNamesByFamilyLine } from '@/lib/queries/contributors';
 
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [federatedCount, recent, membersByLine] = await Promise.all([
+  const [federatedCount, recent] = await Promise.all([
     fetchFederatedCount(),
     fetchRecentPublishedRecipes(6),
-    fetchMemberNamesByFamilyLine(),
   ]);
 
   return (
@@ -23,17 +19,18 @@ export default async function HomePage() {
       {/* Hero */}
       <section className="grid gap-10 py-16 md:grid-cols-[1.1fr_1fr] md:items-center md:gap-16 md:py-24">
         <div>
-          <p className="label mb-4">A living cookbook</p>
+          <p className="label mb-4">A living family cookbook</p>
           <h1 className="font-serif text-4xl leading-[1.05] tracking-tight text-ink md:text-6xl">
-            Recipes from our families, <span className="warm text-primary">kept and growing</span>.
+            The recipes we make, remember, and pass around.
           </h1>
           <p className="mt-6 max-w-prose text-lg text-ink-soft">
-            Six family lines. One shared kitchen. A place where the old casseroles
-            and the new weeknight dinners can sit on the same shelf.
+            Many family lines, one shared recipe collection. This is where the old
+            casseroles, handwritten cards, holiday staples, weeknight saves, and
+            “wait, who has that recipe?” favorites can live side by side.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/recipes"  className="btn-primary">All recipes</Link>
-            <Link href="/sections" className="btn-ghost">Browse sections</Link>
+            <Link href="/recipes"  className="btn-primary">Browse recipes</Link>
+            <Link href="/sections" className="btn-ghost">Explore by recipe type</Link>
           </div>
         </div>
 
@@ -49,58 +46,43 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Sections */}
+      {/* Browse by recipe type */}
       <section className="py-16 md:py-20">
-        <div className="mb-10 flex items-baseline justify-between">
-          <h2 className="font-serif text-3xl text-ink md:text-4xl">Browse by section</h2>
-          <p className="label hidden md:block">A meal-day in 16 colors</p>
-        </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        <h2 className="font-serif text-3xl text-ink md:text-4xl">Browse by recipe type</h2>
+        <p className="mt-3 max-w-prose text-ink-soft">
+          Find what fits the moment: breakfast, dinner, dessert, sides, snacks, and more.
+        </p>
+        <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {SECTIONS.map((section) => (
             <SectionCard key={section.slug} section={section} />
           ))}
         </div>
       </section>
 
-      {/* Latest contributions */}
+      {/* Recently added */}
       {recent.length > 0 && (
         <section className="py-16 md:py-20">
-          <h2 className="font-serif text-3xl text-ink md:text-4xl">Latest contributions</h2>
+          <h2 className="font-serif text-3xl text-ink md:text-4xl">Recently added</h2>
+          <p className="mt-3 max-w-prose text-ink-soft">
+            The newest recipes, notes, and remembered favorites added to the kitchen.
+          </p>
           <div className="mt-8">
             <NativeRecipeGrid recipes={recent} />
           </div>
         </section>
       )}
 
-      {/* Family lines — demoted below sections + latest */}
-      <section className="py-12 md:py-16">
-        <div className="mb-6 flex items-baseline justify-between">
-          <h2 className="font-serif text-2xl text-ink md:text-3xl">Browse by family</h2>
-          <p className="label hidden md:block">Six lines, one table</p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {FAMILY_LINES.map((line) => (
-            <FamilyLineCard
-              key={line.slug}
-              line={line}
-              members={membersByLine[line.slug] ?? []}
-              size="small"
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* Federated archive — quieter reference, well below the hero */}
+      {/* From Aunt Laura’s archive */}
       {federatedCount > 0 && (
         <section className="pb-20 md:pb-24">
           <div className="rounded-2xl border border-rule bg-paper p-6 md:p-8">
-            <p className="font-serif italic text-primary">From the archive</p>
-            <p className="mt-2 max-w-prose text-ink-soft">
-              {federatedCount} more recipes from the Leusch archive — federated from{' '}
-              leuschfamilyrecipes.com.
+            <h2 className="font-serif text-2xl text-ink md:text-3xl">From Aunt Laura’s archive</h2>
+            <p className="mt-3 max-w-prose text-ink-soft">
+              The original Leusch family cookbook lives at leuschfamilyrecipes.com,
+              with {federatedCount} preserved recipes, scans, and stories.
             </p>
-            <Link href="/family-lines/leusch" className="mt-4 inline-flex label text-primary hover:underline">
-              Browse Aunt Laura’s original collection of family recipes →
+            <Link href="/family-lines/leusch" className="btn-ghost mt-5 inline-flex">
+              Browse Aunt Laura’s original collection
             </Link>
           </div>
         </section>
