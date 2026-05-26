@@ -35,7 +35,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           body: JSON.stringify({
             from,
             to:      identifier,
-            subject: 'Sign in to Our Big Family Kitchen',
+            subject: 'Your Magic Sign-In Link',
             html:    magicLinkHtml({ url, host }),
             text:    magicLinkText({ url, host }),
           }),
