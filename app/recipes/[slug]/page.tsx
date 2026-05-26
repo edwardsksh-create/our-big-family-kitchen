@@ -433,16 +433,16 @@ export default async function RecipePage({
         </section>
       )}
 
-      <footer className="hairline mt-16 space-y-1 pt-6 text-sm italic text-ink-soft">
+      <footer className="hairline mt-16 space-y-1 pt-6 text-xs italic text-ink-soft/70">
         {contributor && (
           <p>
-            Added by{' '}
+            Saved by{' '}
             {contributorSlug ? (
-              <Link href={`/contributors/${contributorSlug}`} className="not-italic font-serif hover:text-primary">
+              <Link href={`/contributors/${contributorSlug}`} className="not-italic hover:text-primary">
                 {contributor.name || contributor.email.split('@')[0]}
               </Link>
             ) : (
-              <span className="not-italic font-serif">
+              <span className="not-italic">
                 {contributor.name || contributor.email.split('@')[0]}
               </span>
             )}
@@ -456,11 +456,11 @@ export default async function RecipePage({
           <p>
             Last edited by{' '}
             {lastEditorSlug ? (
-              <Link href={`/contributors/${lastEditorSlug}`} className="not-italic font-serif hover:text-primary">
+              <Link href={`/contributors/${lastEditorSlug}`} className="not-italic hover:text-primary">
                 {lastEditedBy.name || lastEditedBy.email.split('@')[0]}
               </Link>
             ) : (
-              <span className="not-italic font-serif">
+              <span className="not-italic">
                 {lastEditedBy.name || lastEditedBy.email.split('@')[0]}
               </span>
             )}
