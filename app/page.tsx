@@ -32,8 +32,8 @@ export default async function HomePage() {
             and the new weeknight dinners can sit on the same shelf.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/recipes"      className="btn-primary">All recipes</Link>
-            <Link href="/family-lines" className="btn-ghost">Browse by family</Link>
+            <Link href="/recipes"  className="btn-primary">All recipes</Link>
+            <Link href="/sections" className="btn-ghost">Browse sections</Link>
           </div>
         </div>
 
