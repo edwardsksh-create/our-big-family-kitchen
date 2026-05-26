@@ -16,22 +16,22 @@ export type Section = {
 };
 
 export const SECTIONS: Section[] = [
-  { slug: 'breakfast-and-brunch',       name: 'Breakfast and Brunch',         color: 'blush'    },
-  { slug: 'drinks',                     name: 'Drinks',                       color: 'gold'     },
+  { slug: 'breakfast-and-brunch',       name: 'Breakfast and Brunch',         color: 'burgundy' },
+  { slug: 'drinks',                     name: 'Drinks',                       color: 'blush'    },
   { slug: 'appetizers-and-snacks',      name: 'Appetizers and Snacks',        color: 'rose'     },
-  { slug: 'soups-and-stews',            name: 'Soups and Stews',              color: 'burgundy' },
-  { slug: 'chili',                      name: 'Chili',                        color: 'mauve'    },
-  { slug: 'salads-and-dressings',       name: 'Salads and Dressings',         color: 'olive'    },
-  { slug: 'sandwiches',                 name: 'Sandwiches',                   color: 'sky'      },
-  { slug: 'pasta-and-noodles',          name: 'Pasta and Noodles',            color: 'blush'    },
-  { slug: 'mains-chicken-turkey',       name: 'Mains: Chicken and Turkey',    color: 'rose'     },
+  { slug: 'soups-and-stews',            name: 'Soups and Stews',              color: 'gold'     },
+  { slug: 'chili',                      name: 'Chili',                        color: 'olive'    },
+  { slug: 'salads-and-dressings',       name: 'Salads and Dressings',         color: 'sky'      },
+  { slug: 'sandwiches',                 name: 'Sandwiches',                   color: 'navy'     },
+  { slug: 'pasta-and-noodles',          name: 'Pasta and Noodles',            color: 'slate'    },
+  { slug: 'mains-chicken-turkey',       name: 'Mains: Chicken and Turkey',    color: 'mauve'    },
   { slug: 'mains-beef-pork-lamb',       name: 'Mains: Beef, Pork and Lamb',   color: 'burgundy' },
-  { slug: 'mains-fish-seafood',         name: 'Mains: Fish and Seafood',      color: 'slate'    },
-  { slug: 'mains-vegetarian',           name: 'Mains: Vegetarian',            color: 'olive'    },
-  { slug: 'sides-vegetables',           name: 'Sides: Vegetables',            color: 'navy'     },
-  { slug: 'sides-potatoes-rice-grains', name: 'Sides: Potatoes, Rice and Grains', color: 'slate' },
-  { slug: 'breads',                     name: 'Breads',                       color: 'gold'     },
-  { slug: 'desserts',                   name: 'Desserts',                     color: 'mauve'    },
+  { slug: 'mains-fish-seafood',         name: 'Mains: Fish and Seafood',      color: 'blush'    },
+  { slug: 'mains-vegetarian',           name: 'Mains: Vegetarian',            color: 'rose'     },
+  { slug: 'sides-vegetables',           name: 'Sides: Vegetables',            color: 'gold'     },
+  { slug: 'sides-potatoes-rice-grains', name: 'Sides: Potatoes, Rice and Grains', color: 'olive' },
+  { slug: 'breads',                     name: 'Breads',                       color: 'sky'      },
+  { slug: 'desserts',                   name: 'Desserts',                     color: 'navy'     },
 ];
 
 // Old → new slug mapping used for /sections/[old-slug] redirects and the
