@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { SECTION_BG, SECTION_TEXT, type SectionColorToken } from '@/lib/sections';
+import { sectionBySlug, type SectionColorToken } from '@/lib/sections';
+import { FAMILY_TEXT, familyLineBySlug } from '@/lib/family-lines';
 import { publicUrl } from '@/lib/storage/photos';
 import { publicStatusNotes } from '@/lib/recipes/status-notes';
 import { cn, slugify } from '@/lib/utils';
@@ -126,8 +127,18 @@ export default async function RecipePage({
 
   const flashNotAllowed = searchParams.msg === 'not_allowed';
 
+  const statusNotes = publicStatusNotes(tags.map((t) => t.slug));
+  const familyLineColorClass = recipe.primary_family_line
+    ? FAMILY_TEXT[familyLineBySlug(recipe.primary_family_line.slug)?.color ?? 'burgundy']
+    : '';
+  // Section display name is sourced from lib/sections.ts (canonical "and" copy)
+  // rather than the DB row, which may still hold legacy "&" punctuation.
+  const sectionDisplayName = recipe.section
+    ? (sectionBySlug(recipe.section.slug)?.name ?? recipe.section.name)
+    : null;
+
   return (
-    <article className="mx-auto max-w-prose px-6 py-12">
+    <article className="mx-auto max-w-page px-6 py-12">
       {flashNotAllowed && (
         <div className="recipe-flash mb-8 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
           <span className="font-serif italic">
@@ -181,7 +192,7 @@ export default async function RecipePage({
         )}
         {recipe.section && (
           <Link href={`/sections/${recipe.section.slug}`} className="hover:text-primary">
-            {recipe.section.name}
+            {sectionDisplayName}
           </Link>
         )}
       </nav>
@@ -208,63 +219,110 @@ export default async function RecipePage({
 
       <h1 className="font-serif text-4xl leading-tight text-primary md:text-5xl">{recipe.title}</h1>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-ink-soft">
-        {contributor && contributorSlug && (
-          <Link href={`/contributors/${contributorSlug}`} className="hover:text-primary">
-            By {contributor.name || contributor.email.split('@')[0]}
-          </Link>
-        )}
-        {recipe.originally_from && (
-          <>
-            <span>·</span>
-            <span className="italic">Originally from {recipe.originally_from}</span>
-          </>
-        )}
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        {recipe.primary_family_line && (
-          <span className="label rounded-full border border-rule px-3 py-1">{recipe.primary_family_line.name}</span>
-        )}
-        {recipe.secondary_family_line && (
-          <span className="label rounded-full border border-rule px-3 py-1">{recipe.secondary_family_line.name}</span>
-        )}
-        {recipe.section && (
-          <span
-            className={cn(
-              'label rounded-full px-3 py-1',
-              SECTION_BG[recipe.section.color_token],
-              SECTION_TEXT[recipe.section.color_token],
-            )}
-            style={{ color: 'inherit', opacity: 0.95 }}
-          >
-            {recipe.section.name}
-          </span>
-        )}
-      </div>
-
-      {(() => {
-        const notes = publicStatusNotes(tags.map((t) => t.slug));
-        if (notes.length === 0) return null;
-        return (
-          <div className="mt-6 space-y-3" data-no-print>
-            {notes.map((note, i) => (
-              <p
-                key={i}
-                className="rounded-xl border border-rule bg-cream/30 px-4 py-3 text-sm leading-relaxed text-ink-soft"
-              >
-                <span className="font-serif italic">{note}</span>
-              </p>
-            ))}
-          </div>
-        );
-      })()}
-
-      {recipe.story && (
-        <div className="prose-body mt-10 max-w-prose text-lg font-serif italic text-ink-soft">
-          <p>{recipe.story}</p>
+      {/* Title-down content: byline on the left, at-a-glance box on the right (md+). */}
+      <div className="mt-3 md:grid md:grid-cols-[minmax(0,42rem)_minmax(15rem,18rem)] md:gap-10 md:items-start">
+        {/* Byline + originally-from — col-1 row-1 */}
+        <div className="md:col-start-1 md:row-start-1 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-ink-soft">
+          {contributor && contributorSlug && (
+            <Link href={`/contributors/${contributorSlug}`} className="hover:text-primary">
+              By {contributor.name || contributor.email.split('@')[0]}
+            </Link>
+          )}
+          {recipe.originally_from && (
+            <>
+              <span>·</span>
+              <span className="italic">Originally from {recipe.originally_from}</span>
+            </>
+          )}
         </div>
-      )}
+
+        {/* At a glance — col-2 row-1 on md+, stacked on mobile right after byline */}
+        <aside
+          className="mt-6 rounded-2xl border border-rule bg-cream/30 px-5 py-4 md:col-start-2 md:row-start-1 md:mt-0"
+          aria-label="At a glance"
+          data-no-print
+        >
+          <p className="label mb-3 text-ink-soft">At a glance</p>
+          <dl className="space-y-3 text-sm">
+            {recipe.primary_family_line && (
+              <div>
+                <dt className="label text-[10px] text-ink-soft/70">Family line</dt>
+                <dd className="mt-0.5">
+                  <Link
+                    href={`/family-lines/${recipe.primary_family_line.slug}`}
+                    className={cn('font-serif text-base hover:opacity-80', familyLineColorClass)}
+                  >
+                    {recipe.primary_family_line.name}
+                  </Link>
+                  {recipe.secondary_family_line && (
+                    <span className="text-ink-soft">
+                      {' · '}
+                      <Link
+                        href={`/family-lines/${recipe.secondary_family_line.slug}`}
+                        className="hover:text-primary"
+                      >
+                        {recipe.secondary_family_line.name}
+                      </Link>
+                    </span>
+                  )}
+                </dd>
+              </div>
+            )}
+            {recipe.section && (
+              <div>
+                <dt className="label text-[10px] text-ink-soft/70">Section</dt>
+                <dd className="mt-0.5">
+                  <Link
+                    href={`/sections/${recipe.section.slug}`}
+                    className="font-serif text-base text-ink hover:text-primary"
+                  >
+                    {sectionDisplayName}
+                  </Link>
+                </dd>
+              </div>
+            )}
+            {contributor && contributorSlug && (
+              <div>
+                <dt className="label text-[10px] text-ink-soft/70">Contributor</dt>
+                <dd className="mt-0.5">
+                  <Link
+                    href={`/contributors/${contributorSlug}`}
+                    className="font-serif text-base text-ink hover:text-primary"
+                  >
+                    {contributor.name || contributor.email.split('@')[0]}
+                  </Link>
+                </dd>
+              </div>
+            )}
+            {recipe.originally_from && (
+              <div>
+                <dt className="label text-[10px] text-ink-soft/70">Originally from</dt>
+                <dd className="mt-0.5 font-serif text-base text-ink">{recipe.originally_from}</dd>
+              </div>
+            )}
+          </dl>
+        </aside>
+
+        {/* Status notes + rest of recipe content — col-1, rows 2+ */}
+        <div className="md:col-start-1 mt-6 space-y-6">
+          {statusNotes.length > 0 && (
+            <div className="space-y-3" data-no-print>
+              {statusNotes.map((note, i) => (
+                <p
+                  key={i}
+                  className="rounded-xl border border-rule bg-cream/30 px-4 py-3 text-sm leading-relaxed text-ink-soft"
+                >
+                  <span className="font-serif italic">{note}</span>
+                </p>
+              ))}
+            </div>
+          )}
+
+          {recipe.story && (
+            <div className="prose-body mt-10 text-lg font-serif italic text-ink-soft">
+              <p>{recipe.story}</p>
+            </div>
+          )}
 
       <section className="recipe-ingredients mt-12">
         <h2 className="font-serif text-2xl text-ink">Ingredients</h2>
@@ -404,6 +462,8 @@ export default async function RecipePage({
           </p>
         )}
       </footer>
+        </div>
+      </div>
     </article>
   );
 }
