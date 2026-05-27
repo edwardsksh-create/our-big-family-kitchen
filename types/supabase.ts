@@ -228,6 +228,183 @@ export type Database = {
           },
         ]
       }
+      family_photo_occasion_types: {
+        Row: {
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          name: string
+          slug: string
+          sort_order: number
+        }
+        Update: {
+          name?: string
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      family_photo_occasions: {
+        Row: {
+          family_photo_id: string
+          occasion_slug: string
+        }
+        Insert: {
+          family_photo_id: string
+          occasion_slug: string
+        }
+        Update: {
+          family_photo_id?: string
+          occasion_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_photo_occasions_family_photo_id_fkey"
+            columns: ["family_photo_id"]
+            isOneToOne: false
+            referencedRelation: "family_photos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_photo_occasions_occasion_slug_fkey"
+            columns: ["occasion_slug"]
+            isOneToOne: false
+            referencedRelation: "family_photo_occasion_types"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      family_photo_people: {
+        Row: {
+          contributor_id: string | null
+          family_member_id: string | null
+          family_photo_id: string
+          person_type: string
+        }
+        Insert: {
+          contributor_id?: string | null
+          family_member_id?: string | null
+          family_photo_id: string
+          person_type: string
+        }
+        Update: {
+          contributor_id?: string | null
+          family_member_id?: string | null
+          family_photo_id?: string
+          person_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_photo_people_contributor_id_fkey"
+            columns: ["contributor_id"]
+            isOneToOne: false
+            referencedRelation: "contributors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_photo_people_family_member_id_fkey"
+            columns: ["family_member_id"]
+            isOneToOne: false
+            referencedRelation: "family_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_photo_people_family_photo_id_fkey"
+            columns: ["family_photo_id"]
+            isOneToOne: false
+            referencedRelation: "family_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_photo_recipes: {
+        Row: {
+          family_photo_id: string
+          recipe_id: string
+        }
+        Insert: {
+          family_photo_id: string
+          recipe_id: string
+        }
+        Update: {
+          family_photo_id?: string
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_photo_recipes_family_photo_id_fkey"
+            columns: ["family_photo_id"]
+            isOneToOne: false
+            referencedRelation: "family_photos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_photo_recipes_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      family_photos: {
+        Row: {
+          additional_people: string | null
+          ai_hints: Json | null
+          caption: string | null
+          created_at: string
+          id: string
+          not_for_archive: boolean
+          pets: string | null
+          place: string | null
+          reviewed: boolean
+          storage_path: string
+          uploaded_at: string
+          uploaded_by_id: string | null
+          year: string | null
+        }
+        Insert: {
+          additional_people?: string | null
+          ai_hints?: Json | null
+          caption?: string | null
+          created_at?: string
+          id?: string
+          not_for_archive?: boolean
+          pets?: string | null
+          place?: string | null
+          reviewed?: boolean
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by_id?: string | null
+          year?: string | null
+        }
+        Update: {
+          additional_people?: string | null
+          ai_hints?: Json | null
+          caption?: string | null
+          created_at?: string
+          id?: string
+          not_for_archive?: boolean
+          pets?: string | null
+          place?: string | null
+          reviewed?: boolean
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by_id?: string | null
+          year?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_photos_uploaded_by_id_fkey"
+            columns: ["uploaded_by_id"]
+            isOneToOne: false
+            referencedRelation: "contributors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       federated_recipes: {
         Row: {
           contributor_name: string | null
