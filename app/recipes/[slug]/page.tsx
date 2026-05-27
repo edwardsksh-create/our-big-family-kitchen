@@ -217,10 +217,12 @@ export default async function RecipePage({
 
       <h1 className="font-serif text-4xl leading-tight text-primary md:text-5xl">{recipe.title}</h1>
 
-      {/* Title-down content: byline on the left, at-a-glance box on the right (md+). */}
-      <div className="mt-3 md:grid md:grid-cols-[minmax(0,42rem)_minmax(15rem,18rem)] md:gap-10 md:items-start">
-        {/* Byline + originally-from — col-1 row-1 */}
-        <div className="md:col-start-1 md:row-start-1 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-ink-soft">
+      {/* Title-down content: byline + body in the left column; at-a-glance
+          floats at top-right via absolute positioning so its height never
+          stretches main-column rows. */}
+      <div className="mt-3 md:relative md:pr-[20.5rem]">
+        {/* Byline + originally-from */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-ink-soft">
           {contributor && contributorSlug && (
             <Link href={`/contributors/${contributorSlug}`} className="hover:text-primary">
               By {contributor.name || contributor.email.split('@')[0]}
@@ -234,10 +236,9 @@ export default async function RecipePage({
           )}
         </div>
 
-        {/* At a glance — col-2, anchored top, spans full grid height so col-1
-            content packs immediately under the byline (no blank gap). */}
+        {/* At a glance — absolute top-right on md+, inline (full-width) on mobile. */}
         <aside
-          className="mt-6 rounded-2xl border border-rule bg-cream/30 px-5 py-4 md:col-start-2 md:row-start-1 md:row-span-full md:mt-0 md:self-start"
+          className="mt-6 rounded-2xl border border-rule bg-cream/30 px-5 py-4 md:absolute md:right-0 md:top-0 md:mt-0 md:w-[18rem]"
           aria-label="At a glance"
           data-no-print
         >
@@ -278,8 +279,9 @@ export default async function RecipePage({
           </dl>
         </aside>
 
-        {/* Status notes + rest of recipe content — col-1, rows 2+ */}
-        <div className="md:col-start-1 mt-6 space-y-6">
+        {/* Main column body — packs tightly under the byline since the aside
+            is absolutely positioned and doesn't affect block flow on md+. */}
+        <div className="mt-6 space-y-6">
           {statusNotes.length > 0 && (
             <div className="space-y-3" data-no-print>
               {statusNotes.map((note, i) => (
