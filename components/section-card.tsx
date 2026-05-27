@@ -7,14 +7,11 @@ export function SectionCard({ section }: { section: Section }) {
     <Link
       href={`/sections/${section.slug}`}
       className={cn(
-        'group flex aspect-[5/6] flex-col justify-between rounded-2xl p-5 card-hover',
+        'group flex aspect-[5/6] flex-col justify-end rounded-2xl p-5 card-hover',
         SECTION_BG[section.color],
         SECTION_TEXT[section.color],
       )}
     >
-      <span className="label" style={{ color: 'inherit', opacity: 0.7 }}>
-        Section
-      </span>
       <span className="font-serif text-2xl leading-tight md:text-3xl">
         {section.name}
       </span>
