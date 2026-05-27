@@ -22,7 +22,7 @@ export default async function PhotoReviewPage() {
     return (
       <div className="mx-auto max-w-prose px-6 py-16">
         <h1 className="font-serif text-3xl text-ink">Admin only.</h1>
-        <p className="mt-4 text-ink-soft">This screen is for Kate's review of family photos.</p>
+        <p className="mt-4 text-ink-soft">This screen is for Kate’s review of family photos.</p>
       </div>
     );
   }
