@@ -3,7 +3,6 @@ export const metadata = { title: 'About' };
 export default function AboutPage() {
   return (
     <div className="mx-auto max-w-prose px-6 py-20">
-      <p className="label mb-4">About</p>
       <h1 className="font-serif text-4xl leading-tight text-ink md:text-5xl">
         A kitchen big enough for everyone’s recipes.
       </h1>
