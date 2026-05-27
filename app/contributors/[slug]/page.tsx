@@ -1,6 +1,8 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { fetchContributorBySlug } from '@/lib/queries/contributors';
+import { fetchPhotosForContributor } from '@/lib/queries/family-photos';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { NativeRecipeSummary } from '@/lib/queries/recipes';
 import { NativeRecipeGrid } from '@/components/native-recipe-card';
@@ -58,6 +60,8 @@ export default async function ContributorPage({ params }: { params: { slug: stri
   const heroPhotoUrl = contributor.hero_photo_path
     ? contributorPhotoUrl(contributor.hero_photo_path)
     : null;
+
+  const familyPhotos = await fetchPhotosForContributor(contributor.id, 6);
 
   const displayName = formatDisplayName({
     fullName:   contributor.name,
@@ -117,6 +121,35 @@ export default async function ContributorPage({ params }: { params: { slug: stri
             );
           })}
         </div>
+      )}
+
+      {familyPhotos.length > 0 && (
+        <section className="mt-16">
+          <h2 className="font-serif text-2xl text-ink">Photos with {displayName}</h2>
+          <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3">
+            {familyPhotos.map((p) => (
+              <li key={p.id} className="overflow-hidden rounded-2xl border border-rule bg-paper">
+                <Link href={`/album?photo=${p.id}`} className="block">
+                  <div className="relative aspect-[4/3] w-full">
+                    <Image
+                      src={p.public_url}
+                      alt={p.caption ?? 'Family photo'}
+                      fill
+                      sizes="(min-width: 768px) 33vw, 50vw"
+                      className="object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-sm italic text-ink-soft">
+            <Link href="/album" className="hover:text-primary">
+              See all photos in the family archive →
+            </Link>
+          </p>
+        </section>
       )}
     </div>
   );

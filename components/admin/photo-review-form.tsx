@@ -1,0 +1,403 @@
+'use client';
+
+import { useMemo, useState, useTransition } from 'react';
+import { formatDisplayName } from '@/lib/contributors/display-name';
+import { submitPhotoReview } from '@/app/admin/photo-review/actions';
+import type {
+  FamilyPhotoFull,
+  PickerPerson,
+  PickerRecipe,
+  OccasionType,
+} from '@/lib/queries/family-photos';
+
+type Props = {
+  photo:           FamilyPhotoFull;
+  occasions:       OccasionType[];
+  people:          PickerPerson[];
+  recipes:         PickerRecipe[];
+  previous:        FamilyPhotoFull | null;
+};
+
+function personRefOf(p: PickerPerson): string {
+  return `${p.person_type}:${p.id}`;
+}
+
+function personRefOfTag(p: { person_type: 'contributor' | 'family_member'; id: string }): string {
+  return `${p.person_type}:${p.id}`;
+}
+
+function formattedPerson(p: { name: string; nickname: string | null; birth_name: string | null }): string {
+  return formatDisplayName({ fullName: p.name, nickname: p.nickname, birth_name: p.birth_name });
+}
+
+export function PhotoReviewForm({ photo, occasions, people, recipes, previous }: Props) {
+  // Form state.
+  const [caption,          setCaption]          = useState(photo.caption          ?? '');
+  const [year,             setYear]             = useState(photo.year             ?? photo.ai_hints?.estimated_year ?? '');
+  const [place,            setPlace]            = useState(photo.place            ?? '');
+  const [additionalPeople, setAdditionalPeople] = useState(photo.additional_people ?? '');
+  const [pets,             setPets]             = useState(photo.pets             ?? '');
+  const [selectedPeople, setSelectedPeople] = useState<string[]>(
+    photo.people.map((p) => personRefOfTag(p)),
+  );
+  const [selectedOccasions, setSelectedOccasions] = useState<string[]>(() => {
+    if (photo.occasions.length > 0) return photo.occasions;
+    return photo.ai_hints?.probable_occasions ?? [];
+  });
+  const [selectedRecipes, setSelectedRecipes] = useState<string[]>(
+    photo.recipes.map((r) => r.id),
+  );
+
+  // Autocomplete state.
+  const [personQuery, setPersonQuery] = useState('');
+  const [recipeQuery, setRecipeQuery] = useState('');
+
+  const [pending, startTransition] = useTransition();
+
+  const peopleByRef = useMemo(() => {
+    const m = new Map<string, PickerPerson>();
+    for (const p of people) m.set(personRefOf(p), p);
+    return m;
+  }, [people]);
+
+  const recipesById = useMemo(() => {
+    const m = new Map<string, PickerRecipe>();
+    for (const r of recipes) m.set(r.id, r);
+    return m;
+  }, [recipes]);
+
+  const personMatches = useMemo(() => {
+    const q = personQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    const haystack = (p: PickerPerson) => [p.name, p.nickname, p.birth_name].filter(Boolean).join(' ').toLowerCase();
+    return people
+      .filter((p) => haystack(p).includes(q))
+      .filter((p) => !selectedPeople.includes(personRefOf(p)))
+      .slice(0, 10);
+  }, [people, personQuery, selectedPeople]);
+
+  const recipeMatches = useMemo(() => {
+    const q = recipeQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return recipes
+      .filter((r) => r.title.toLowerCase().includes(q))
+      .filter((r) => !selectedRecipes.includes(r.id))
+      .slice(0, 10);
+  }, [recipes, recipeQuery, selectedRecipes]);
+
+  function copyFromPrevious() {
+    if (!previous) return;
+    setSelectedPeople(previous.people.map((p) => personRefOfTag(p)));
+    setSelectedOccasions(previous.occasions);
+    setYear(previous.year ?? '');
+    setPlace(previous.place ?? '');
+  }
+
+  function submitWith(intent: 'save_and_next' | 'skip' | 'not_for_archive' | 'done') {
+    startTransition(async () => {
+      await submitPhotoReview({
+        photoId:          photo.id,
+        caption,
+        year,
+        place,
+        additionalPeople,
+        pets,
+        occasionSlugs:    selectedOccasions,
+        personRefs:       selectedPeople,
+        recipeIds:        selectedRecipes,
+        intent,
+      });
+    });
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* AI hints */}
+      {photo.ai_hints && (
+        <div className="rounded-2xl border border-rule bg-cream/30 p-5 text-sm text-ink-soft">
+          <p className="label mb-2 text-ink-soft">AI hints</p>
+          <p>
+            <strong className="font-serif text-ink">{photo.ai_hints.estimated_year}</strong>
+            <span className="text-ink-soft/70"> ({photo.ai_hints.estimated_year_confidence} confidence)</span>
+            {' · '}
+            {photo.ai_hints.person_count} {photo.ai_hints.person_count === 1 ? 'person' : 'people'}
+            {' · '}
+            {photo.ai_hints.setting}
+          </p>
+          {photo.ai_hints.probable_occasions.length > 0 && (
+            <p className="mt-1">
+              Suggested occasions: {photo.ai_hints.probable_occasions.join(', ')}
+            </p>
+          )}
+          {photo.ai_hints.food_visible.length > 0 && (
+            <p className="mt-1">Food: {photo.ai_hints.food_visible.join(', ')}</p>
+          )}
+          {photo.ai_hints.visible_occasion_clues.length > 0 && (
+            <p className="mt-1 italic">Clues: {photo.ai_hints.visible_occasion_clues.join('; ')}</p>
+          )}
+          {photo.ai_hints.date_stamp_visible && (
+            <p className="mt-1">Date stamp: {photo.ai_hints.date_stamp_visible}</p>
+          )}
+          {photo.ai_hints.notes && (
+            <p className="mt-2 max-w-prose text-ink-soft/80">{photo.ai_hints.notes}</p>
+          )}
+        </div>
+      )}
+
+      {/* People */}
+      <section>
+        <label className="label mb-2 block text-ink">People in photo</label>
+        {selectedPeople.length > 0 && (
+          <ul className="mb-3 flex flex-wrap gap-2">
+            {selectedPeople.map((ref) => {
+              const p = peopleByRef.get(ref);
+              if (!p) return null;
+              return (
+                <li
+                  key={ref}
+                  className="inline-flex items-center gap-2 rounded-full border border-rule bg-paper px-3 py-1 text-sm text-ink"
+                >
+                  <span>{formattedPerson(p)}</span>
+                  {p.family_line_name && (
+                    <span className="text-xs text-ink-soft">· {p.family_line_name}</span>
+                  )}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${p.name}`}
+                    className="text-ink-soft hover:text-primary"
+                    onClick={() => setSelectedPeople(selectedPeople.filter((r) => r !== ref))}
+                  >
+                    ×
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <div className="relative">
+          <input
+            type="text"
+            value={personQuery}
+            onChange={(e) => setPersonQuery(e.target.value)}
+            placeholder="Type a name (contributor or family member)…"
+            className="w-full rounded-xl border border-rule bg-paper px-4 py-2 text-sm"
+          />
+          {personMatches.length > 0 && (
+            <ul className="absolute left-0 right-0 z-10 mt-1 max-h-72 overflow-auto rounded-xl border border-rule bg-paper shadow-lg">
+              {personMatches.map((p) => (
+                <li key={personRefOf(p)}>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left text-sm hover:bg-cream/40"
+                    onClick={() => {
+                      setSelectedPeople([...selectedPeople, personRefOf(p)]);
+                      setPersonQuery('');
+                    }}
+                  >
+                    <span>
+                      {formattedPerson(p)}
+                      <span className="ml-2 text-xs text-ink-soft">
+                        {p.person_type === 'contributor' ? 'contributor' : 'family member'}
+                        {p.family_line_name && ` · ${p.family_line_name}`}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      <Field
+        label="Additional people (not in DB)"
+        value={additionalPeople}
+        onChange={setAdditionalPeople}
+        placeholder="e.g. Lawrence's cousin visiting from Hong Kong"
+      />
+      <Field
+        label="Pets"
+        value={pets}
+        onChange={setPets}
+        placeholder="e.g. Maizy"
+      />
+
+      {/* Occasions */}
+      <section>
+        <label className="label mb-2 block text-ink">Occasion(s)</label>
+        <div className="flex flex-wrap gap-2">
+          {occasions.map((o) => {
+            const checked = selectedOccasions.includes(o.slug);
+            return (
+              <button
+                key={o.slug}
+                type="button"
+                onClick={() => {
+                  setSelectedOccasions(
+                    checked
+                      ? selectedOccasions.filter((s) => s !== o.slug)
+                      : [...selectedOccasions, o.slug],
+                  );
+                }}
+                className={
+                  'rounded-full border px-3 py-1 text-sm transition-colors ' +
+                  (checked
+                    ? 'border-primary bg-primary text-paper'
+                    : 'border-rule bg-paper text-ink-soft hover:border-ink')
+                }
+              >
+                {o.name}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <Field
+        label="Year"
+        value={year}
+        onChange={setYear}
+        placeholder='e.g. 1987-12-25, 1987, "around 1995", "early 90s"'
+      />
+      <Field
+        label="Place"
+        value={place}
+        onChange={setPlace}
+        placeholder="e.g. Quinn kitchen"
+      />
+      <Field
+        label="Caption"
+        value={caption}
+        onChange={setCaption}
+        placeholder="Brief description of the moment"
+      />
+
+      {/* Linked recipes */}
+      <section>
+        <label className="label mb-2 block text-ink">Linked recipes</label>
+        {selectedRecipes.length > 0 && (
+          <ul className="mb-3 flex flex-wrap gap-2">
+            {selectedRecipes.map((id) => {
+              const r = recipesById.get(id);
+              if (!r) return null;
+              return (
+                <li
+                  key={id}
+                  className="inline-flex items-center gap-2 rounded-full border border-rule bg-paper px-3 py-1 text-sm text-ink"
+                >
+                  <span>{r.title}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${r.title}`}
+                    className="text-ink-soft hover:text-primary"
+                    onClick={() => setSelectedRecipes(selectedRecipes.filter((x) => x !== id))}
+                  >
+                    ×
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <div className="relative">
+          <input
+            type="text"
+            value={recipeQuery}
+            onChange={(e) => setRecipeQuery(e.target.value)}
+            placeholder="Type a recipe title…"
+            className="w-full rounded-xl border border-rule bg-paper px-4 py-2 text-sm"
+          />
+          {recipeMatches.length > 0 && (
+            <ul className="absolute left-0 right-0 z-10 mt-1 max-h-72 overflow-auto rounded-xl border border-rule bg-paper shadow-lg">
+              {recipeMatches.map((r) => (
+                <li key={r.id}>
+                  <button
+                    type="button"
+                    className="block w-full px-4 py-2 text-left text-sm hover:bg-cream/40"
+                    onClick={() => {
+                      setSelectedRecipes([...selectedRecipes, r.id]);
+                      setRecipeQuery('');
+                    }}
+                  >
+                    {r.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      {/* Buttons */}
+      <div className="flex flex-wrap gap-3 border-t border-rule pt-6">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => submitWith('save_and_next')}
+          className="btn-primary"
+        >
+          Save and next →
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => submitWith('skip')}
+          className="btn-ghost"
+        >
+          Skip for now
+        </button>
+        {previous && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={copyFromPrevious}
+            className="btn-ghost"
+          >
+            Copy tags from previous
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => submitWith('not_for_archive')}
+          className="btn-ghost text-ink-soft"
+        >
+          Not for archive
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => submitWith('done')}
+          className="btn-ghost ml-auto"
+        >
+          Done for now
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <section>
+      <label className="label mb-2 block text-ink">{label}</label>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full rounded-xl border border-rule bg-paper px-4 py-2 text-sm"
+      />
+    </section>
+  );
+}

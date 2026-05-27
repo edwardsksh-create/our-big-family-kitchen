@@ -8,6 +8,7 @@ import { sectionBySlug, type SectionColorToken } from '@/lib/sections';
 import { publicUrl } from '@/lib/storage/photos';
 import { publicStatusNotes } from '@/lib/recipes/status-notes';
 import { formatDisplayName } from '@/lib/contributors/display-name';
+import { fetchPhotosForRecipe } from '@/lib/queries/family-photos';
 import { slugify } from '@/lib/utils';
 
 export const revalidate = 60;
@@ -99,11 +100,12 @@ export default async function RecipePage({
   // row) can't edit even their own attributions until they sign up.
   const canEdit = isAdmin || isOwner;
 
-  const [{ data: ingredients }, { data: instructions }, { data: tagJoins }, { data: photoRows }] = await Promise.all([
+  const [{ data: ingredients }, { data: instructions }, { data: tagJoins }, { data: photoRows }, familyPhotos] = await Promise.all([
     db.from('ingredients').select('sub_header, item_text, sort_order').eq('recipe_id', recipe.id).order('sort_order'),
     db.from('instructions').select('sub_header, body, sort_order').eq('recipe_id', recipe.id).order('sort_order'),
     db.from('recipe_tags').select('tag:tags!recipe_tags_tag_id_fkey(slug, name)').eq('recipe_id', recipe.id),
     db.from('photos').select('id, url, storage_path, caption, photo_type, sort_order').eq('recipe_id', recipe.id).order('sort_order'),
+    fetchPhotosForRecipe(recipe.id),
   ]);
 
   const photos = ((photoRows ?? []) as PhotoRow[]).map((p) => ({
@@ -390,6 +392,30 @@ export default async function RecipePage({
                     />
                   </div>
                 </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {familyPhotos.length > 0 && (
+        <section className="mt-16">
+          <h2 className="font-serif text-2xl text-ink">Family photos of this recipe</h2>
+          <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3">
+            {familyPhotos.slice(0, 3).map((p) => (
+              <li key={p.id} className="overflow-hidden rounded-2xl border border-rule bg-paper">
+                <Link href={`/album?photo=${p.id}`} className="block">
+                  <div className="relative aspect-[4/3] w-full">
+                    <Image
+                      src={p.public_url}
+                      alt={p.caption ?? 'Family photo'}
+                      fill
+                      sizes="(min-width: 768px) 33vw, 50vw"
+                      className="object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                </Link>
               </li>
             ))}
           </ul>

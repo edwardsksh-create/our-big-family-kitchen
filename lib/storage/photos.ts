@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 
 export const PHOTO_BUCKET             = 'recipe-photos';
 export const CONTRIBUTOR_PHOTO_BUCKET = 'contributor-photos';
+export const FAMILY_PHOTO_BUCKET      = 'family-photos';
 
 // Cap matches the bucket's file_size_limit (10 MB). Enforced server-side.
 export const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
@@ -107,6 +108,10 @@ export function publicUrl(storagePath: string): string {
 
 export function contributorPhotoUrl(storagePath: string): string {
   return client().storage.from(CONTRIBUTOR_PHOTO_BUCKET).getPublicUrl(storagePath).data.publicUrl;
+}
+
+export function familyPhotoUrl(storagePath: string): string {
+  return client().storage.from(FAMILY_PHOTO_BUCKET).getPublicUrl(storagePath).data.publicUrl;
 }
 
 // List every object under sources/_inbox/. Storage's list API is shallow per
