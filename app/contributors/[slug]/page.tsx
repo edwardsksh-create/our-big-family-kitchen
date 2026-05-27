@@ -1,5 +1,4 @@
 import Image from 'next/image';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { fetchContributorBySlug } from '@/lib/queries/contributors';
 import { supabaseAdmin } from '@/lib/supabase/server';
@@ -7,6 +6,7 @@ import type { NativeRecipeSummary } from '@/lib/queries/recipes';
 import { NativeRecipeGrid } from '@/components/native-recipe-card';
 import { SECTIONS, SECTION_HEADING_TEXT } from '@/lib/sections';
 import { contributorPhotoUrl } from '@/lib/storage/photos';
+import { formatDisplayName } from '@/lib/contributors/display-name';
 import { cn } from '@/lib/utils';
 
 export const revalidate = 60;
@@ -55,64 +55,38 @@ export default async function ContributorPage({ params }: { params: { slug: stri
       primary_family_line_slug: r.primary_family_line?.slug ?? null,
     }));
 
-  const hasLineage = contributor.primary_family_line || contributor.secondary_family_line;
-
   const heroPhotoUrl = contributor.hero_photo_path
     ? contributorPhotoUrl(contributor.hero_photo_path)
     : null;
 
+  const displayName = formatDisplayName({
+    fullName:   contributor.name,
+    nickname:   contributor.nickname,
+    birth_name: contributor.birth_name,
+  });
+
   return (
     <div className="mx-auto max-w-prose px-6 py-16">
       {heroPhotoUrl && (
-        <figure className="mb-10 overflow-hidden rounded-2xl border border-rule">
+        <figure className="mb-8 overflow-hidden rounded-2xl border border-rule md:max-w-[280px]">
           <Image
             src={heroPhotoUrl}
             alt={contributor.name}
             width={1200}
             height={1200}
-            sizes="(min-width: 768px) 600px, 100vw"
+            sizes="(min-width: 768px) 280px, 80vw"
             className="h-auto w-full"
           />
         </figure>
       )}
-      <p className="label mb-3">Contributor</p>
-      <h1 className="font-serif text-4xl text-ink md:text-5xl">{contributor.name}</h1>
 
-      {hasLineage && (
-        <dl className="mt-6 grid gap-y-2 text-sm sm:grid-cols-[140px_1fr]">
-          {contributor.primary_family_line && (
-            <>
-              <dt className="label">Primary</dt>
-              <dd>
-                <Link
-                  href={`/family-lines/${contributor.primary_family_line.slug}`}
-                  className="font-serif text-lg text-ink hover:text-primary"
-                >
-                  {contributor.primary_family_line.name}
-                </Link>
-              </dd>
-            </>
-          )}
-          {contributor.secondary_family_line && (
-            <>
-              <dt className="label">Secondary</dt>
-              <dd>
-                <Link
-                  href={`/family-lines/${contributor.secondary_family_line.slug}`}
-                  className="text-ink-soft hover:text-primary"
-                >
-                  {contributor.secondary_family_line.name}
-                </Link>
-              </dd>
-            </>
-          )}
-        </dl>
+      <h1 className="font-serif text-3xl text-ink md:text-4xl">{displayName}</h1>
+      {contributor.deceased && (
+        <p className="mt-2 text-sm italic text-ink-soft/70">In loving memory</p>
       )}
 
-      {contributor.bio ? (
+      {contributor.bio && (
         <div className="prose-body mt-8 text-ink-soft">{contributor.bio}</div>
-      ) : (
-        <p className="mt-8 font-serif italic text-ink-soft">A bio is on the way.</p>
       )}
 
       <h2 className="font-serif mt-16 text-2xl text-ink">Recipes</h2>

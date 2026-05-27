@@ -7,9 +7,18 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { sectionBySlug, type SectionColorToken } from '@/lib/sections';
 import { publicUrl } from '@/lib/storage/photos';
 import { publicStatusNotes } from '@/lib/recipes/status-notes';
+import { formatDisplayName } from '@/lib/contributors/display-name';
 import { slugify } from '@/lib/utils';
 
 export const revalidate = 60;
+
+type ContribJoin = {
+  id: string;
+  name: string | null;
+  email: string;
+  nickname: string | null;
+  birth_name: string | null;
+};
 
 type RecipeRow = {
   id: string;
@@ -22,8 +31,9 @@ type RecipeRow = {
   created_at: string;
   last_edited_at: string | null;
   kitchen_notes: string[] | null;
-  contributor:           { id: string; name: string | null; email: string } | null;
-  last_edited_by:        { id: string; name: string | null; email: string } | null;
+  contributor:           ContribJoin | null;
+  added_by:              ContribJoin | null;
+  last_edited_by:        ContribJoin | null;
   primary_family_line:   { slug: string; name: string } | null;
   secondary_family_line: { slug: string; name: string } | null;
   section:               { slug: string; name: string; color_token: SectionColorToken } | null;
@@ -64,8 +74,9 @@ export default async function RecipePage({
     .from('recipes')
     .select(`
       id, title, slug, story, originally_from, status, published_at, created_at, last_edited_at, kitchen_notes,
-      contributor:contributors!recipes_contributor_id_fkey ( id, name, email ),
-      last_edited_by:contributors!recipes_last_edited_by_id_fkey ( id, name, email ),
+      contributor:contributors!recipes_contributor_id_fkey ( id, name, email, nickname, birth_name ),
+      added_by:contributors!recipes_added_by_id_fkey ( id, name, email, nickname, birth_name ),
+      last_edited_by:contributors!recipes_last_edited_by_id_fkey ( id, name, email, nickname, birth_name ),
       primary_family_line:family_lines!recipes_primary_family_line_id_fkey ( slug, name ),
       secondary_family_line:family_lines!recipes_secondary_family_line_id_fkey ( slug, name ),
       section:sections!recipes_section_id_fkey ( slug, name, color_token )
@@ -107,10 +118,37 @@ export default async function RecipePage({
   const kitchenNotes = (recipe.kitchen_notes ?? []).filter((n) => n.trim().length > 0);
 
   const contributor = recipe.contributor;
+  // The "Saved by" provenance uses added_by_id (who saved the recipe to the
+  // site); falls back to the contributor (original author) if the column is
+  // null on a pre-backfill row.
+  const savedBy     = recipe.added_by ?? recipe.contributor;
   const lastEditedBy = recipe.last_edited_by;
   const contributorSlug = contributor ? slugify(contributor.name || contributor.email.split('@')[0]) : null;
+  const savedBySlug     = savedBy     ? slugify(savedBy.name     || savedBy.email.split('@')[0])     : null;
   const tags = ((tagJoins ?? []) as unknown as { tag: { slug: string; name: string } | null }[])
     .map((j) => j.tag).filter(Boolean) as { slug: string; name: string }[];
+
+  const contributorDisplay = contributor
+    ? formatDisplayName({
+        fullName:   contributor.name || contributor.email.split('@')[0],
+        nickname:   contributor.nickname,
+        birth_name: contributor.birth_name,
+      })
+    : null;
+  const savedByDisplay = savedBy
+    ? formatDisplayName({
+        fullName:   savedBy.name || savedBy.email.split('@')[0],
+        nickname:   savedBy.nickname,
+        birth_name: savedBy.birth_name,
+      })
+    : null;
+  const lastEditedByDisplay = lastEditedBy
+    ? formatDisplayName({
+        fullName:   lastEditedBy.name || lastEditedBy.email.split('@')[0],
+        nickname:   lastEditedBy.nickname,
+        birth_name: lastEditedBy.birth_name,
+      })
+    : null;
 
   // Show "Last edited by X" only when the edit happened more than a day after
   // first publish (so a freshly published recipe doesn't show two near-identical lines).
@@ -223,9 +261,9 @@ export default async function RecipePage({
       <div className="mt-3 md:relative md:pr-[20.5rem]">
         {/* Byline + originally-from */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-ink-soft">
-          {contributor && contributorSlug && (
+          {contributor && contributorSlug && contributorDisplay && (
             <Link href={`/contributors/${contributorSlug}`} className="hover:text-primary">
-              By {contributor.name || contributor.email.split('@')[0]}
+              By {contributorDisplay}
             </Link>
           )}
           {recipe.originally_from && (
@@ -402,17 +440,15 @@ export default async function RecipePage({
       )}
 
       <footer className="hairline mt-16 space-y-1 pt-6 text-xs italic text-ink-soft/70">
-        {contributor && (
+        {savedBy && savedByDisplay && (
           <p>
             Saved by{' '}
-            {contributorSlug ? (
-              <Link href={`/contributors/${contributorSlug}`} className="not-italic hover:text-primary">
-                {contributor.name || contributor.email.split('@')[0]}
+            {savedBySlug ? (
+              <Link href={`/contributors/${savedBySlug}`} className="not-italic hover:text-primary">
+                {savedByDisplay}
               </Link>
             ) : (
-              <span className="not-italic">
-                {contributor.name || contributor.email.split('@')[0]}
-              </span>
+              <span className="not-italic">{savedByDisplay}</span>
             )}
             {recipe.published_at && (
               <> on {new Date(recipe.published_at).toLocaleDateString('en-US', { dateStyle: 'long' })}</>
@@ -420,17 +456,15 @@ export default async function RecipePage({
             .
           </p>
         )}
-        {showLastEdited && lastEditedBy && (
+        {showLastEdited && lastEditedBy && lastEditedByDisplay && (
           <p>
             Last edited by{' '}
             {lastEditorSlug ? (
               <Link href={`/contributors/${lastEditorSlug}`} className="not-italic hover:text-primary">
-                {lastEditedBy.name || lastEditedBy.email.split('@')[0]}
+                {lastEditedByDisplay}
               </Link>
             ) : (
-              <span className="not-italic">
-                {lastEditedBy.name || lastEditedBy.email.split('@')[0]}
-              </span>
+              <span className="not-italic">{lastEditedByDisplay}</span>
             )}
             {' '}on {lastEditedAt!.toLocaleDateString('en-US', { dateStyle: 'long' })}.
           </p>

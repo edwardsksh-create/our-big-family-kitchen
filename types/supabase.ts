@@ -95,7 +95,10 @@ export type Database = {
       contributors: {
         Row: {
           bio: string | null
+          birth_name: string | null
+          can_sign_in: boolean
           created_at: string
+          deceased: boolean
           email: string
           hero_photo_path: string | null
           id: string
@@ -103,12 +106,16 @@ export type Database = {
           invited_by_id: string | null
           joined_at: string | null
           name: string | null
+          nickname: string | null
           photo_url: string | null
           role: string
         }
         Insert: {
           bio?: string | null
+          birth_name?: string | null
+          can_sign_in?: boolean
           created_at?: string
+          deceased?: boolean
           email: string
           hero_photo_path?: string | null
           id?: string
@@ -116,12 +123,16 @@ export type Database = {
           invited_by_id?: string | null
           joined_at?: string | null
           name?: string | null
+          nickname?: string | null
           photo_url?: string | null
           role?: string
         }
         Update: {
           bio?: string | null
+          birth_name?: string | null
+          can_sign_in?: boolean
           created_at?: string
+          deceased?: boolean
           email?: string
           hero_photo_path?: string | null
           id?: string
@@ -129,6 +140,7 @@ export type Database = {
           invited_by_id?: string | null
           joined_at?: string | null
           name?: string | null
+          nickname?: string | null
           photo_url?: string | null
           role?: string
         }
@@ -168,6 +180,53 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      family_members: {
+        Row: {
+          birth_name: string | null
+          contributor_slug: string | null
+          created_at: string
+          deceased: boolean
+          family_line_id: string
+          id: string
+          name: string
+          nickname: string | null
+          notes: string | null
+          sort_order: number
+        }
+        Insert: {
+          birth_name?: string | null
+          contributor_slug?: string | null
+          created_at?: string
+          deceased?: boolean
+          family_line_id: string
+          id?: string
+          name: string
+          nickname?: string | null
+          notes?: string | null
+          sort_order?: number
+        }
+        Update: {
+          birth_name?: string | null
+          contributor_slug?: string | null
+          created_at?: string
+          deceased?: boolean
+          family_line_id?: string
+          id?: string
+          name?: string
+          nickname?: string | null
+          notes?: string | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_members_family_line_id_fkey"
+            columns: ["family_line_id"]
+            isOneToOne: false
+            referencedRelation: "family_lines"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       federated_recipes: {
         Row: {
@@ -384,6 +443,7 @@ export type Database = {
       }
       recipes: {
         Row: {
+          added_by_id: string | null
           contributor_id: string
           created_at: string
           id: string
@@ -402,6 +462,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          added_by_id?: string | null
           contributor_id: string
           created_at?: string
           id?: string
@@ -420,6 +481,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          added_by_id?: string | null
           contributor_id?: string
           created_at?: string
           id?: string
@@ -438,6 +500,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "recipes_added_by_id_fkey"
+            columns: ["added_by_id"]
+            isOneToOne: false
+            referencedRelation: "contributors"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "recipes_contributor_id_fkey"
             columns: ["contributor_id"]

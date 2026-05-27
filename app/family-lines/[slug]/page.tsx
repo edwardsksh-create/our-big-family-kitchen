@@ -1,9 +1,11 @@
+import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { FAMILY_LINES, familyLineBySlug, FAMILY_TEXT } from '@/lib/family-lines';
 import { fetchFederatedCount } from '@/lib/queries/federated';
 import { fetchPublishedRecipesForFamilyLine } from '@/lib/queries/recipes';
-import { fetchContributorsForFamilyLine } from '@/lib/queries/contributors';
+import { fetchFamilyMembersForLine, type FamilyMember } from '@/lib/queries/family-members';
+import { formatDisplayName } from '@/lib/contributors/display-name';
 import { NativeRecipeGrid } from '@/components/native-recipe-card';
 import { cn } from '@/lib/utils';
 
@@ -24,22 +26,43 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
   return { title: line ? `${line.name} family recipes` : 'Family line' };
 }
 
+function MemberName({ member }: { member: FamilyMember }) {
+  const formatted = formatDisplayName({
+    fullName:   member.name,
+    nickname:   member.nickname,
+    birth_name: member.birth_name,
+  });
+  const inner = member.contributor_slug ? (
+    <Link
+      href={`/contributors/${member.contributor_slug}`}
+      className="hover:text-primary"
+    >
+      {formatted}
+    </Link>
+  ) : (
+    <span>{formatted}</span>
+  );
+  return (
+    <span className="whitespace-nowrap">
+      {inner}
+      {member.deceased && (
+        <span className="ml-1 text-xs italic text-ink-soft/70">· in loving memory</span>
+      )}
+    </span>
+  );
+}
+
 export default async function FamilyLinePage({ params }: { params: { slug: string } }) {
   const line = familyLineBySlug(params.slug);
   if (!line) notFound();
 
   const federation = FEDERATED_LINES[line.slug];
-  const [native, contributors, federatedCount] = await Promise.all([
+  const [native, members, federatedCount] = await Promise.all([
     fetchPublishedRecipesForFamilyLine(line.slug),
-    fetchContributorsForFamilyLine(line.slug),
+    fetchFamilyMembersForLine(line.slug),
     federation ? fetchFederatedCount() : Promise.resolve(0),
   ]);
 
-  const memberNames = [
-    ...contributors.primary.map((c) => c.name),
-    ...contributors.secondary.map((c) => c.name),
-  ];
-  const uniqueNames = [...new Set(memberNames)].sort();
   const colorClass = FAMILY_TEXT[line.color];
 
   return (
@@ -52,10 +75,21 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
         A collection of recipes connected to this branch of the family.
       </p>
 
-      <p className="mt-8 max-w-prose text-base text-ink-soft">
-        <span className="label mr-2 text-ink-soft">People included here:</span>
-        {uniqueNames.length > 0 ? uniqueNames.join(', ') : 'Members coming soon.'}
-      </p>
+      <section className="mt-8 max-w-prose">
+        <p className="label mb-2 text-ink-soft">People included here</p>
+        {members.length > 0 ? (
+          <p className="text-base leading-relaxed text-ink">
+            {members.map((m, i) => (
+              <span key={m.id}>
+                <MemberName member={m} />
+                {i < members.length - 1 && <span className="text-ink-soft">, </span>}
+              </span>
+            ))}
+          </p>
+        ) : (
+          <p className="text-base italic text-ink-soft">Members coming soon.</p>
+        )}
+      </section>
 
       {/* Recipes from this line */}
       <section className="mt-16">

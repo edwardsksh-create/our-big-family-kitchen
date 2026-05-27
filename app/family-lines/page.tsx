@@ -1,13 +1,13 @@
 import { FAMILY_LINES } from '@/lib/family-lines';
 import { FamilyLineCard } from '@/components/family-line-card';
-import { fetchMemberNamesByFamilyLine } from '@/lib/queries/contributors';
+import { fetchMemberNamesByLine } from '@/lib/queries/family-members';
 
 export const revalidate = 60;
 
 export const metadata = { title: 'Family lines' };
 
 export default async function FamilyLinesIndexPage() {
-  const membersByLine = await fetchMemberNamesByFamilyLine();
+  const membersByLine = await fetchMemberNamesByLine();
 
   return (
     <div className="mx-auto max-w-page px-6 py-16">

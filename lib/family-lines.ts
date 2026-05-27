@@ -6,7 +6,9 @@ export type FamilyColorToken =
   | 'rose'
   | 'sky'
   | 'olive'
-  | 'slate';
+  | 'slate'
+  | 'navy'
+  | 'mauve';
 
 export type FamilyLine = {
   slug: string;
@@ -16,13 +18,16 @@ export type FamilyLine = {
   color: FamilyColorToken;
 };
 
+// Canonical order — must match the family_lines.sort_order column in the DB.
 export const FAMILY_LINES: FamilyLine[] = [
-  { slug: 'leusch',  name: 'Leusch',  type: 'primary',   color: 'burgundy', blurb: 'The archive — recipes preserved from generations past.' },
-  { slug: 'sundy',   name: 'Sundy',   type: 'primary',   color: 'gold',     blurb: 'Sunday tables, casseroles, garden-grown plenty.' },
-  { slug: 'edwards', name: 'Edwards', type: 'primary',   color: 'rose',     blurb: 'Quick weeknight know-how and a fondness for spice.' },
-  { slug: 'hong',    name: 'Hong',    type: 'primary',   color: 'sky',      blurb: 'Soups, dumplings, and the things that taste like home.' },
-  { slug: 'quinn',   name: 'Quinn',   type: 'secondary', color: 'olive',    blurb: 'New traditions, brought in by marriage and love.' },
-  { slug: 'branion', name: 'Branion', type: 'secondary', color: 'slate',    blurb: 'New traditions, brought in by marriage and love.' },
+  { slug: 'leusch',        name: 'Leusch',        type: 'primary',   color: 'burgundy', blurb: 'The archive — recipes preserved from generations past.' },
+  { slug: 'quinn',         name: 'Quinn',         type: 'secondary', color: 'olive',    blurb: 'New traditions, brought in by marriage and love.' },
+  { slug: 'branion',       name: 'Branion',       type: 'secondary', color: 'slate',    blurb: 'New traditions, brought in by marriage and love.' },
+  { slug: 'sundy',         name: 'Sundy',         type: 'primary',   color: 'gold',     blurb: 'Sunday tables, casseroles, garden-grown plenty.' },
+  { slug: 'richs-family',  name: "Rich's family", type: 'secondary', color: 'navy',     blurb: 'Rich and his extended branch — kids, grandkids, and more.' },
+  { slug: 'edwards',       name: 'Edwards',       type: 'primary',   color: 'rose',     blurb: 'Quick weeknight know-how and a fondness for spice.' },
+  { slug: 'hong',          name: 'Hong',          type: 'primary',   color: 'sky',      blurb: 'Soups, dumplings, and the things that taste like home.' },
+  { slug: 'chosen-family', name: 'Chosen Family', type: 'secondary', color: 'mauve',    blurb: 'Family by choice — the people who became family along the way.' },
 ];
 
 export function familyLineBySlug(slug: string): FamilyLine | undefined {
@@ -41,4 +46,6 @@ export const FAMILY_TEXT: Record<FamilyColorToken, string> = {
   sky:      'text-card-sky',
   olive:    'text-card-olive',
   slate:    'text-card-slate',
+  navy:     'text-card-navy',
+  mauve:    'text-card-mauve',
 };
