@@ -27,11 +27,10 @@ export async function SiteHeader() {
           <SearchBar />
         </div>
 
-        {/* Desktop nav */}
+        {/* Desktop nav — same order as mobile: primary links, + Add, admin,
+            secondary (lg+), then sign in/out. */}
         <nav className="ml-auto hidden items-center gap-5 label md:flex">
           {primaryLinks}
-          <Link href="/contributors" className="hover:text-primary transition-colors hidden lg:inline">Contributors</Link>
-          <Link href="/about"        className="hover:text-primary transition-colors hidden lg:inline">About</Link>
           {signedIn && (
             <Link href="/add" className="rounded-full bg-primary px-3 py-1.5 text-paper transition-colors hover:bg-ink">+ Add</Link>
           )}
@@ -41,6 +40,8 @@ export async function SiteHeader() {
               <Link href="/admin/contributors" className="hover:text-primary transition-colors hidden lg:inline">People</Link>
             </>
           )}
+          <Link href="/contributors" className="hover:text-primary transition-colors hidden lg:inline">Contributors</Link>
+          <Link href="/about"        className="hover:text-primary transition-colors hidden lg:inline">About</Link>
           {signedIn ? (
             <Link href="/sign-out" className="hover:text-primary transition-colors">Sign out</Link>
           ) : (
