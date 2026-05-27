@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { fetchContributorBySlug } from '@/lib/queries/contributors';
@@ -5,6 +6,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import type { NativeRecipeSummary } from '@/lib/queries/recipes';
 import { NativeRecipeGrid } from '@/components/native-recipe-card';
 import { SECTIONS, SECTION_HEADING_TEXT } from '@/lib/sections';
+import { contributorPhotoUrl } from '@/lib/storage/photos';
 import { cn } from '@/lib/utils';
 
 export const revalidate = 60;
@@ -55,8 +57,24 @@ export default async function ContributorPage({ params }: { params: { slug: stri
 
   const hasLineage = contributor.primary_family_line || contributor.secondary_family_line;
 
+  const heroPhotoUrl = contributor.hero_photo_path
+    ? contributorPhotoUrl(contributor.hero_photo_path)
+    : null;
+
   return (
     <div className="mx-auto max-w-prose px-6 py-16">
+      {heroPhotoUrl && (
+        <figure className="mb-10 overflow-hidden rounded-2xl border border-rule">
+          <Image
+            src={heroPhotoUrl}
+            alt={contributor.name}
+            width={1200}
+            height={1200}
+            sizes="(min-width: 768px) 600px, 100vw"
+            className="h-auto w-full"
+          />
+        </figure>
+      )}
       <p className="label mb-3">Contributor</p>
       <h1 className="font-serif text-4xl text-ink md:text-5xl">{contributor.name}</h1>
 

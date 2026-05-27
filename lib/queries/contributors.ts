@@ -11,6 +11,7 @@ export type ContributorSummary = {
   role: 'admin' | 'contributor' | 'viewer';
   slug: string;
   joined_at: string | null;
+  hero_photo_path: string | null;
   primary_family_line:   FamilyLineRef | null;
   secondary_family_line: FamilyLineRef | null;
 };
@@ -26,7 +27,7 @@ function isStubEmail(email: string): boolean {
 export async function fetchAllContributors(): Promise<ContributorSummary[]> {
   const db = supabaseAdmin();
   const [{ data: rows }, { data: cflRows }, { data: flRows }] = await Promise.all([
-    db.from('contributors').select('id, email, name, bio, role, joined_at').order('name'),
+    db.from('contributors').select('id, email, name, bio, role, joined_at, hero_photo_path').order('name'),
     db.from('contributor_family_lines').select('contributor_id, family_line_id, rank'),
     db.from('family_lines').select('id, slug, name'),
   ]);
@@ -53,6 +54,7 @@ export async function fetchAllContributors(): Promise<ContributorSummary[]> {
       role:         c.role as ContributorSummary['role'],
       slug:         slugify(name),
       joined_at:    c.joined_at,
+      hero_photo_path: c.hero_photo_path ?? null,
       primary_family_line:   primaryBy.get(c.id)   ?? null,
       secondary_family_line: secondaryBy.get(c.id) ?? null,
     };
