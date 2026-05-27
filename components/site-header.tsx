@@ -10,8 +10,9 @@ export async function SiteHeader() {
 
   const primaryLinks = (
     <>
-      <Link href="/recipes"  className="hover:text-primary transition-colors">Recipes</Link>
-      <Link href="/sections" className="hover:text-primary transition-colors">Browse</Link>
+      <Link href="/recipes"      className="hover:text-primary transition-colors">Recipes</Link>
+      <Link href="/sections"     className="hover:text-primary transition-colors">Browse</Link>
+      <Link href="/family-lines" className="hover:text-primary transition-colors">Families</Link>
     </>
   );
 
@@ -56,8 +57,9 @@ export async function SiteHeader() {
             <Menu className="h-5 w-5" />
           </summary>
           <nav className="absolute right-0 mt-2 w-56 origin-top-right rounded-2xl border border-rule bg-paper p-2 shadow-[0_12px_40px_-20px_rgba(42,37,34,0.45)] label">
-            <Link href="/recipes"  className="block rounded-lg px-3 py-3 hover:bg-cream/40">Recipes</Link>
-            <Link href="/sections" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Browse</Link>
+            <Link href="/recipes"      className="block rounded-lg px-3 py-3 hover:bg-cream/40">Recipes</Link>
+            <Link href="/sections"     className="block rounded-lg px-3 py-3 hover:bg-cream/40">Browse</Link>
+            <Link href="/family-lines" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Families</Link>
             {signedIn && (
               <Link href="/add" className="block rounded-lg px-3 py-3 text-primary hover:bg-cream/40">+ Add</Link>
             )}

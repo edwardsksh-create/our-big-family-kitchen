@@ -11,7 +11,6 @@ export default async function FamilyLinesIndexPage() {
 
   return (
     <div className="mx-auto max-w-page px-6 py-16">
-      <p className="label mb-3">Family lines</p>
       <h1 className="font-serif text-4xl leading-tight text-ink md:text-5xl">
         Follow the recipes through the family.
       </h1>
