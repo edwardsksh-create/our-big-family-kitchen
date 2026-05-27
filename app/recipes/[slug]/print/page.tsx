@@ -95,16 +95,19 @@ export default async function RecipePrintPage({ params }: { params: { slug: stri
               (useTwoColumns ? 'print:columns-2 print:gap-6' : '')
             }
           >
-            {(ingredients ?? []).map((i, idx) => (
-              <li key={idx} className="print-keep">
-                {i.sub_header && (
-                  <p className="mt-3 font-serif text-base italic text-primary print:mt-2">
-                    {i.sub_header}
-                  </p>
-                )}
-                <span>{i.item_text}</span>
-              </li>
-            ))}
+            {(ingredients ?? []).map((i, idx, arr) => {
+              const showSub = !!i.sub_header && i.sub_header !== arr[idx - 1]?.sub_header;
+              return (
+                <li key={idx} className="print-keep">
+                  {showSub && (
+                    <p className="mt-3 font-serif text-base italic text-primary print:mt-2">
+                      {i.sub_header}
+                    </p>
+                  )}
+                  <span>{i.item_text}</span>
+                </li>
+              );
+            })}
           </ul>
         </section>
 
@@ -114,14 +117,17 @@ export default async function RecipePrintPage({ params }: { params: { slug: stri
             <p className="mt-3 italic text-ink-soft">Method not documented.</p>
           ) : (
             <ol className="mt-3 list-decimal space-y-3 pl-5 text-ink">
-              {(instructions ?? []).map((i, idx) => (
-                <li key={idx} className="print-keep">
-                  {i.sub_header && (
-                    <p className="mb-1 -ml-5 font-serif text-base italic text-primary">{i.sub_header}</p>
-                  )}
-                  <span>{i.body}</span>
-                </li>
-              ))}
+              {(instructions ?? []).map((i, idx, arr) => {
+                const showSub = !!i.sub_header && i.sub_header !== arr[idx - 1]?.sub_header;
+                return (
+                  <li key={idx} className="print-keep">
+                    {showSub && (
+                      <p className="mb-1 -ml-5 font-serif text-base italic text-primary">{i.sub_header}</p>
+                    )}
+                    <span>{i.body}</span>
+                  </li>
+                );
+              })}
             </ol>
           )}
         </section>

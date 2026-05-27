@@ -257,25 +257,6 @@ export default async function RecipePage({
                 </dd>
               </div>
             )}
-            {contributor && contributorSlug && (
-              <div>
-                <dt className="label text-[10px] text-ink-soft/70">Contributor</dt>
-                <dd className="mt-0.5">
-                  <Link
-                    href={`/contributors/${contributorSlug}`}
-                    className="font-serif text-base text-ink hover:text-primary"
-                  >
-                    {contributor.name || contributor.email.split('@')[0]}
-                  </Link>
-                </dd>
-              </div>
-            )}
-            {recipe.originally_from && (
-              <div>
-                <dt className="label text-[10px] text-ink-soft/70">Originally from</dt>
-                <dd className="mt-0.5 font-serif text-base text-ink">{recipe.originally_from}</dd>
-              </div>
-            )}
           </dl>
         </aside>
 
@@ -298,28 +279,38 @@ export default async function RecipePage({
       <section className="recipe-ingredients mt-12">
         <h2 className="font-serif text-2xl text-ink">Ingredients</h2>
         <ul className="mt-4 space-y-1 text-ink-soft">
-          {(ingredients ?? []).map((i, idx) => (
-            <li key={idx} className="print-keep">
-              {i.sub_header && (
-                <p className="mt-4 font-serif text-base italic text-primary">{i.sub_header}</p>
-              )}
-              <span>{i.item_text}</span>
-            </li>
-          ))}
+          {(ingredients ?? []).map((i, idx, arr) => {
+            // Render the sub-header only when it changes from the previous row's
+            // value, so recipes that repeat the sub_header on every row (e.g.
+            // Marmalade soup, where every row says "For the Soup") don't print
+            // the heading before each ingredient.
+            const showSub = !!i.sub_header && i.sub_header !== arr[idx - 1]?.sub_header;
+            return (
+              <li key={idx} className="print-keep">
+                {showSub && (
+                  <p className="mt-4 font-serif text-base italic text-primary">{i.sub_header}</p>
+                )}
+                <span>{i.item_text}</span>
+              </li>
+            );
+          })}
         </ul>
       </section>
 
       <section className="recipe-instructions mt-12">
         <h2 className="font-serif text-2xl text-ink">Method</h2>
         <ol className="mt-4 list-decimal space-y-4 pl-5 text-ink-soft">
-          {(instructions ?? []).map((i, idx) => (
-            <li key={idx} className="print-keep">
-              {i.sub_header && (
-                <p className="mb-1 -ml-5 font-serif text-base italic text-primary">{i.sub_header}</p>
-              )}
-              <span>{i.body}</span>
-            </li>
-          ))}
+          {(instructions ?? []).map((i, idx, arr) => {
+            const showSub = !!i.sub_header && i.sub_header !== arr[idx - 1]?.sub_header;
+            return (
+              <li key={idx} className="print-keep">
+                {showSub && (
+                  <p className="mb-1 -ml-5 font-serif text-base italic text-primary">{i.sub_header}</p>
+                )}
+                <span>{i.body}</span>
+              </li>
+            );
+          })}
         </ol>
       </section>
 
