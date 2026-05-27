@@ -33,8 +33,7 @@ export default async function SectionPage({ params }: { params: { slug: string }
     <div>
       <header className={cn('w-full', SECTION_BG[section.color], SECTION_TEXT[section.color])}>
         <div className="mx-auto max-w-page px-6 py-20">
-          <p className="label" style={{ color: 'inherit', opacity: 0.7 }}>Section</p>
-          <h1 className="font-serif mt-3 text-5xl leading-tight md:text-6xl">{section.name}</h1>
+          <h1 className="font-serif text-5xl leading-tight md:text-6xl">{section.name}</h1>
           {SECTION_BLURBS[section.slug] && (
             <p
               className="mt-6 max-w-prose text-lg"
