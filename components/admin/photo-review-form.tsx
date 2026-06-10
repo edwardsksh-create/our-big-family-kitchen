@@ -18,10 +18,6 @@ type Props = {
   previous:        FamilyPhotoFull | null;
 };
 
-function personRefOf(p: PickerPerson): string {
-  return `${p.person_type}:${p.id}`;
-}
-
 function personRefOfTag(p: { person_type: 'contributor' | 'family_member'; id: string }): string {
   return `${p.person_type}:${p.id}`;
 }
@@ -69,7 +65,7 @@ function PhotoReviewFormInner({ photo, occasions, people, recipes, previous }: P
 
   const peopleByRef = useMemo(() => {
     const m = new Map<string, PickerPerson>();
-    for (const p of people) m.set(personRefOf(p), p);
+    for (const p of people) m.set(p.ref, p);
     return m;
   }, [people]);
 
@@ -85,7 +81,7 @@ function PhotoReviewFormInner({ photo, occasions, people, recipes, previous }: P
     const haystack = (p: PickerPerson) => [p.name, p.nickname, p.birth_name].filter(Boolean).join(' ').toLowerCase();
     return people
       .filter((p) => haystack(p).includes(q))
-      .filter((p) => !selectedPeople.includes(personRefOf(p)))
+      .filter((p) => !selectedPeople.includes(p.ref))
       .slice(0, 10);
   }, [people, personQuery, selectedPeople]);
 
@@ -173,8 +169,8 @@ function PhotoReviewFormInner({ photo, occasions, people, recipes, previous }: P
                   className="inline-flex items-center gap-2 rounded-full border border-rule bg-paper px-3 py-1 text-sm text-ink"
                 >
                   <span>{formattedPerson(p)}</span>
-                  {p.family_line_name && (
-                    <span className="text-xs text-ink-soft">· {p.family_line_name}</span>
+                  {p.family_line_names.length > 0 && (
+                    <span className="text-xs text-ink-soft">· {p.family_line_names.join(' · ')}</span>
                   )}
                   <button
                     type="button"
@@ -200,21 +196,22 @@ function PhotoReviewFormInner({ photo, occasions, people, recipes, previous }: P
           {personMatches.length > 0 && (
             <ul className="absolute left-0 right-0 z-10 mt-1 max-h-72 overflow-auto rounded-xl border border-rule bg-paper shadow-lg">
               {personMatches.map((p) => (
-                <li key={personRefOf(p)}>
+                <li key={p.ref}>
                   <button
                     type="button"
                     className="flex w-full items-center justify-between gap-2 px-4 py-2 text-left text-sm hover:bg-cream/40"
                     onClick={() => {
-                      setSelectedPeople([...selectedPeople, personRefOf(p)]);
+                      setSelectedPeople([...selectedPeople, p.ref]);
                       setPersonQuery('');
                     }}
                   >
                     <span>
                       {formattedPerson(p)}
-                      <span className="ml-2 text-xs text-ink-soft">
-                        {p.person_type === 'contributor' ? 'contributor' : 'family member'}
-                        {p.family_line_name && ` · ${p.family_line_name}`}
-                      </span>
+                      {p.family_line_names.length > 0 && (
+                        <span className="ml-2 text-xs text-ink-soft">
+                          {p.family_line_names.join(' · ')}
+                        </span>
+                      )}
                     </span>
                   </button>
                 </li>

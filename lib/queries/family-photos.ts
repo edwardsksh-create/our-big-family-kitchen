@@ -250,52 +250,151 @@ export async function fetchPhotosForRecipe(recipeId: string): Promise<FamilyPhot
 // People + recipes pickers — small datasets loaded upfront for client-side filtering.
 
 export type PickerPerson = {
-  person_type: 'contributor' | 'family_member';
-  id: string;
+  // 'contributor:<id>' or 'family_member:<id>'. The form action splits this
+  // back into a person_type and id when saving family_photo_people rows.
+  ref: string;
   name: string;
-  nickname: string | null;
+  nickname:   string | null;
   birth_name: string | null;
-  family_line_name: string | null;
+  // All family lines this person belongs to, joined together so the
+  // autocomplete row can show e.g. "Leusch · Sundy" for cross-listed people.
+  family_line_names: string[];
 };
+
+// Normalizing key so multiple records that belong to the same human collapse
+// into one autocomplete entry: contributor_slug when set, otherwise the
+// person's name with whitespace and case smoothed out.
+function personKey(name: string, contributorSlug: string | null): string {
+  if (contributorSlug && contributorSlug.trim()) return `slug:${contributorSlug.trim().toLowerCase()}`;
+  return `name:${name.toLowerCase().replace(/\s+/g, ' ').trim()}`;
+}
+
+function slugifyName(name: string): string {
+  return name.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+// Inputs for dedupePeopleForPicker — exported so tests can construct them
+// without touching the DB.
+export type DedupeContributor = {
+  id:         string;
+  name:       string | null;
+  nickname:   string | null;
+  birth_name: string | null;
+};
+export type DedupeFamilyMember = {
+  id:               string;
+  name:             string;
+  nickname:         string | null;
+  birth_name:       string | null;
+  contributor_slug: string | null;
+  family_line_id:   string;
+};
+export type DedupeContribLink = {
+  contributor_id: string;
+  family_line_id: string;
+  rank:           string | null;
+};
+export type DedupeFamilyLine = { id: string; name: string };
+
+/**
+ * Pure dedup logic: one PickerPerson per real human. A contributor record
+ * takes precedence — when a family_members row points at (or matches by
+ * name) an existing contributor, the family_members row is dropped.
+ * Cross-listed family_members rows (one per family line) collapse into a
+ * single option whose family_line_names lists every line they belong to.
+ */
+export function dedupePeopleForPicker(
+  contributors:     DedupeContributor[],
+  members:          DedupeFamilyMember[],
+  contributorLines: DedupeContribLink[],
+  familyLines:      DedupeFamilyLine[],
+): PickerPerson[] {
+  const lineNameById = new Map(familyLines.map((l) => [l.id, l.name]));
+
+  // Lines per contributor: primary first, then the rest. Stable sort
+  // preserves insertion order for non-primary links.
+  const linesPerContributor = new Map<string, string[]>();
+  const ordered = contributorLines.slice().sort(
+    (a, b) => (a.rank === 'primary' ? -1 : 0) - (b.rank === 'primary' ? -1 : 0),
+  );
+  for (const link of ordered) {
+    const ln = lineNameById.get(link.family_line_id);
+    if (!ln) continue;
+    const arr = linesPerContributor.get(link.contributor_id) ?? [];
+    if (!arr.includes(ln)) arr.push(ln);
+    linesPerContributor.set(link.contributor_id, arr);
+  }
+
+  // Contributor lookup keyed by BOTH slug-of-name AND lowercased name so a
+  // family_members row matches whether it carries a contributor_slug or not.
+  const contributorKeys = new Set<string>();
+  for (const c of contributors) {
+    if (!c.name) continue;
+    contributorKeys.add(personKey(c.name, slugifyName(c.name))); // slug:annie-sundy
+    contributorKeys.add(personKey(c.name, null));                // name:annie sundy
+  }
+
+  // Collapse same-person family_members rows into one entry.
+  const familyOnly = new Map<string, {
+    id: string; name: string; nickname: string | null; birth_name: string | null; family_line_names: string[];
+  }>();
+  for (const m of members) {
+    const key = personKey(m.name, m.contributor_slug);
+    if (contributorKeys.has(key)) continue;
+    const ln = lineNameById.get(m.family_line_id);
+    const existing = familyOnly.get(key);
+    if (existing) {
+      if (ln && !existing.family_line_names.includes(ln)) existing.family_line_names.push(ln);
+    } else {
+      familyOnly.set(key, {
+        id:                m.id,
+        name:              m.name,
+        nickname:          m.nickname,
+        birth_name:        m.birth_name,
+        family_line_names: ln ? [ln] : [],
+      });
+    }
+  }
+
+  const out: PickerPerson[] = [];
+  for (const c of contributors) {
+    if (!c.name) continue;
+    out.push({
+      ref:               `contributor:${c.id}`,
+      name:              c.name,
+      nickname:          c.nickname,
+      birth_name:        c.birth_name,
+      family_line_names: linesPerContributor.get(c.id) ?? [],
+    });
+  }
+  for (const f of familyOnly.values()) {
+    out.push({
+      ref:               `family_member:${f.id}`,
+      name:              f.name,
+      nickname:          f.nickname,
+      birth_name:        f.birth_name,
+      family_line_names: f.family_line_names,
+    });
+  }
+  out.sort((a, b) => a.name.localeCompare(b.name));
+  return out;
+}
 
 export async function fetchAllPeopleForPicker(): Promise<PickerPerson[]> {
   const db = supabaseAdmin();
   const [{ data: contribs }, { data: members }, { data: cfl }, { data: lines }] = await Promise.all([
     db.from('contributors').select('id, name, nickname, birth_name').order('name'),
-    db.from('family_members').select('id, name, nickname, birth_name, family_line_id, sort_order').order('sort_order'),
+    db.from('family_members').select('id, name, nickname, birth_name, family_line_id, contributor_slug, sort_order').order('sort_order'),
     db.from('contributor_family_lines').select('contributor_id, family_line_id, rank'),
     db.from('family_lines').select('id, name'),
   ]);
-  const lineNameById = new Map((lines ?? []).map((l) => [l.id, l.name]));
-  const contribLineByContributor = new Map<string, string>();
-  for (const link of cfl ?? []) {
-    if (link.rank !== 'primary') continue;
-    const ln = lineNameById.get(link.family_line_id);
-    if (ln) contribLineByContributor.set(link.contributor_id, ln);
-  }
-  const out: PickerPerson[] = [];
-  for (const c of contribs ?? []) {
-    if (!c.name) continue;
-    out.push({
-      person_type: 'contributor',
-      id:          c.id,
-      name:        c.name,
-      nickname:    c.nickname,
-      birth_name:  c.birth_name,
-      family_line_name: contribLineByContributor.get(c.id) ?? null,
-    });
-  }
-  for (const m of members ?? []) {
-    out.push({
-      person_type: 'family_member',
-      id:          m.id,
-      name:        m.name,
-      nickname:    m.nickname,
-      birth_name:  m.birth_name,
-      family_line_name: lineNameById.get(m.family_line_id) ?? null,
-    });
-  }
-  return out;
+  return dedupePeopleForPicker(
+    (contribs ?? []) as DedupeContributor[],
+    (members  ?? []) as DedupeFamilyMember[],
+    (cfl      ?? []) as DedupeContribLink[],
+    (lines    ?? []) as DedupeFamilyLine[],
+  );
 }
 
 export type PickerRecipe = { id: string; slug: string; title: string };
