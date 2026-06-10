@@ -340,22 +340,6 @@ export default async function RecipePage({
         </ol>
       </section>
 
-      {/* Provenance note (e.g. "From Lucy's recipe collection") sits in the
-          contextual zone after the cooking content, alongside the kitchen
-          notes and photos — same register as the Family Note box below. */}
-      {statusNotes.length > 0 && (
-        <div className="mt-12 space-y-3" data-no-print>
-          {statusNotes.map((note, i) => (
-            <p
-              key={i}
-              className="rounded-xl border border-rule bg-cream/30 px-4 py-3 text-sm leading-relaxed text-ink-soft"
-            >
-              <span className="font-serif italic">{note}</span>
-            </p>
-          ))}
-        </div>
-      )}
-
       {kitchenNotes.length > 0 && (
         <section className="recipe-notes mt-12">
           <h2 className="font-serif text-2xl text-ink">Notes from the kitchen</h2>
@@ -456,6 +440,23 @@ export default async function RecipePage({
             ))}
           </ul>
         </section>
+      )}
+
+      {/* Provenance note (e.g. "From Lucy's recipe collection") — a quiet
+          factual line, placed just before the boxed Family Note so the
+          personal story is the very last thing read. Hidden entirely when
+          there's no provenance to surface. */}
+      {statusNotes.length > 0 && (
+        <div className="mt-16 space-y-3" data-no-print>
+          {statusNotes.map((note, i) => (
+            <p
+              key={i}
+              className="rounded-xl border border-rule bg-cream/30 px-4 py-3 text-sm leading-relaxed text-ink-soft"
+            >
+              <span className="font-serif italic">{note}</span>
+            </p>
+          ))}
+        </div>
       )}
 
       {/* Family Note — the cook's story, given a visually distinct boxed
