@@ -300,25 +300,32 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
         </div>
 
         {/* Add a new reusable occasion. Persists to family_photo_occasion_types
-            and becomes available everywhere (review form and /album filter). */}
-        <div className="mt-3 rounded-xl border border-dashed border-rule bg-paper p-3">
-          <p className="label mb-2 text-ink-soft">Add an occasion</p>
-          <div className="flex flex-wrap items-center gap-2">
+            and becomes available everywhere (review form and /album filter).
+            Visual emphasis: solid border + cream backdrop + accent CTA so
+            it reads as an action, not as a passive footnote. */}
+        <div className="mt-4 rounded-2xl border border-rule bg-cream/40 p-4">
+          <p className="font-serif text-base italic text-ink">
+            Don&rsquo;t see your occasion? Add one.
+          </p>
+          <p className="mt-1 text-xs text-ink-soft">
+            New occasions persist for every future photo and the /album filter.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <input
               type="text"
               value={newOccasionInput}
               onChange={(e) => { setNewOccasionInput(e.target.value); setNewOccasionFeedback(null); }}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddOccasion(); } }}
               placeholder="e.g. St. Patrick's Day, Confirmation, Crawfish boil…"
-              className="min-w-[12rem] flex-1 rounded-xl border border-rule bg-paper px-3 py-2 text-sm"
+              className="min-w-[12rem] flex-1 rounded-xl border border-rule bg-paper px-3 py-2 text-sm outline-none focus:border-ink focus:ring-2 focus:ring-ink/10"
             />
             <button
               type="button"
               onClick={handleAddOccasion}
               disabled={creatingOccasion || newOccasionInput.trim().length < 2}
-              className="rounded-full border border-rule bg-paper px-3 py-2 text-sm hover:border-ink disabled:opacity-50"
+              className="rounded-full bg-primary px-4 py-2 font-sans text-sm font-medium text-paper transition-colors hover:bg-ink disabled:opacity-50"
             >
-              {creatingOccasion ? 'Adding…' : '+ Add'}
+              {creatingOccasion ? 'Adding…' : '+ Add occasion'}
             </button>
           </div>
           {occasionSuggestions.length > 0 && (
