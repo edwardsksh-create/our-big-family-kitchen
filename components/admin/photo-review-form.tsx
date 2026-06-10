@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { submitPhotoReview, createOccasionType } from '@/app/admin/photo-review/actions';
 import { suggestExistingOccasions } from '@/lib/photos/occasions';
@@ -60,6 +60,17 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
   );
   const [needsEditing, setNeedsEditing] = useState(photo.needs_editing);
   const [editingNote,  setEditingNote]  = useState(photo.editing_note ?? '');
+
+  // Scroll the viewport to the top whenever a fresh photo loads. The outer
+  // PhotoReviewForm keys this inner component on photo.id, so the mount-only
+  // effect runs once per advance — covering Save and next, Skip, and Not for
+  // archive, which all redirect back to /admin/photo-review with the next
+  // unreviewed photo. Without this, the action buttons stay in view and the
+  // newly loaded photo sits offscreen above. CSS sets scroll-behavior: smooth
+  // on <html>, so the default scroll animation is honored.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, []);
 
   const [newOccasionInput,   setNewOccasionInput]   = useState('');
   const [newOccasionFeedback, setNewOccasionFeedback] = useState<string | null>(null);
@@ -135,6 +146,9 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
     setSelectedOccasions(previous.occasions);
     setYear(previous.year ?? '');
     setPlace(previous.place ?? '');
+    // Pull the viewport back up so the just-prefilled fields and the photo
+    // are in view, matching the post-advance scroll behavior.
+    window.scrollTo({ top: 0 });
   }
 
   function submitWith(intent: 'save_and_next' | 'skip' | 'not_for_archive' | 'done') {
