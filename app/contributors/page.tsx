@@ -1,11 +1,15 @@
 import Link from 'next/link';
-import { fetchAllContributors } from '@/lib/queries/contributors';
+import { fetchListedContributors } from '@/lib/queries/contributors';
 
 export const metadata = { title: 'Contributors' };
 export const revalidate = 60;
 
 export default async function ContributorsPage() {
-  const all = await fetchAllContributors();
+  // Only people with ≥1 published recipe attributed to them (contributor_id)
+  // are listed here. People who only appear in family structure or as
+  // photo tags still exist (and show on /family-lines and /contributors/[slug]),
+  // they just don't pad the public index.
+  const all = await fetchListedContributors();
 
   return (
     <div className="mx-auto max-w-page px-6 py-16">

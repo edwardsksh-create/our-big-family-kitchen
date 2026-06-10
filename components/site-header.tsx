@@ -8,11 +8,30 @@ export async function SiteHeader() {
   const role = session?.user?.role;
   const signedIn = !!session?.user;
 
+  // Canonical nav order, kept identical between desktop and mobile so users
+  // get the same scan whichever surface they're on. "By type" reads cleaner
+  // than the old "Browse" — the latter was ambiguous with the umbrella for
+  // all the browsing axes (sections, families, contributors). Album appears
+  // for everyone in the nav; access to /album itself stays signed-in only.
   const primaryLinks = (
     <>
       <Link href="/recipes"      className="hover:text-primary transition-colors">Recipes</Link>
-      <Link href="/sections"     className="hover:text-primary transition-colors">Browse</Link>
+      <Link href="/sections"     className="hover:text-primary transition-colors">By type</Link>
+      <Link href="/contributors" className="hover:text-primary transition-colors">Contributors</Link>
       <Link href="/family-lines" className="hover:text-primary transition-colors">Families</Link>
+      <Link href="/about"        className="hover:text-primary transition-colors">About</Link>
+      <Link href="/album"        className="hover:text-primary transition-colors">Album</Link>
+    </>
+  );
+
+  const mobilePrimaryLinks = (
+    <>
+      <Link href="/recipes"      className="block rounded-lg px-3 py-3 hover:bg-cream/40">Recipes</Link>
+      <Link href="/sections"     className="block rounded-lg px-3 py-3 hover:bg-cream/40">By type</Link>
+      <Link href="/contributors" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Contributors</Link>
+      <Link href="/family-lines" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Families</Link>
+      <Link href="/about"        className="block rounded-lg px-3 py-3 hover:bg-cream/40">About</Link>
+      <Link href="/album"        className="block rounded-lg px-3 py-3 hover:bg-cream/40">Album</Link>
     </>
   );
 
@@ -43,8 +62,6 @@ export async function SiteHeader() {
               <Link href="/admin/contributors" className="hover:text-primary transition-colors">People</Link>
             </>
           )}
-          <Link href="/contributors" className="hover:text-primary transition-colors">Contributors</Link>
-          <Link href="/about"        className="hover:text-primary transition-colors">About</Link>
           {signedIn ? (
             <Link href="/sign-out" className="hover:text-primary transition-colors">Sign out</Link>
           ) : (
@@ -53,9 +70,7 @@ export async function SiteHeader() {
         </nav>
 
         <MobileMenu>
-          <Link href="/recipes"      className="block rounded-lg px-3 py-3 hover:bg-cream/40">Recipes</Link>
-          <Link href="/sections"     className="block rounded-lg px-3 py-3 hover:bg-cream/40">Browse</Link>
-          <Link href="/family-lines" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Families</Link>
+          {mobilePrimaryLinks}
           {signedIn && (
             <Link href="/add" className="block rounded-lg px-3 py-3 text-primary hover:bg-cream/40">+ Add</Link>
           )}
@@ -65,8 +80,6 @@ export async function SiteHeader() {
               <Link href="/admin/contributors" className="block rounded-lg px-3 py-3 hover:bg-cream/40">People</Link>
             </>
           )}
-          <Link href="/contributors" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Contributors</Link>
-          <Link href="/about"        className="block rounded-lg px-3 py-3 hover:bg-cream/40">About</Link>
           <div className="my-1 border-t border-rule" />
           {signedIn ? (
             <Link href="/sign-out" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Sign out</Link>

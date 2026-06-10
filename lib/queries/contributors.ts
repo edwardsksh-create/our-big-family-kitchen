@@ -74,6 +74,54 @@ export async function fetchContributorBySlug(slug: string): Promise<ContributorS
   return all.find((c) => c.slug === slug) ?? null;
 }
 
+/**
+ * Pure filter for the public /contributors index: keep only people who have
+ * at least one published recipe attributed to them as `contributor_id`.
+ * Recipes a person merely added (added_by_id) don't count — listing a stub
+ * that's never authored anything makes the index feel padded.
+ *
+ * Exported so the filter can be unit-tested without touching the database.
+ * Other surfaces (/family-lines, /contributors/[slug], admin listings) keep
+ * using the full list so structure-only people still appear where their
+ * presence belongs.
+ */
+export function filterToListedContributors(
+  all: ContributorSummary[],
+  authoredContributorIds: Set<string>,
+): ContributorSummary[] {
+  return all.filter((c) => authoredContributorIds.has(c.id));
+}
+
+/**
+ * Public /contributors listing. Fetches every contributor (so each row's
+ * display data is fully hydrated), then narrows to those who actually have
+ * a published authored recipe.
+ */
+export async function fetchListedContributors(): Promise<ContributorSummary[]> {
+  const [all, ids] = await Promise.all([
+    fetchAllContributors(),
+    fetchContributorIdsWithPublishedRecipes(),
+  ]);
+  return filterToListedContributors(all, ids);
+}
+
+async function fetchContributorIdsWithPublishedRecipes(): Promise<Set<string>> {
+  const db = supabaseAdmin();
+  // Chunked select would matter if the table ballooned past PostgREST's
+  // 1000-row cap; published-recipe count is well under that, so a single
+  // query with .range is enough for the foreseeable future.
+  const { data } = await db
+    .from('recipes')
+    .select('contributor_id')
+    .eq('status', 'published')
+    .range(0, 9999);
+  const out = new Set<string>();
+  for (const row of (data ?? []) as { contributor_id: string | null }[]) {
+    if (row.contributor_id) out.add(row.contributor_id);
+  }
+  return out;
+}
+
 export type ContributorsForFamilyLine = {
   primary:   ContributorSummary[];
   secondary: ContributorSummary[];
