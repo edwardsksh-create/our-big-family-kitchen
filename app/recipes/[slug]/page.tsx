@@ -282,19 +282,30 @@ export default async function RecipePage({
         <div className="mt-6 space-y-6">
           {/* Actionable needs-prompt. Visible ONLY to admin or this recipe's
               own contributor — the same set of viewers who can act on it.
-              Other family members and signed-out visitors see nothing here.
-              A single prompt covers both missing method and missing story,
-              since the edit flow handles either. */}
+              Admin sees the "Ask the family" CTA so they can route the
+              question to any emailable family member (often someone other
+              than the original contributor — e.g. a sibling for a recipe
+              attributed to a deceased relative). The recipe's own
+              contributor (non-admin) sees the warm self-edit prompt. */}
           {canEdit && (() => {
             const needsMethod = (instructions ?? []).length === 0;
             const needsStory  = !recipe.story || recipe.story.trim().length === 0;
             if (!needsMethod && !needsStory) return null;
+            if (isAdmin) {
+              return (
+                <div data-no-print>
+                  <NeedsPrompt
+                    headline="This recipe is missing information."
+                    href={`/admin/recipes/${params.slug}/ask`}
+                    cta="Ask the family"
+                  />
+                </div>
+              );
+            }
             return (
               <div data-no-print>
                 <NeedsPrompt
-                  headline={isOwner
-                    ? 'This recipe is missing information — would you help fix it?'
-                    : 'This recipe is missing information.'}
+                  headline="This recipe is missing information — would you help fix it?"
                   href={`/recipes/${params.slug}/edit`}
                   cta="Add the steps"
                 />
