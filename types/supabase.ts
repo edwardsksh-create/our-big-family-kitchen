@@ -594,6 +594,45 @@ export type Database = {
           },
         ]
       }
+      recipe_comments: {
+        Row: {
+          author_contributor_id: string
+          body: string
+          created_at: string
+          id: string
+          recipe_id: string
+        }
+        Insert: {
+          author_contributor_id: string
+          body: string
+          created_at?: string
+          id?: string
+          recipe_id: string
+        }
+        Update: {
+          author_contributor_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_comments_author_contributor_id_fkey"
+            columns: ["author_contributor_id"]
+            isOneToOne: false
+            referencedRelation: "contributors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_comments_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_tags: {
         Row: {
           recipe_id: string

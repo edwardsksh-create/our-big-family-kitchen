@@ -9,9 +9,15 @@ import { publicUrl } from '@/lib/storage/photos';
 import { publicStatusNotes } from '@/lib/recipes/status-notes';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { fetchPhotosForRecipe } from '@/lib/queries/family-photos';
+import { fetchCommentsForRecipe } from '@/lib/queries/recipe-comments';
+import { RecipeComments } from '@/components/recipe-comments';
+import { SIGNED_OUT_COMMENT_VIEWER, type CommentViewer } from '@/lib/recipes/comment-permissions';
 import { slugify } from '@/lib/utils';
 
-export const revalidate = 60;
+// Comments need the signed-in viewer's contributor row to decide who can
+// post or delete; that has to be fresh per request rather than served from
+// the static ISR cache.
+export const dynamic = 'force-dynamic';
 
 type ContribJoin = {
   id: string;
@@ -100,13 +106,32 @@ export default async function RecipePage({
   // row) can't edit even their own attributions until they sign up.
   const canEdit = isAdmin || isOwner;
 
-  const [{ data: ingredients }, { data: instructions }, { data: tagJoins }, { data: photoRows }, familyPhotos] = await Promise.all([
+  const [{ data: ingredients }, { data: instructions }, { data: tagJoins }, { data: photoRows }, familyPhotos, comments] = await Promise.all([
     db.from('ingredients').select('sub_header, item_text, sort_order').eq('recipe_id', recipe.id).order('sort_order'),
     db.from('instructions').select('sub_header, body, sort_order').eq('recipe_id', recipe.id).order('sort_order'),
     db.from('recipe_tags').select('tag:tags!recipe_tags_tag_id_fkey(slug, name)').eq('recipe_id', recipe.id),
     db.from('photos').select('id, url, storage_path, caption, photo_type, sort_order').eq('recipe_id', recipe.id).order('sort_order'),
     fetchPhotosForRecipe(recipe.id),
+    fetchCommentsForRecipe(recipe.id),
   ]);
+
+  // Resolve the comment viewer — needs the viewer's contributor id and
+  // can_sign_in to decide who can post / who can delete.
+  let commentViewer: CommentViewer = SIGNED_OUT_COMMENT_VIEWER;
+  if (session?.user?.email) {
+    const { data: viewerRow } = await db
+      .from('contributors')
+      .select('id, can_sign_in')
+      .ilike('email', session.user.email)
+      .maybeSingle();
+    if (viewerRow) {
+      commentViewer = {
+        isAdmin,
+        contributorId: viewerRow.id,
+        canSignIn:     !!viewerRow.can_sign_in,
+      };
+    }
+  }
 
   const photos = ((photoRows ?? []) as PhotoRow[]).map((p) => ({
     id: p.id,
@@ -472,9 +497,9 @@ export default async function RecipePage({
 
       {/* Family Note — the cook's story, given a visually distinct boxed
           treatment so it reads as a personal aside rather than another body
-          section. Sits at the very bottom of the recipe content, above the
-          provenance footer. Hidden entirely when there's no story to tell —
-          never replaced by system or needs-class prose. */}
+          section. Sits just before the communal Comments layer. Hidden
+          entirely when there's no story to tell — never replaced by system
+          or needs-class prose. */}
       {recipe.story && recipe.story.trim().length > 0 && (
         <section className="mt-16 rounded-2xl border border-rule bg-cream/40 p-6 md:p-8">
           <h2 className="font-serif text-2xl text-ink">Family note</h2>
@@ -483,6 +508,15 @@ export default async function RecipePage({
           </div>
         </section>
       )}
+
+      {/* Family memories — the communal layer that comes after the
+          contributor's own note. Any signed-in family member can add one. */}
+      <RecipeComments
+        recipeId={recipe.id}
+        recipeSlug={params.slug}
+        comments={comments}
+        viewer={commentViewer}
+      />
 
       <footer className="hairline mt-16 space-y-1 pt-6 text-xs italic text-ink-soft/70">
         {savedBy && savedByDisplay && (
