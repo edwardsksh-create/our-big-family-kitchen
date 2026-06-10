@@ -21,9 +21,9 @@ test.describe('recipe detail page', () => {
     await expect(crumb).toBeVisible();
   });
 
-  test('shows a "Print this recipe" link', async ({ page }) => {
+  test('shows a "Print recipe" link', async ({ page }) => {
     await page.goto(`/recipes/${PUBLISHED_SLUG}`);
-    await expect(page.getByRole('link', { name: /Print this recipe/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Print recipe/i })).toBeVisible();
   });
 
   test('does NOT show an Edit link to signed-out visitors', async ({ page }) => {

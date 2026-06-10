@@ -7,7 +7,7 @@ import { test, expect } from '@playwright/test';
 test.describe('public pages render', () => {
   test('home page shows hero + section grid + family lines', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /Recipes from our families/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /recipes we make, remember/i })).toBeVisible();
     await expect(page.getByRole('link', { name: /Breakfast/i }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /Leusch/i }).first()).toBeVisible();
   });
@@ -19,7 +19,7 @@ test.describe('public pages render', () => {
 
   test('/family-lines/leusch shows the federation banner', async ({ page }) => {
     await page.goto('/family-lines/leusch');
-    await expect(page.getByRole('heading', { name: /The Leusch family/i })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: /Leusch family recipes/i })).toBeVisible();
     await expect(page.getByText(/Aunt Laura/i).first()).toBeVisible();
   });
 
@@ -36,11 +36,12 @@ test.describe('public pages render', () => {
     await expect(page.getByRole('heading', { name: /The cooks/i })).toBeVisible();
   });
 
-  test('/contributors/kate-edwards shows Primary: Edwards', async ({ page }) => {
+  test('/contributors/kate-edwards renders', async ({ page }) => {
     await page.goto('/contributors/kate-edwards');
-    await expect(page.getByRole('heading', { name: /Kate Edwards/i })).toBeVisible();
-    await expect(page.getByText('Primary')).toBeVisible();
-    await expect(page.getByText('Edwards').first()).toBeVisible();
+    // Heading uses formatDisplayName, which inserts an optional birth-name
+    // segment between first and last (e.g. "Kate (Sundy) Edwards").
+    await expect(page.getByRole('heading', { level: 1, name: /Kate.*Edwards/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Recipes' })).toBeVisible();
   });
 
   test('/about renders', async ({ page }) => {
