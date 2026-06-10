@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import type { ParsedRecipe } from '@/lib/recipe-parser';
+import { formatSourceAttribution } from '@/lib/recipes/source-attribution';
 
 // Pure JSON-LD Recipe extraction. Split out of recipe-from-url.ts so the
 // parsing logic is unit-testable without network I/O.
@@ -47,6 +48,25 @@ export function authorString(author: unknown): string | null {
   if (typeof author === 'object') {
     const a = author as Record<string, unknown>;
     if (typeof a.name === 'string') return a.name.trim() || null;
+  }
+  return null;
+}
+
+// schema.org "publisher" is typically an Organization with a name. Strings
+// are also tolerated. Returns the publication name, or null.
+export function publisherString(publisher: unknown): string | null {
+  if (!publisher) return null;
+  if (typeof publisher === 'string') return publisher.trim() || null;
+  if (Array.isArray(publisher)) {
+    for (const p of publisher) {
+      const s = publisherString(p);
+      if (s) return s;
+    }
+    return null;
+  }
+  if (typeof publisher === 'object') {
+    const p = publisher as Record<string, unknown>;
+    if (typeof p.name === 'string') return p.name.trim() || null;
   }
   return null;
 }
@@ -110,15 +130,23 @@ export function ingredientsToGroups(
 }
 
 // Build a ParsedRecipe from a single JSON-LD Recipe node. Returns null when
-// the node has no usable title.
+// the node has no usable title. JSON-LD recipes nearly always come from a
+// publication or website (schema.org Recipe is rarely emitted by book apps),
+// so author + publisher feed the "Author for Source" form by default.
 export function recipeNodeToParsed(node: Record<string, unknown>): ParsedRecipe | null {
   const title = (node.name as string) || '';
   if (!title.trim()) return null;
   const description = (node.description as string) || null;
+  const author    = authorString(node.author);
+  const publisher = publisherString(node.publisher);
+  const originally_from = formatSourceAttribution({ author, source: publisher, isBook: false });
   return {
     title:             title.trim(),
     story:             description?.trim() || null,
-    originally_from:   authorString(node.author),
+    originally_from,
+    external_source:   (author || publisher)
+      ? { author, source: publisher, is_book: false }
+      : null,
     ingredient_groups: ingredientsToGroups(node.recipeIngredient ?? node.ingredients),
     instruction_steps: instructionsToSteps(node.recipeInstructions),
   };

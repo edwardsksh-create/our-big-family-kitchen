@@ -165,6 +165,24 @@ describe('recipeNodeToParsed()', () => {
     expect(recipeNodeToParsed({ '@type': 'Recipe' })).toBeNull();
     expect(recipeNodeToParsed({ '@type': 'Recipe', name: '   ' })).toBeNull();
   });
+  it('formats author + publisher in house style ("Author for Source")', () => {
+    const parsed = recipeNodeToParsed({
+      '@type': 'Recipe',
+      name: 'Skillet Cornbread',
+      author:    { '@type': 'Person',       name: 'Sam Sifton' },
+      publisher: { '@type': 'Organization', name: 'NYT Cooking' },
+    });
+    expect(parsed?.originally_from).toBe('Sam Sifton for NYT Cooking');
+    expect(parsed?.external_source).toEqual({ author: 'Sam Sifton', source: 'NYT Cooking', is_book: false });
+  });
+  it('falls back to publisher alone when no author is present', () => {
+    const parsed = recipeNodeToParsed({
+      '@type': 'Recipe',
+      name: 'Whatever',
+      publisher: { name: 'Bon Appétit' },
+    });
+    expect(parsed?.originally_from).toBe('Bon Appétit');
+  });
 });
 
 describe('extractJsonLdRecipe()', () => {

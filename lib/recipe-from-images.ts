@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import type { RenderedPage } from '@/lib/pdf/render';
 import { SECTIONS } from '@/lib/sections';
+import { formatSourceAttribution } from '@/lib/recipes/source-attribution';
 
 // One ingredient line, optionally grouped under a sub-header.
 const IngredientGroupSchema = z.object({
@@ -18,10 +19,17 @@ const InstructionStepSchema = z.object({
 const VALID_SECTION_SLUGS = SECTIONS.map((s) => s.slug);
 const SectionSlugSchema = z.enum(VALID_SECTION_SLUGS as [string, ...string[]]);
 
+const ExternalSourceSchema = z.object({
+  author:  z.string().nullable(),
+  source:  z.string().nullable(),
+  is_book: z.boolean(),
+});
+
 const ParsedRecipeSchema = z.object({
   title:             z.string(),
   story:             z.string().nullable(),
   originally_from:   z.string().nullable(),
+  external_source:   ExternalSourceSchema.nullable(),
   section_slug:      SectionSlugSchema.nullable(),
   ingredient_groups: z.array(IngredientGroupSchema),
   instruction_steps: z.array(InstructionStepSchema),
@@ -46,7 +54,12 @@ Rules:
 - "section_slug" — pick the most appropriate slug from this list, or null if unsure:
   ${VALID_SECTION_SLUGS.join(', ')}
 - "story" — any narrative the source author wrote around the recipe: where it came from, who taught it, personal notes addressed to family. PRESERVE these verbatim. Null if none.
-- "originally_from" — only set if the source explicitly attributes the recipe (a person, cookbook, restaurant, etc.). Null otherwise.
+- "external_source" — populate ONLY when the source explicitly attributes the recipe to a publication, website, cookbook, or named author outside the family.
+  - "author" — named author/cook ("Sam Sifton", "Deb Perelman", "Ina Garten"), or null.
+  - "source" — the publication, website, or cookbook title ("NYT Cooking", "Smitten Kitchen", "Barefoot Contessa"), or null.
+  - "is_book" — true if "source" is a cookbook (book title); false for a publication, magazine, or website.
+  - Set to null when the source is a family member, restaurant, or otherwise not an external publication/cookbook.
+- "originally_from" — leave null when you populate external_source. The system formats it from those structured fields. Set it only for cases external_source can't capture (e.g. a restaurant name like "Holiday Inn, South Bend").
 
 Do not invent content. If something isn't visible in the source, leave it out (or null).`;
 
@@ -114,10 +127,21 @@ export async function parseRecipesFromImages(args: {
   if (!parsed) throw new Error('Vision recipe parser returned no structured output.');
 
   return {
-    recipes: parsed.recipes,
+    recipes: parsed.recipes.map(applyHouseStyleSource),
     usage: {
       input_tokens:  response.usage.input_tokens,
       output_tokens: response.usage.output_tokens,
     },
   };
+}
+
+function applyHouseStyleSource(r: ParsedRecipeVision): ParsedRecipeVision {
+  if (!r.external_source) return r;
+  const normalized = formatSourceAttribution({
+    author: r.external_source.author,
+    source: r.external_source.source,
+    isBook: r.external_source.is_book,
+  });
+  if (normalized === null) return r;
+  return { ...r, originally_from: normalized };
 }

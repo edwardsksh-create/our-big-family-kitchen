@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { SECTIONS } from '@/lib/sections';
+import { formatSourceAttribution } from '@/lib/recipes/source-attribution';
 
 const Confidence = z.enum(['high', 'medium', 'low']);
 
@@ -20,6 +21,12 @@ const VALID_SECTION_SLUGS = [
   'uncategorized',
 ] as unknown as [string, ...string[]];
 
+const ExternalSourceSchema = z.object({
+  author:  z.string().nullable(),
+  source:  z.string().nullable(),
+  is_book: z.boolean(),
+});
+
 export const ParsedFromPhotosSchema = z.object({
   title:                          z.string(),
   title_confidence:               Confidence,
@@ -29,6 +36,7 @@ export const ParsedFromPhotosSchema = z.object({
   suggested_section_confidence:   Confidence,
 
   originally_from:                z.string().nullable(),
+  external_source:                ExternalSourceSchema.nullable(),
   story:                          z.string().nullable(),
 
   ingredients:                    z.array(IngredientGroup),
@@ -52,7 +60,12 @@ Rules:
 - "ingredients" — preserve grouping. If the source shows "For the dough:" then "For the filling:", each becomes a group with the matching sub_header. If there's no grouping, return one group with sub_header = null. Keep ingredient lines AS WRITTEN — don't normalize units ("1 stick butter" stays as is). Don't invent ingredients.
 - "instructions" — concrete, step-shaped. If the source doesn't document instructions (ingredient-only recipes are real), return an empty array.
 - "kitchen_notes" — preserve margin notes, personal annotations, asides ("don't forget to chill overnight!", "Mom's trick: …"). Each note is one string. Do NOT duplicate ingredients or instructions here.
-- "originally_from" — set only if the source explicitly names a person, cookbook, restaurant, magazine. Null otherwise.
+- "external_source" — populate ONLY when the source explicitly attributes the recipe to a publication, website, cookbook, or named author OUTSIDE the family.
+  - "author" — named author/cook ("Sam Sifton", "Ina Garten"), or null.
+  - "source" — publication, website, or cookbook title ("NYT Cooking", "Barefoot Contessa"), or null.
+  - "is_book" — true if "source" is a cookbook (book title); false for a publication, magazine, or website.
+  - Set to null when the source is a family member or otherwise not an external publication/cookbook.
+- "originally_from" — leave null when you populate external_source; the system formats it from the structured fields. Set it ONLY for cases external_source can't capture (e.g. a restaurant name, "Holiday Inn, South Bend").
 - "story" — if the photo includes prose around the recipe (who taught it, when it became a tradition), capture it verbatim. Null otherwise.
 - "suggested_section" — pick the closest fit from this list:
 ${[...SECTIONS.map((s) => `    ${s.slug} — ${s.name}`), '    uncategorized — if unsure'].join('\n')}
@@ -124,8 +137,19 @@ export async function parseRecipeFromPhotoUrls(args: {
     (response.usage.output_tokens / 1_000_000) * PRICE_OUTPUT_PER_1M;
 
   return {
-    recipe: parsed,
+    recipe: applyHouseStyleSource(parsed),
     usage:  { input_tokens: response.usage.input_tokens, output_tokens: response.usage.output_tokens },
     cost_usd,
   };
+}
+
+function applyHouseStyleSource(r: ParsedFromPhotos): ParsedFromPhotos {
+  if (!r.external_source) return r;
+  const normalized = formatSourceAttribution({
+    author: r.external_source.author,
+    source: r.external_source.source,
+    isBook: r.external_source.is_book,
+  });
+  if (normalized === null) return r;
+  return { ...r, originally_from: normalized };
 }
