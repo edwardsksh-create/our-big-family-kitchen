@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { Menu } from 'lucide-react';
 import { auth } from '@/auth';
 import { SearchBar } from '@/components/search-bar';
+import { MobileMenu } from '@/components/mobile-menu';
 
 export async function SiteHeader() {
   const session = await auth();
@@ -49,37 +49,28 @@ export async function SiteHeader() {
           )}
         </nav>
 
-        {/* Mobile menu (hamburger) */}
-        <details className="relative ml-auto md:hidden">
-          <summary
-            aria-label="Menu"
-            className="list-none flex h-10 w-10 items-center justify-center rounded-full border border-rule text-ink hover:border-ink cursor-pointer [&::-webkit-details-marker]:hidden"
-          >
-            <Menu className="h-5 w-5" />
-          </summary>
-          <nav className="absolute right-0 mt-2 w-56 origin-top-right rounded-2xl border border-rule bg-paper p-2 shadow-[0_12px_40px_-20px_rgba(42,37,34,0.45)] label">
-            <Link href="/recipes"      className="block rounded-lg px-3 py-3 hover:bg-cream/40">Recipes</Link>
-            <Link href="/sections"     className="block rounded-lg px-3 py-3 hover:bg-cream/40">Browse</Link>
-            <Link href="/family-lines" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Families</Link>
-            {signedIn && (
-              <Link href="/add" className="block rounded-lg px-3 py-3 text-primary hover:bg-cream/40">+ Add</Link>
-            )}
-            {role === 'admin' && (
-              <>
-                <Link href="/admin/queue"        className="block rounded-lg px-3 py-3 hover:bg-cream/40">Queue</Link>
-                <Link href="/admin/contributors" className="block rounded-lg px-3 py-3 hover:bg-cream/40">People</Link>
-              </>
-            )}
-            <Link href="/contributors" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Contributors</Link>
-            <Link href="/about"        className="block rounded-lg px-3 py-3 hover:bg-cream/40">About</Link>
-            <div className="my-1 border-t border-rule" />
-            {signedIn ? (
-              <Link href="/sign-out" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Sign out</Link>
-            ) : (
-              <Link href="/sign-in"  className="block rounded-lg px-3 py-3 hover:bg-cream/40">Sign in</Link>
-            )}
-          </nav>
-        </details>
+        <MobileMenu>
+          <Link href="/recipes"      className="block rounded-lg px-3 py-3 hover:bg-cream/40">Recipes</Link>
+          <Link href="/sections"     className="block rounded-lg px-3 py-3 hover:bg-cream/40">Browse</Link>
+          <Link href="/family-lines" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Families</Link>
+          {signedIn && (
+            <Link href="/add" className="block rounded-lg px-3 py-3 text-primary hover:bg-cream/40">+ Add</Link>
+          )}
+          {role === 'admin' && (
+            <>
+              <Link href="/admin/queue"        className="block rounded-lg px-3 py-3 hover:bg-cream/40">Queue</Link>
+              <Link href="/admin/contributors" className="block rounded-lg px-3 py-3 hover:bg-cream/40">People</Link>
+            </>
+          )}
+          <Link href="/contributors" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Contributors</Link>
+          <Link href="/about"        className="block rounded-lg px-3 py-3 hover:bg-cream/40">About</Link>
+          <div className="my-1 border-t border-rule" />
+          {signedIn ? (
+            <Link href="/sign-out" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Sign out</Link>
+          ) : (
+            <Link href="/sign-in"  className="block rounded-lg px-3 py-3 hover:bg-cream/40">Sign in</Link>
+          )}
+        </MobileMenu>
       </div>
 
       <div className="border-t border-rule px-6 py-3 md:hidden">
