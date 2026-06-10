@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import type { RecipeIndexItem } from '@/lib/queries/recipes';
 import { RecipeIndexGrid } from '@/components/recipe-index-card';
+import type { Viewer } from '@/lib/recipes/badges';
+import { canSeeNeedsFor } from '@/lib/recipes/badges';
 import { SECTIONS } from '@/lib/sections';
 import { cn } from '@/lib/utils';
 
@@ -32,9 +34,14 @@ const SORT_LABELS: Record<SortKey, string> = {
   contributor: 'Contributor',
 };
 
-export function RecipeIndex({ recipes, now }: { recipes: RecipeIndexItem[]; now: number }) {
+export function RecipeIndex({ recipes, viewer, now }: { recipes: RecipeIndexItem[]; viewer: Viewer; now: number }) {
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [sort,    setSort]    = useState<SortKey>('newest');
+
+  // Only viewers entitled to act (admin OR a recipe's own contributor) see
+  // the "Needs details" toggle. Hidden for everyone else so the index doesn't
+  // expose the needs-classification to other family members.
+  const canFilterNeeds = viewer.isAdmin || recipes.some((r) => canSeeNeedsFor(viewer, r.contributor_id));
 
   const contributorOptions = useMemo(() => {
     const seen = new Map<string, string>();
@@ -74,6 +81,10 @@ export function RecipeIndex({ recipes, now }: { recipes: RecipeIndexItem[]; now:
       if (filters.hasOriginal   && !r.has_source_photo) return false;
       if (filters.hasFamilyNote && !r.has_story) return false;
       if (filters.needsDetails) {
+        // The Needs-details filter is itself a needs-class prompt — even when
+        // a non-admin contributor has the toggle available, they should only
+        // see needs results for THEIR OWN recipes.
+        if (!canSeeNeedsFor(viewer, r.contributor_id)) return false;
         const needs = !r.has_method || !r.has_story || r.tag_slugs.includes('needs-instructions') || r.tag_slugs.includes('low-confidence');
         if (!needs) return false;
       }
@@ -110,7 +121,9 @@ export function RecipeIndex({ recipes, now }: { recipes: RecipeIndexItem[]; now:
           <Toggle label="Ready to cook"   on={filters.readyToCook}   onChange={(v) => setFilters((f) => ({ ...f, readyToCook: v }))} />
           <Toggle label="Has original page" on={filters.hasOriginal}   onChange={(v) => setFilters((f) => ({ ...f, hasOriginal: v }))} />
           <Toggle label="Has family note" on={filters.hasFamilyNote} onChange={(v) => setFilters((f) => ({ ...f, hasFamilyNote: v }))} />
-          <Toggle label="Needs details"   on={filters.needsDetails}  onChange={(v) => setFilters((f) => ({ ...f, needsDetails: v }))} />
+          {canFilterNeeds && (
+            <Toggle label="Needs details"   on={filters.needsDetails}  onChange={(v) => setFilters((f) => ({ ...f, needsDetails: v }))} />
+          )}
 
           <div className="ml-auto flex items-center gap-2">
             <Select
@@ -152,7 +165,7 @@ export function RecipeIndex({ recipes, now }: { recipes: RecipeIndexItem[]; now:
 
       <div className="mt-4">
         {filtered.length > 0 ? (
-          <RecipeIndexGrid recipes={filtered} now={now} />
+          <RecipeIndexGrid recipes={filtered} viewer={viewer} now={now} />
         ) : (
           <p className="rounded-2xl border border-dashed border-rule p-12 text-center font-serif italic text-ink-soft">
             No recipes match those filters.

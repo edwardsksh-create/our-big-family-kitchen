@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import type { RecipeIndexItem } from '@/lib/queries/recipes';
-import { badgesFor, type Badge } from '@/lib/recipes/badges';
+import { badgesFor, type Badge, type Viewer } from '@/lib/recipes/badges';
 import { cn } from '@/lib/utils';
 
-export function RecipeIndexCard({ recipe, now }: { recipe: RecipeIndexItem; now?: number }) {
-  const badges = badgesFor(recipe, now);
+export function RecipeIndexCard({ recipe, viewer, now }: { recipe: RecipeIndexItem; viewer: Viewer; now?: number }) {
+  const badges = badgesFor(recipe, viewer, now);
   const subline = [recipe.contributor?.display, recipe.section?.name].filter(Boolean).join(' · ');
   const thirdLine =
     recipe.family_line?.name ??
@@ -65,13 +65,13 @@ function BadgePill({ badge }: { badge: Badge }) {
   );
 }
 
-export function RecipeIndexGrid({ recipes, now }: { recipes: RecipeIndexItem[]; now?: number }) {
+export function RecipeIndexGrid({ recipes, viewer, now }: { recipes: RecipeIndexItem[]; viewer: Viewer; now?: number }) {
   if (recipes.length === 0) return null;
   return (
     <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {recipes.map((r) => (
         <li key={r.id}>
-          <RecipeIndexCard recipe={r} now={now} />
+          <RecipeIndexCard recipe={r} viewer={viewer} now={now} />
         </li>
       ))}
     </ul>

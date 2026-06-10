@@ -316,6 +316,35 @@ export default async function RecipePage({
             </div>
           )}
 
+          {/* Actionable needs-prompts. Visible ONLY to admin or this recipe's
+              own contributor — the same set of viewers who can act on them.
+              Other family members and signed-out visitors see nothing here. */}
+          {canEdit && (() => {
+            const needsMethod = (instructions ?? []).length === 0;
+            const needsStory  = !recipe.story || recipe.story.trim().length === 0;
+            if (!needsMethod && !needsStory) return null;
+            return (
+              <div className="space-y-3" data-no-print>
+                {needsMethod && (
+                  <NeedsPrompt
+                    headline={isOwner ? 'You saved this — it still needs its method.' : 'This recipe still needs its method.'}
+                    helper="The structured steps are empty. Adding them helps the rest of the family cook this."
+                    href={`/recipes/${params.slug}/edit`}
+                    cta="Add the steps"
+                  />
+                )}
+                {needsStory && (
+                  <NeedsPrompt
+                    headline={isOwner ? 'You saved this — want to add a family note?' : 'This recipe could use a family note.'}
+                    helper="Where it came from, who taught it, when it became a tradition."
+                    href={`/recipes/${params.slug}/edit`}
+                    cta="Add a story"
+                  />
+                )}
+              </div>
+            );
+          })()}
+
       <section className="recipe-ingredients mt-12">
         <h2 className="font-serif text-2xl text-ink">Ingredients</h2>
         <ul className="mt-4 space-y-1 text-ink-soft">
@@ -499,5 +528,35 @@ export default async function RecipePage({
         </div>
       </div>
     </article>
+  );
+}
+
+/** Actionable prompt rendered on the recipe detail page when the viewer can
+ *  fix the gap (admin or the recipe's contributor). Warm accent treatment so
+ *  it reads as an invitation rather than a cold "incomplete" badge. */
+function NeedsPrompt({
+  headline,
+  helper,
+  href,
+  cta,
+}: {
+  headline: string;
+  helper: string;
+  href: string;
+  cta: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-accent/40 bg-accent/10 px-4 py-4">
+      <p className="font-serif text-base italic text-ink">{headline}</p>
+      <p className="mt-1 text-sm text-ink-soft">{helper}</p>
+      <p className="mt-2">
+        <Link
+          href={href}
+          className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 font-sans text-sm font-medium text-paper transition-colors hover:bg-ink"
+        >
+          {cta} →
+        </Link>
+      </p>
+    </div>
   );
 }

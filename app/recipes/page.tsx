@@ -1,6 +1,8 @@
 import Link from 'next/link';
+import { auth } from '@/auth';
+import { supabaseAdmin } from '@/lib/supabase/server';
 import { fetchRecipeIndex } from '@/lib/queries/recipes';
-import { needsFamilyHelp } from '@/lib/recipes/badges';
+import { visibleInNeedsFamilyHelp, type Viewer, ANONYMOUS_VIEWER } from '@/lib/recipes/badges';
 import { RecipeIndexGrid } from '@/components/recipe-index-card';
 import { RecipeIndex } from '@/components/recipe-index';
 import { RecipeSearchBlock } from '@/components/recipe-search-block';
@@ -8,14 +10,32 @@ import { SECTIONS, SECTION_BG, SECTION_TEXT } from '@/lib/sections';
 import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Recipes' };
-export const revalidate = 60;
+// This page now reads the signed-in session for viewer-aware needs prompts,
+// so it must render per-request rather than from the static ISR cache.
+export const dynamic = 'force-dynamic';
+
+async function resolveViewer(): Promise<Viewer> {
+  const session = await auth();
+  const email = session?.user?.email?.toLowerCase();
+  if (!email) return ANONYMOUS_VIEWER;
+  const isAdmin = (session?.user?.role ?? '') === 'admin';
+  const { data } = await supabaseAdmin()
+    .from('contributors')
+    .select('id')
+    .ilike('email', email)
+    .maybeSingle();
+  return { isAdmin, contributorId: data?.id ?? null };
+}
 
 export default async function RecipesIndexPage() {
-  const recipes = await fetchRecipeIndex();
+  const [recipes, viewer] = await Promise.all([fetchRecipeIndex(), resolveViewer()]);
   const now = Date.now();
 
   const recent      = recipes.slice(0, 6);
-  const needingHelp = recipes.filter(needsFamilyHelp).slice(0, 6);
+  // Needs-family-help is gated by viewer permission: admin sees every flagged
+  // recipe, a contributor sees only their own, everyone else sees none and
+  // the section hides itself.
+  const needingHelp = recipes.filter((r) => visibleInNeedsFamilyHelp(r, viewer)).slice(0, 6);
 
   return (
     <div className="mx-auto max-w-page px-6 py-16">
@@ -68,12 +88,12 @@ export default async function RecipesIndexPage() {
         <section className="mt-16">
           <h2 className="font-serif text-2xl text-ink md:text-3xl">Recently added</h2>
           <div className="mt-6">
-            <RecipeIndexGrid recipes={recent} now={now} />
+            <RecipeIndexGrid recipes={recent} viewer={viewer} now={now} />
           </div>
         </section>
       )}
 
-      {/* Needs family help — hidden when empty (no filler copy). */}
+      {/* Needs family help — hidden when this viewer has nothing actionable. */}
       {needingHelp.length > 0 && (
         <section className="mt-16">
           <h2 className="font-serif text-2xl text-ink md:text-3xl">Needs family help</h2>
@@ -81,7 +101,7 @@ export default async function RecipesIndexPage() {
             These recipes are missing a method, a memory, a photo, or someone&rsquo;s best guess.
           </p>
           <div className="mt-6">
-            <RecipeIndexGrid recipes={needingHelp} now={now} />
+            <RecipeIndexGrid recipes={needingHelp} viewer={viewer} now={now} />
           </div>
         </section>
       )}
@@ -93,7 +113,7 @@ export default async function RecipesIndexPage() {
           Browse the full collection, or use search and filters to narrow it down.
         </p>
         <div className="mt-6">
-          <RecipeIndex recipes={recipes} now={now} />
+          <RecipeIndex recipes={recipes} viewer={viewer} now={now} />
         </div>
       </section>
     </div>

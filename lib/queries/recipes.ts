@@ -107,6 +107,9 @@ export type RecipeIndexItem = {
   published_at: string;
   updated_at: string;
   originally_from: string | null;
+  /** Raw FK so the viewer-permission check on needs-prompts can compare
+   *  signed-in viewer ↔ this recipe's owner without rehydrating contributors. */
+  contributor_id: string | null;
   contributor: {
     slug: string;
     display: string;
@@ -135,6 +138,7 @@ type IndexRow = {
   updated_at: string;
   originally_from: string | null;
   story: string | null;
+  contributor_id: string | null;
   contributor: {
     name: string | null;
     email: string;
@@ -156,7 +160,7 @@ export async function fetchRecipeIndex(): Promise<RecipeIndexItem[]> {
   const { data } = await db
     .from('recipes')
     .select(`
-      id, slug, title, published_at, updated_at, originally_from, story,
+      id, slug, title, published_at, updated_at, originally_from, story, contributor_id,
       contributor:contributors!recipes_contributor_id_fkey ( name, email, nickname, birth_name ),
       section:sections!recipes_section_id_fkey ( slug, name ),
       primary_family_line:family_lines!recipes_primary_family_line_id_fkey ( slug, name )
@@ -237,6 +241,7 @@ export async function fetchRecipeIndex(): Promise<RecipeIndexItem[]> {
       published_at:    row.published_at,
       updated_at:      row.updated_at,
       originally_from: row.originally_from,
+      contributor_id:  row.contributor_id,
       contributor: contribDisplay && contribSlug
         ? { slug: contribSlug, display: contribDisplay }
         : null,
