@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { dedupeOccasion } from '@/lib/photos/occasions';
 
 type SubmitPayload = {
   photoId:          string;
@@ -98,4 +99,51 @@ export async function submitPhotoReview(payload: SubmitPayload): Promise<void> {
 
   revalidatePath('/admin/photo-review');
   redirect('/admin/photo-review');
+}
+
+export type CreateOccasionResult =
+  | { ok: true;  slug: string; name: string; created: boolean }
+  | { ok: false; reason: 'unauthorized' | 'invalid' };
+
+/**
+ * Add a new reusable occasion type from the photo-review form. Trims, slugifies,
+ * and case-insensitively dedupes against existing occasions; returns the
+ * existing entry rather than inserting a duplicate when a match is found.
+ * Admin-only.
+ */
+export async function createOccasionType(rawName: string): Promise<CreateOccasionResult> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== 'admin') {
+    return { ok: false, reason: 'unauthorized' };
+  }
+
+  const db = supabaseAdmin();
+  const { data: existing } = await db
+    .from('family_photo_occasion_types')
+    .select('slug, name, sort_order');
+
+  const outcome = dedupeOccasion(rawName, (existing ?? []).map((e) => ({ slug: e.slug, name: e.name })));
+  if (outcome.kind === 'invalid') return { ok: false, reason: 'invalid' };
+  if (outcome.kind === 'existing') {
+    return { ok: true, slug: outcome.slug, name: outcome.name, created: false };
+  }
+
+  // Brand new — sort it to the end of the list.
+  const maxSort = (existing ?? []).reduce((m, e) => Math.max(m, e.sort_order ?? 0), 0);
+  const { error } = await db.from('family_photo_occasion_types').insert({
+    slug:       outcome.slug,
+    name:       outcome.name,
+    sort_order: maxSort + 1,
+  });
+  if (error) {
+    // Unique-violation race (someone else inserted concurrently) is benign —
+    // fall back to the existing row.
+    if (error.code === '23505') {
+      return { ok: true, slug: outcome.slug, name: outcome.name, created: false };
+    }
+    throw new Error(`create occasion: ${error.message}`);
+  }
+  revalidatePath('/admin/photo-review');
+  revalidatePath('/album');
+  return { ok: true, slug: outcome.slug, name: outcome.name, created: true };
 }

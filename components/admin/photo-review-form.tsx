@@ -2,7 +2,8 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { formatDisplayName } from '@/lib/contributors/display-name';
-import { submitPhotoReview } from '@/app/admin/photo-review/actions';
+import { submitPhotoReview, createOccasionType } from '@/app/admin/photo-review/actions';
+import { suggestExistingOccasions } from '@/lib/photos/occasions';
 import type {
   FamilyPhotoFull,
   PickerPerson,
@@ -37,7 +38,10 @@ export function PhotoReviewForm(props: Props) {
   return <PhotoReviewFormInner key={props.photo.id} {...props} />;
 }
 
-function PhotoReviewFormInner({ photo, occasions, people, recipes, previous }: Props) {
+function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, recipes, previous }: Props) {
+  // Local copy so newly-created occasions show up immediately without a
+  // full server-round-trip / re-render.
+  const [occasions, setOccasions] = useState<OccasionType[]>(initialOccasions);
   // Form state.
   const [caption,          setCaption]          = useState(photo.caption          ?? '');
   const [year,             setYear]             = useState(photo.year             ?? photo.ai_hints?.estimated_year ?? '');
@@ -56,6 +60,37 @@ function PhotoReviewFormInner({ photo, occasions, people, recipes, previous }: P
   );
   const [needsEditing, setNeedsEditing] = useState(photo.needs_editing);
   const [editingNote,  setEditingNote]  = useState(photo.editing_note ?? '');
+
+  const [newOccasionInput,   setNewOccasionInput]   = useState('');
+  const [newOccasionFeedback, setNewOccasionFeedback] = useState<string | null>(null);
+  const [creatingOccasion, startCreatingOccasion] = useTransition();
+
+  const occasionSuggestions = useMemo(
+    () => suggestExistingOccasions(newOccasionInput, occasions.map((o) => ({ slug: o.slug, name: o.name }))),
+    [newOccasionInput, occasions],
+  );
+
+  function handleAddOccasion() {
+    const raw = newOccasionInput.trim();
+    if (!raw) return;
+    setNewOccasionFeedback(null);
+    startCreatingOccasion(async () => {
+      const res = await createOccasionType(raw);
+      if (!res.ok) {
+        setNewOccasionFeedback(res.reason === 'invalid'
+          ? 'That doesn’t look like a usable occasion name.'
+          : 'Could not add the occasion.');
+        return;
+      }
+      // Ensure it's in the local list, then select it.
+      setOccasions((prev) => prev.some((o) => o.slug === res.slug)
+        ? prev
+        : [...prev, { slug: res.slug, name: res.name, sort_order: prev.length + 1 }]);
+      setSelectedOccasions((prev) => prev.includes(res.slug) ? prev : [...prev, res.slug]);
+      setNewOccasionInput('');
+      setNewOccasionFeedback(res.created ? `Added “${res.name}.”` : `Selected existing “${res.name}.”`);
+    });
+  }
 
   // Autocomplete state.
   const [personQuery, setPersonQuery] = useState('');
@@ -262,6 +297,56 @@ function PhotoReviewFormInner({ photo, occasions, people, recipes, previous }: P
               </button>
             );
           })}
+        </div>
+
+        {/* Add a new reusable occasion. Persists to family_photo_occasion_types
+            and becomes available everywhere (review form and /album filter). */}
+        <div className="mt-3 rounded-xl border border-dashed border-rule bg-paper p-3">
+          <p className="label mb-2 text-ink-soft">Add an occasion</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={newOccasionInput}
+              onChange={(e) => { setNewOccasionInput(e.target.value); setNewOccasionFeedback(null); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddOccasion(); } }}
+              placeholder="e.g. St. Patrick's Day, Confirmation, Crawfish boil…"
+              className="min-w-[12rem] flex-1 rounded-xl border border-rule bg-paper px-3 py-2 text-sm"
+            />
+            <button
+              type="button"
+              onClick={handleAddOccasion}
+              disabled={creatingOccasion || newOccasionInput.trim().length < 2}
+              className="rounded-full border border-rule bg-paper px-3 py-2 text-sm hover:border-ink disabled:opacity-50"
+            >
+              {creatingOccasion ? 'Adding…' : '+ Add'}
+            </button>
+          </div>
+          {occasionSuggestions.length > 0 && (
+            <p className="mt-2 text-xs text-ink-soft">
+              Already in the list:{' '}
+              {occasionSuggestions.map((s, i) => (
+                <span key={s.slug}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedOccasions((prev) =>
+                        prev.includes(s.slug) ? prev : [...prev, s.slug],
+                      );
+                      setNewOccasionInput('');
+                      setNewOccasionFeedback(`Selected existing “${s.name}.”`);
+                    }}
+                    className="text-primary hover:underline"
+                  >
+                    {s.name}
+                  </button>
+                  {i < occasionSuggestions.length - 1 && ', '}
+                </span>
+              ))}
+            </p>
+          )}
+          {newOccasionFeedback && (
+            <p className="mt-1 text-xs italic text-ink-soft">{newOccasionFeedback}</p>
+          )}
         </div>
       </section>
 
