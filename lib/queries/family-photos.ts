@@ -29,6 +29,8 @@ export type FamilyPhotoFull = {
   ai_hints:     FamilyPhotoHints | null;
   reviewed:     boolean;
   not_for_archive: boolean;
+  needs_editing:   boolean;        // admin-only — never rendered on public pages
+  editing_note:    string | null;  // admin-only
   uploaded_at:  string;
   people:       FamilyPhotoTagPerson[];
   occasions:    string[];
@@ -46,6 +48,8 @@ type Joined = {
   ai_hints: FamilyPhotoHints | null;
   reviewed: boolean;
   not_for_archive: boolean;
+  needs_editing: boolean;
+  editing_note:  string | null;
   uploaded_at: string;
   people:    { person_type: 'contributor' | 'family_member'; contributor_id: string | null; family_member_id: string | null }[];
   occasions: { occasion_slug: string }[];
@@ -95,6 +99,8 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
     ai_hints:          r.ai_hints,
     reviewed:          r.reviewed,
     not_for_archive:   r.not_for_archive,
+    needs_editing:     r.needs_editing,
+    editing_note:      r.editing_note,
     uploaded_at:       r.uploaded_at,
     people: r.people.map((p): FamilyPhotoTagPerson => {
       if (p.person_type === 'contributor' && p.contributor_id) {
@@ -128,7 +134,7 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
 
 const COMMON_SELECT = `
   id, storage_path, caption, year, place, additional_people, pets,
-  ai_hints, reviewed, not_for_archive, uploaded_at,
+  ai_hints, reviewed, not_for_archive, needs_editing, editing_note, uploaded_at,
   people:family_photo_people ( person_type, contributor_id, family_member_id ),
   occasions:family_photo_occasions ( occasion_slug ),
   recipes:family_photo_recipes ( recipe:recipes!family_photo_recipes_recipe_id_fkey ( id, slug, title ) )
@@ -169,6 +175,27 @@ export async function fetchPhotoReviewProgress(): Promise<{ total: number; revie
   const total = allCnt.count ?? 0;
   const reviewed = reviewedCnt.count ?? 0;
   return { total, reviewed, remaining: total - reviewed };
+}
+
+export async function fetchPhotosNeedingEditing(): Promise<FamilyPhotoFull[]> {
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from('family_photos')
+    .select(COMMON_SELECT)
+    .eq('needs_editing', true)
+    .eq('not_for_archive', false)
+    .order('uploaded_at', { ascending: true });
+  return hydratePhotos((data ?? []) as unknown as Joined[]);
+}
+
+export async function countPhotosNeedingEditing(): Promise<number> {
+  const db = supabaseAdmin();
+  const { count } = await db
+    .from('family_photos')
+    .select('*', { count: 'exact', head: true })
+    .eq('needs_editing', true)
+    .eq('not_for_archive', false);
+  return count ?? 0;
 }
 
 export async function fetchAllReviewedPhotos(): Promise<FamilyPhotoFull[]> {

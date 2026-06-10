@@ -355,7 +355,9 @@ export type Database = {
           ai_hints: Json | null
           caption: string | null
           created_at: string
+          editing_note: string | null
           id: string
+          needs_editing: boolean
           not_for_archive: boolean
           pets: string | null
           place: string | null
@@ -370,7 +372,9 @@ export type Database = {
           ai_hints?: Json | null
           caption?: string | null
           created_at?: string
+          editing_note?: string | null
           id?: string
+          needs_editing?: boolean
           not_for_archive?: boolean
           pets?: string | null
           place?: string | null
@@ -385,7 +389,9 @@ export type Database = {
           ai_hints?: Json | null
           caption?: string | null
           created_at?: string
+          editing_note?: string | null
           id?: string
+          needs_editing?: boolean
           not_for_archive?: boolean
           pets?: string | null
           place?: string | null

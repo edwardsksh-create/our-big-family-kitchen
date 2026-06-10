@@ -9,6 +9,7 @@ import {
   fetchAllPeopleForPicker,
   fetchAllRecipesForPicker,
   fetchOccasionTypes,
+  countPhotosNeedingEditing,
 } from '@/lib/queries/family-photos';
 import { PhotoReviewForm } from '@/components/admin/photo-review-form';
 
@@ -27,13 +28,14 @@ export default async function PhotoReviewPage() {
     );
   }
 
-  const [photo, previous, progress, occasions, people, recipes] = await Promise.all([
+  const [photo, previous, progress, occasions, people, recipes, flaggedCount] = await Promise.all([
     fetchFirstUnreviewedPhoto(),
     fetchMostRecentlyReviewedPhoto(),
     fetchPhotoReviewProgress(),
     fetchOccasionTypes(),
     fetchAllPeopleForPicker(),
     fetchAllRecipesForPicker(),
+    countPhotosNeedingEditing(),
   ]);
 
   return (
@@ -43,10 +45,19 @@ export default async function PhotoReviewPage() {
           <p className="label mb-1">Admin</p>
           <h1 className="font-serif text-3xl text-ink">Photo review</h1>
         </div>
-        <p className="text-sm text-ink-soft">
-          {progress.reviewed} of {progress.total} reviewed
-          {progress.remaining > 0 && <> · {progress.remaining} remaining</>}
-        </p>
+        <div className="text-right text-sm text-ink-soft">
+          <p>
+            {progress.reviewed} of {progress.total} reviewed
+            {progress.remaining > 0 && <> · {progress.remaining} remaining</>}
+          </p>
+          {flaggedCount > 0 && (
+            <p className="mt-1">
+              <Link href="/admin/photos/needs-editing" className="font-serif italic hover:text-primary">
+                {flaggedCount} flagged for editing →
+              </Link>
+            </p>
+          )}
+        </div>
       </header>
 
       {!photo ? (
