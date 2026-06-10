@@ -59,7 +59,7 @@ export default async function SectionPage({ params }: { params: { slug: string }
           <section>
             <h2 className="font-serif text-2xl text-ink">From Aunt Laura’s 2003 cookbook</h2>
             <p className="mt-2 max-w-prose text-sm text-ink-soft">
-              {federated.length} {federated.length === 1 ? 'recipe' : 'recipes'} — each links to the full version at leuschfamilyrecipes.com.
+              {federated.length} {federated.length === 1 ? 'recipe' : 'recipes'} — each links to the full version in Aunt Laura&rsquo;s original collection.
             </p>
             <div className="mt-6">
               <FederatedRecipeGrid recipes={federated} />

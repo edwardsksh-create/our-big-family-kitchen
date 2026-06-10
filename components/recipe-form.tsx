@@ -222,7 +222,7 @@ export function RecipeForm({
           {draft.notes_to_reviewer && (
             <p className="mt-2 rounded-xl border border-rule bg-paper p-3 text-sm text-ink-soft">
               <AlertCircle size={14} className="mr-1 inline align-text-bottom text-primary" />
-              <span className="font-serif italic">From the parser:</span> {draft.notes_to_reviewer}
+              <span className="font-serif italic">{draft.notes_to_reviewer}</span>
             </p>
           )}
         </div>
@@ -601,8 +601,8 @@ export function RecipeForm({
           {savedAt
             ? `Saved · ${savedAt.toLocaleTimeString()}`
             : enableAutoSave
-              ? 'Draft auto-saves every 30 seconds.'
-              : 'Changes save only when you click a button.'}
+              ? 'Saving as you go.'
+              : null}
         </span>
       </div>
 
@@ -619,7 +619,7 @@ function humanError(code: string): string {
   switch (code) {
     case 'unauthorized':       return 'You need to be signed in to save.';
     case 'admin_only':         return 'Only Kate can do that — try “Submit for review”.';
-    case 'not_recipe_owner':   return 'Only the recipe’s contributor or an admin can edit this recipe.';
+    case 'not_recipe_owner':   return 'Only the recipe’s contributor or Kate can edit this recipe.';
     case 'missing_recipe_id':  return 'No recipe to update — try refreshing.';
     case 'missing_title':       return 'Add a title before saving.';
     case 'missing_family_line': return 'Pick a primary family line.';
@@ -661,7 +661,7 @@ function FieldText({
         <p className="mt-1 flex items-center gap-1 text-sm text-primary">
           <AlertCircle size={12} aria-hidden="true" />
           <span className="font-serif italic">
-            {flagText ?? 'Please double-check this'}
+            {flagText ?? 'Worth a second look'}
           </span>
         </p>
       )}
@@ -741,7 +741,7 @@ function FieldSelect({
       {!errorMessage && flagLowConfidence && (
         <p className="mt-1 flex items-center gap-1 text-sm text-primary">
           <AlertCircle size={12} aria-hidden="true" />
-          <span className="font-serif italic">Please double-check this</span>
+          <span className="font-serif italic">Worth a second look</span>
         </p>
       )}
       {helper && <p className="mt-1 text-sm text-ink-soft">{helper}</p>}

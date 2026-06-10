@@ -124,14 +124,15 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
               {federatedCount} recipes from this family line
             </h2>
             <p className="mt-3 max-w-prose text-ink-soft">
-              The Leusch archive — every recipe with its full ingredients, story,
-              and scans of the original page — lives at leuschfamilyrecipes.com.
+              The Leusch archive — every recipe with its full ingredients,
+              story, and scans of the original page — lives in Aunt
+              Laura&rsquo;s original collection.
             </p>
             <span className="btn-primary mt-7 inline-flex items-center gap-2">
               Browse Aunt Laura’s cookbook
               <ExternalLink size={14} aria-hidden="true" />
             </span>
-            <span className="sr-only">Opens at leuschfamilyrecipes.com in a new tab.</span>
+            <span className="sr-only">Opens Aunt Laura&rsquo;s original collection in a new tab.</span>
           </a>
         </section>
       )}

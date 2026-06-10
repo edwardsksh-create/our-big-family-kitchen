@@ -297,7 +297,7 @@ export function ContributorPicker({
               className="mt-2 w-full rounded-full border border-rule bg-paper px-5 py-3 text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink/10"
             />
             <p className="mt-1 text-sm text-ink-soft">
-              Without an email they’ll be a stub (no sign-in). You can upgrade them later.
+              Without an email they won&rsquo;t be able to sign in yet. You can add one later.
             </p>
           </label>
 

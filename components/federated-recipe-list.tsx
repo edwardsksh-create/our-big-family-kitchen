@@ -38,8 +38,8 @@ export function FederatedRecipesBySection({
         <h2 className="font-serif text-3xl text-ink md:text-4xl">{heading}</h2>
         {subheading && <p className="mt-2 font-serif italic text-ink-soft">{subheading}</p>}
         <p className="mt-2 text-sm text-ink-soft">
-          {total} {total === 1 ? 'recipe' : 'recipes'} — every card links out to
-          leuschfamilyrecipes.com, where the full recipe lives.
+          {total} {total === 1 ? 'recipe' : 'recipes'} — every card links out
+          to Aunt Laura&rsquo;s original collection, where the full recipe lives.
         </p>
       </header>
 
