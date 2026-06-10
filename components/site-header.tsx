@@ -27,21 +27,24 @@ export async function SiteHeader() {
           <SearchBar />
         </div>
 
-        {/* Desktop nav — same order as mobile: primary links, + Add, admin,
-            secondary (lg+), then sign in/out. */}
-        <nav className="ml-auto hidden items-center gap-5 label md:flex">
+        {/* Desktop nav — only shown at lg+ (1024px) so all items fit without
+            individual `hidden` qualifiers. Below lg, the hamburger takes over
+            with the complete list. Keeping these in lockstep avoids the
+            dead-zone width where the desktop nav drops items but the
+            hamburger isn't yet available. */}
+        <nav className="ml-auto hidden items-center gap-5 label lg:flex">
           {primaryLinks}
           {signedIn && (
             <Link href="/add" className="rounded-full bg-primary px-3 py-1.5 text-paper transition-colors hover:bg-ink">+ Add</Link>
           )}
           {role === 'admin' && (
             <>
-              <Link href="/admin/queue"        className="hover:text-primary transition-colors hidden lg:inline">Queue</Link>
-              <Link href="/admin/contributors" className="hover:text-primary transition-colors hidden lg:inline">People</Link>
+              <Link href="/admin/queue"        className="hover:text-primary transition-colors">Queue</Link>
+              <Link href="/admin/contributors" className="hover:text-primary transition-colors">People</Link>
             </>
           )}
-          <Link href="/contributors" className="hover:text-primary transition-colors hidden lg:inline">Contributors</Link>
-          <Link href="/about"        className="hover:text-primary transition-colors hidden lg:inline">About</Link>
+          <Link href="/contributors" className="hover:text-primary transition-colors">Contributors</Link>
+          <Link href="/about"        className="hover:text-primary transition-colors">About</Link>
           {signedIn ? (
             <Link href="/sign-out" className="hover:text-primary transition-colors">Sign out</Link>
           ) : (

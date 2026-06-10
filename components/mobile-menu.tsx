@@ -13,7 +13,7 @@ export function MobileMenu({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   return (
-    <div className="relative ml-auto md:hidden">
+    <div className="relative ml-auto lg:hidden">
       <button
         type="button"
         aria-label="Menu"
