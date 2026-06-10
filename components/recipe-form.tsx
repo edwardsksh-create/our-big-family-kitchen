@@ -71,6 +71,17 @@ export function RecipeForm({
   const [error, setError] = useState<string | null>(null);
   const [tagInput, setTagInput] = useState('');
 
+  // Inline error for the section field — surfaced when a publish/submit
+  // attempt is blocked because section is missing. The server already
+  // refuses these requests; this just makes the failure legible instead
+  // of silent. Cleared the moment the user picks a section.
+  const [sectionError, setSectionError] = useState<string | null>(null);
+  const sectionFieldRef = useRef<HTMLDivElement | null>(null);
+  function flagMissingSection() {
+    setSectionError('Pick a section before publishing.');
+    sectionFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
   // Auto-advance toast state. When set, a banner shows and a timer fires
   // ADVANCE_DELAY_MS later. The "Stay on this page" link cancels the timer.
   const [advance, setAdvance] = useState<{
@@ -123,9 +134,23 @@ export function RecipeForm({
 
   function doSave(action: SaveAction) {
     setError(null);
+    // Client-side guard for the publish/submit-for-review paths: the server
+    // also blocks this, but catching it here keeps the round trip out and
+    // lets us surface the error on the field instantly.
+    const publishingAction = action === 'publish' || action === 'submit_for_review';
+    if (publishingAction && !draft.section_id) {
+      flagMissingSection();
+      return;
+    }
     startTransition(async () => {
       const result: SaveOutcome = await saveRecipe(draft, action);
       if (!result.ok) {
+        // Promote missing_section to the inline field error so the cause is
+        // obvious; other errors still render in the bottom banner.
+        if (result.error === 'missing_section') {
+          flagMissingSection();
+          return;
+        }
         setError(humanError(result.error));
         return;
       }
@@ -267,14 +292,20 @@ export function RecipeForm({
         />
       </div>
 
-      <FieldSelect
-        label="Section"
-        required
-        value={draft.section_id ?? ''}
-        onChange={(v) => update('section_id', v)}
-        options={options.sections.map((s) => ({ value: s.id, label: s.name }))}
-        flagLowConfidence={lowConfidence('suggested_section')}
-      />
+      <div ref={sectionFieldRef}>
+        <FieldSelect
+          label="Section"
+          required
+          value={draft.section_id ?? ''}
+          onChange={(v) => {
+            update('section_id', v);
+            if (v && sectionError) setSectionError(null);
+          }}
+          options={options.sections.map((s) => ({ value: s.id, label: s.name }))}
+          flagLowConfidence={lowConfidence('suggested_section')}
+          errorMessage={sectionError}
+        />
+      </div>
 
       <FieldTextarea
         label="Story"
@@ -663,7 +694,7 @@ function FieldTextarea({
 }
 
 function FieldSelect({
-  label, value, onChange, options, required, disabled, helper, allowBlank, flagLowConfidence,
+  label, value, onChange, options, required, disabled, helper, allowBlank, flagLowConfidence, errorMessage,
 }: {
   label: string;
   value: string;
@@ -674,7 +705,15 @@ function FieldSelect({
   helper?: string;
   allowBlank?: boolean;
   flagLowConfidence?: boolean;
+  errorMessage?: string | null;
 }) {
+  // Error styling takes precedence over low-confidence styling — the error
+  // is a hard block that the user needs to resolve.
+  const borderClass = errorMessage
+    ? 'border-accent ring-2 ring-accent/30'
+    : flagLowConfidence
+      ? 'border-primary'
+      : 'border-rule';
   return (
     <label className="block">
       <span className="label">{label}{required && ' *'}</span>
@@ -682,9 +721,10 @@ function FieldSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
+        aria-invalid={!!errorMessage}
         className={
           'mt-2 w-full rounded-full border bg-paper px-5 py-3 text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink/10 disabled:opacity-60 ' +
-          (flagLowConfidence ? 'border-primary' : 'border-rule')
+          borderClass
         }
       >
         {(allowBlank || !value) && <option value="">— Select —</option>}
@@ -692,7 +732,13 @@ function FieldSelect({
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
-      {flagLowConfidence && (
+      {errorMessage && (
+        <p className="mt-1 flex items-center gap-1 text-sm text-accent" role="alert">
+          <AlertCircle size={12} aria-hidden="true" />
+          <span className="font-serif italic">{errorMessage}</span>
+        </p>
+      )}
+      {!errorMessage && flagLowConfidence && (
         <p className="mt-1 flex items-center gap-1 text-sm text-primary">
           <AlertCircle size={12} aria-hidden="true" />
           <span className="font-serif italic">Please double-check this</span>
