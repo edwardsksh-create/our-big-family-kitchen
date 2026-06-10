@@ -30,7 +30,18 @@ function formattedPerson(p: { name: string; nickname: string | null; birth_name:
   return formatDisplayName({ fullName: p.name, nickname: p.nickname, birth_name: p.birth_name });
 }
 
-export function PhotoReviewForm({ photo, occasions, people, recipes, previous }: Props) {
+export function PhotoReviewForm(props: Props) {
+  // Key the inner form by photo.id so the next photo always remounts with
+  // clean state. `useState` initializers only run once per mount, so without
+  // this the previous photo's caption, tagged people, occasions, year, etc.
+  // would persist after "Save and next" — risking a photo being saved with
+  // inherited data from the previous one. The explicit "Copy tags from
+  // previous" button below still works because it sets state imperatively
+  // from the `previous` prop.
+  return <PhotoReviewFormInner key={props.photo.id} {...props} />;
+}
+
+function PhotoReviewFormInner({ photo, occasions, people, recipes, previous }: Props) {
   // Form state.
   const [caption,          setCaption]          = useState(photo.caption          ?? '');
   const [year,             setYear]             = useState(photo.year             ?? photo.ai_hints?.estimated_year ?? '');
