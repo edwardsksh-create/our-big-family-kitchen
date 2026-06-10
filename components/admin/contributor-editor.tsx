@@ -15,7 +15,6 @@ export function AdminContributorEditor({ contributor, familyLines }: Props) {
   const [patch, setPatch] = useState<AdminContributorPatch>(contributor);
   const [pending, startTransition] = useTransition();
   const [error, setError]    = useState<string | null>(null);
-  const [savedAt, setSavedAt] = useState<Date | null>(null);
 
   function update<K extends keyof AdminContributorPatch>(key: K, value: AdminContributorPatch[K]) {
     setPatch((p) => ({ ...p, [key]: value }));
@@ -26,12 +25,15 @@ export function AdminContributorEditor({ contributor, familyLines }: Props) {
     startTransition(async () => {
       const result = await updateContributorAsAdmin(patch);
       if (!result.ok) {
+        // Validation / server errors keep the admin on the form so the
+        // message stays visible next to the field they were editing.
         setError(humanError(result.error));
         return;
       }
-      setSavedAt(new Date());
-      // Stay on this page if slug stayed the same; otherwise route to the new slug.
-      router.refresh();
+      // On success, bounce to the contributor's public page so the admin
+      // sees the updated result instead of looking at the editor again.
+      // result.slug already reflects any name change.
+      router.push(`/contributors/${result.slug}`);
     });
   }
 
@@ -121,9 +123,6 @@ export function AdminContributorEditor({ contributor, familyLines }: Props) {
         <button type="button" onClick={save} disabled={pending} className="btn-primary disabled:opacity-60">
           {pending ? 'Saving…' : 'Save changes'}
         </button>
-        <span className="ml-auto text-sm text-ink-soft" aria-live="polite">
-          {savedAt && `Saved · ${savedAt.toLocaleTimeString()}`}
-        </span>
       </div>
 
       {error && (
