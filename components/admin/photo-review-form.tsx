@@ -325,9 +325,6 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
             <Plus size={18} className="text-accent" aria-hidden="true" />
             Don&rsquo;t see your occasion? Add one.
           </p>
-          <p className="mt-1 text-sm text-ink-soft">
-            New occasions persist for every future photo and the /album filter.
-          </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <input
               type="text"
