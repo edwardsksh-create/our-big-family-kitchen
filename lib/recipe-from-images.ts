@@ -4,6 +4,7 @@ import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import type { RenderedPage } from '@/lib/pdf/render';
 import { SECTIONS } from '@/lib/sections';
 import { formatSourceAttribution } from '@/lib/recipes/source-attribution';
+import { applyHouseStyleToParsedRecipe } from '@/lib/recipes/house-style';
 
 // One ingredient line, optionally grouped under a sub-header.
 const IngredientGroupSchema = z.object({
@@ -127,7 +128,7 @@ export async function parseRecipesFromImages(args: {
   if (!parsed) throw new Error('Vision recipe parser returned no structured output.');
 
   return {
-    recipes: parsed.recipes.map(applyHouseStyleSource),
+    recipes: parsed.recipes.map(applyHouseStyle),
     usage: {
       input_tokens:  response.usage.input_tokens,
       output_tokens: response.usage.output_tokens,
@@ -144,4 +145,8 @@ function applyHouseStyleSource(r: ParsedRecipeVision): ParsedRecipeVision {
   });
   if (normalized === null) return r;
   return { ...r, originally_from: normalized };
+}
+
+function applyHouseStyle(r: ParsedRecipeVision): ParsedRecipeVision {
+  return applyHouseStyleToParsedRecipe(applyHouseStyleSource(r));
 }

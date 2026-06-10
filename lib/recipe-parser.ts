@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { formatSourceAttribution } from '@/lib/recipes/source-attribution';
+import { applyHouseStyleToParsedRecipe } from '@/lib/recipes/house-style';
 
 // Output schema for parsed recipes. Kept conservative — we don't try to
 // extract quantities into a structured format; the human can clean up the
@@ -108,7 +109,7 @@ export async function parseRecipeFromText(text: string): Promise<ParsedRecipe> {
   if (!parsed) {
     throw new Error('Recipe parser returned no structured output.');
   }
-  return applyHouseStyleSource(parsed);
+  return applyHouseStyleToParsedRecipe(applyHouseStyleSource(parsed));
 }
 
 /**

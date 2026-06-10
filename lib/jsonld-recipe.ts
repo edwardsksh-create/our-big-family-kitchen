@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import type { ParsedRecipe } from '@/lib/recipe-parser';
 import { formatSourceAttribution } from '@/lib/recipes/source-attribution';
+import { applyHouseStyleToParsedRecipe } from '@/lib/recipes/house-style';
 
 // Pure JSON-LD Recipe extraction. Split out of recipe-from-url.ts so the
 // parsing logic is unit-testable without network I/O.
@@ -140,7 +141,7 @@ export function recipeNodeToParsed(node: Record<string, unknown>): ParsedRecipe 
   const author    = authorString(node.author);
   const publisher = publisherString(node.publisher);
   const originally_from = formatSourceAttribution({ author, source: publisher, isBook: false });
-  return {
+  return applyHouseStyleToParsedRecipe({
     title:             title.trim(),
     story:             description?.trim() || null,
     originally_from,
@@ -149,7 +150,7 @@ export function recipeNodeToParsed(node: Record<string, unknown>): ParsedRecipe 
       : null,
     ingredient_groups: ingredientsToGroups(node.recipeIngredient ?? node.ingredients),
     instruction_steps: instructionsToSteps(node.recipeInstructions),
-  };
+  });
 }
 
 // Scan a full HTML document's <script type="application/ld+json"> tags for

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { SECTIONS } from '@/lib/sections';
 import { formatSourceAttribution } from '@/lib/recipes/source-attribution';
+import { applyHouseStyleToParsedFromPhotos } from '@/lib/recipes/house-style';
 
 const Confidence = z.enum(['high', 'medium', 'low']);
 
@@ -137,7 +138,7 @@ export async function parseRecipeFromPhotoUrls(args: {
     (response.usage.output_tokens / 1_000_000) * PRICE_OUTPUT_PER_1M;
 
   return {
-    recipe: applyHouseStyleSource(parsed),
+    recipe: applyHouseStyleToParsedFromPhotos(applyHouseStyleSource(parsed)),
     usage:  { input_tokens: response.usage.input_tokens, output_tokens: response.usage.output_tokens },
     cost_usd,
   };
