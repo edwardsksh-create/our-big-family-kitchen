@@ -174,36 +174,40 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
 
   return (
     <div className="space-y-8">
-      {/* AI hints */}
+      {/* AI hints — collapsed by default so the photo + tagging fields are
+          immediately reachable without scrolling past suggestions. Native
+          <details> keeps state per-photo without React bookkeeping. */}
       {photo.ai_hints && (
-        <div className="rounded-2xl border border-rule bg-cream/30 p-5 text-sm text-ink-soft">
-          <p className="label mb-2 text-ink-soft">AI hints</p>
-          <p>
-            <strong className="font-serif text-ink">{photo.ai_hints.estimated_year}</strong>
-            <span className="text-ink-soft/70"> ({photo.ai_hints.estimated_year_confidence} confidence)</span>
-            {' · '}
-            {photo.ai_hints.person_count} {photo.ai_hints.person_count === 1 ? 'person' : 'people'}
-            {' · '}
-            {photo.ai_hints.setting}
-          </p>
-          {photo.ai_hints.probable_occasions.length > 0 && (
-            <p className="mt-1">
-              Suggested occasions: {photo.ai_hints.probable_occasions.join(', ')}
+        <details className="rounded-2xl border border-rule bg-cream/30 px-5 py-3 text-sm text-ink-soft">
+          <summary className="label cursor-pointer list-none text-ink-soft marker:hidden [&::-webkit-details-marker]:hidden">
+            <span className="inline-block">+ Show AI suggestions</span>
+          </summary>
+          <div className="mt-3 space-y-1">
+            <p>
+              <strong className="font-serif text-ink">{photo.ai_hints.estimated_year}</strong>
+              <span className="text-ink-soft/70"> ({photo.ai_hints.estimated_year_confidence} confidence)</span>
+              {' · '}
+              {photo.ai_hints.person_count} {photo.ai_hints.person_count === 1 ? 'person' : 'people'}
+              {' · '}
+              {photo.ai_hints.setting}
             </p>
-          )}
-          {photo.ai_hints.food_visible.length > 0 && (
-            <p className="mt-1">Food: {photo.ai_hints.food_visible.join(', ')}</p>
-          )}
-          {photo.ai_hints.visible_occasion_clues.length > 0 && (
-            <p className="mt-1 italic">Clues: {photo.ai_hints.visible_occasion_clues.join('; ')}</p>
-          )}
-          {photo.ai_hints.date_stamp_visible && (
-            <p className="mt-1">Date stamp: {photo.ai_hints.date_stamp_visible}</p>
-          )}
-          {photo.ai_hints.notes && (
-            <p className="mt-2 max-w-prose text-ink-soft/80">{photo.ai_hints.notes}</p>
-          )}
-        </div>
+            {photo.ai_hints.probable_occasions.length > 0 && (
+              <p>Suggested occasions: {photo.ai_hints.probable_occasions.join(', ')}</p>
+            )}
+            {photo.ai_hints.food_visible.length > 0 && (
+              <p>Food: {photo.ai_hints.food_visible.join(', ')}</p>
+            )}
+            {photo.ai_hints.visible_occasion_clues.length > 0 && (
+              <p className="italic">Clues: {photo.ai_hints.visible_occasion_clues.join('; ')}</p>
+            )}
+            {photo.ai_hints.date_stamp_visible && (
+              <p>Date stamp: {photo.ai_hints.date_stamp_visible}</p>
+            )}
+            {photo.ai_hints.notes && (
+              <p className="mt-2 max-w-prose text-ink-soft/80">{photo.ai_hints.notes}</p>
+            )}
+          </div>
+        </details>
       )}
 
       {/* People */}
