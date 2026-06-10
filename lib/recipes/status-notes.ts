@@ -1,12 +1,12 @@
-// Map admin tag slugs to warm, public-facing status notes shown on the
-// recipe page. Internal-only tags (multi-recipe, possible-duplicate,
-// bulk-photos) never surface to the public.
+// Public-facing status notes shown on the recipe page. These are intentionally
+// positive/provenance-only — the previous "Still being checked" /
+// "Method needs filling in" copy was a public surfacing of needs-class
+// prompts and now lives exclusively in the actionable NeedsPrompt block,
+// which is gated to admin + the recipe's contributor (see lib/recipes/badges).
+// Internal-only tags (multi-recipe, possible-duplicate, bulk-photos) still
+// never surface to the public.
 
 const PUBLIC_TAG_NOTES: Record<string, string> = {
-  'low-confidence':
-    "Still being checked. This recipe was transcribed from an original image and may need a second look. The original photo is included at the bottom of the page.",
-  'needs-instructions':
-    "Method needs filling in. The original recipe doesn't include full method instructions yet. Check the original photo below, or add notes if you know how this was usually made.",
   'lucys-recipe-collection':
     "From Lucy's recipe collection. Photographed from her binder of favorites curated over 30+ years.",
 };
@@ -19,24 +19,18 @@ export const INTERNAL_TAG_SLUGS = new Set([
 ]);
 
 /**
- * Compute the public status notes for a recipe given its admin tag slugs.
- *
- * Returns an array (possibly empty). When low-confidence or needs-instructions
- * applies, the lucys-recipe-collection note is suppressed — the more specific
- * "still being checked" / "method needs filling in" carries the meaning.
+ * Public-facing status/provenance notes for a recipe. Returns positive
+ * provenance only (currently just the Lucy's-collection note). Needs-class
+ * tags (low-confidence, needs-instructions) deliberately return nothing
+ * here — actionable versions of those prompts live on the recipe page for
+ * admin + the contributor via NeedsPrompt; they should never appear as cold
+ * system text for the general public.
  */
 export function publicStatusNotes(tagSlugs: string[]): string[] {
   const notes: string[] = [];
-  const has = (slug: string) => tagSlugs.includes(slug);
-
-  if (has('low-confidence')) notes.push(PUBLIC_TAG_NOTES['low-confidence']);
-  if (has('needs-instructions')) notes.push(PUBLIC_TAG_NOTES['needs-instructions']);
-
-  // lucys-recipe-collection only stands alone when there's no other status
-  if (has('lucys-recipe-collection') && notes.length === 0) {
+  if (tagSlugs.includes('lucys-recipe-collection')) {
     notes.push(PUBLIC_TAG_NOTES['lucys-recipe-collection']);
   }
-
   return notes;
 }
 

@@ -257,10 +257,7 @@ export default async function RecipePage({
 
       <h1 className="font-serif text-4xl leading-tight text-primary md:text-5xl">{recipe.title}</h1>
 
-      {/* Title-down content: byline + body in the left column; at-a-glance
-          floats at top-right via absolute positioning so its height never
-          stretches main-column rows. */}
-      <div className="mt-3 md:relative md:pr-[20.5rem]">
+      <div className="mt-3">
         {/* Byline + originally-from */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-ink-soft">
           {contributor && contributorSlug && contributorDisplay && (
@@ -276,32 +273,12 @@ export default async function RecipePage({
           )}
         </div>
 
-        {/* At a glance — absolute top-right on md+, inline (full-width) on mobile. */}
-        <aside
-          className="mt-6 rounded-2xl border border-rule bg-cream/30 px-5 py-4 md:absolute md:right-0 md:top-0 md:mt-0 md:w-[18rem]"
-          aria-label="At a glance"
-          data-no-print
-        >
-          <p className="label mb-3 text-ink-soft">At a glance</p>
-          <dl className="space-y-3 text-sm">
-            {recipe.section && (
-              <div>
-                <dt className="label text-[10px] text-ink-soft/70">Section</dt>
-                <dd className="mt-0.5">
-                  <Link
-                    href={`/sections/${recipe.section.slug}`}
-                    className="font-serif text-base text-ink hover:text-primary"
-                  >
-                    {sectionDisplayName}
-                  </Link>
-                </dd>
-              </div>
-            )}
-          </dl>
-        </aside>
+        {/* The Section appears in the breadcrumb above; a full labeled
+            "At a glance" box for that single field is redundant, so it's
+            been removed. If this page later grows real at-a-glance facts
+            (serves, time, etc.), restore an aside here. */}
 
-        {/* Main column body — packs tightly under the byline since the aside
-            is absolutely positioned and doesn't affect block flow on md+. */}
+        {/* Main column body. */}
         <div className="mt-6 space-y-6">
           {statusNotes.length > 0 && (
             <div className="space-y-3" data-no-print>
@@ -451,15 +428,6 @@ export default async function RecipePage({
         </section>
       )}
 
-      {recipe.story && (
-        <section className="mt-16">
-          <h2 className="font-serif text-2xl text-ink">Family note</h2>
-          <div className="prose-body mt-4 text-lg leading-relaxed text-ink-soft">
-            <p>{recipe.story}</p>
-          </div>
-        </section>
-      )}
-
       {sourcePhotos.length > 0 && (
         <section className="mt-16">
           <h2 className="font-serif text-2xl text-ink">Original page</h2>
@@ -491,6 +459,20 @@ export default async function RecipePage({
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* Family Note — the cook's story, given a visually distinct boxed
+          treatment so it reads as a personal aside rather than another body
+          section. Sits at the very bottom of the recipe content, above the
+          provenance footer. Hidden entirely when there's no story to tell —
+          never replaced by system or needs-class prose. */}
+      {recipe.story && recipe.story.trim().length > 0 && (
+        <section className="mt-16 rounded-2xl border border-rule bg-cream/40 p-6 md:p-8">
+          <h2 className="font-serif text-2xl text-ink">Family note</h2>
+          <div className="prose-body mt-4 text-lg leading-relaxed text-ink-soft">
+            <p>{recipe.story}</p>
+          </div>
         </section>
       )}
 

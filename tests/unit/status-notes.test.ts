@@ -7,48 +7,31 @@ describe('publicStatusNotes', () => {
     expect(publicStatusNotes(['some-other-tag'])).toEqual([]);
   });
 
-  it('returns the "still being checked" note for low-confidence', () => {
-    const notes = publicStatusNotes(['low-confidence']);
-    expect(notes).toHaveLength(1);
-    expect(notes[0]).toMatch(/Still being checked/);
-  });
-
-  it('returns the "method needs filling in" note for needs-instructions', () => {
-    const notes = publicStatusNotes(['needs-instructions']);
-    expect(notes).toHaveLength(1);
-    expect(notes[0]).toMatch(/Method needs filling in/);
-  });
-
-  it("returns Lucy's collection note when it's the only status tag", () => {
+  it('returns Lucy\'s-collection provenance note when the tag is present', () => {
     const notes = publicStatusNotes(['lucys-recipe-collection']);
     expect(notes).toHaveLength(1);
     expect(notes[0]).toMatch(/Lucy's recipe collection/);
   });
 
-  it("suppresses Lucy's note when a more specific status applies", () => {
-    expect(publicStatusNotes(['lucys-recipe-collection', 'low-confidence'])).toEqual([
-      expect.stringMatching(/Still being checked/),
-    ]);
-    expect(publicStatusNotes(['lucys-recipe-collection', 'needs-instructions'])).toEqual([
-      expect.stringMatching(/Method needs filling in/),
-    ]);
+  it('does NOT surface low-confidence as public copy — handled by the actionable NeedsPrompt for admin/owner only', () => {
+    expect(publicStatusNotes(['low-confidence'])).toEqual([]);
   });
 
-  it('combines low-confidence and needs-instructions when both apply', () => {
-    const notes = publicStatusNotes(['low-confidence', 'needs-instructions']);
-    expect(notes).toHaveLength(2);
-    expect(notes[0]).toMatch(/Still being checked/);
-    expect(notes[1]).toMatch(/Method needs filling in/);
+  it('does NOT surface needs-instructions as public copy — handled by the actionable NeedsPrompt for admin/owner only', () => {
+    expect(publicStatusNotes(['needs-instructions'])).toEqual([]);
+  });
+
+  it('keeps the Lucy\'s-collection note even when needs-class tags are also present (provenance is independent of needs)', () => {
+    expect(publicStatusNotes(['lucys-recipe-collection', 'low-confidence']))
+      .toEqual([expect.stringMatching(/Lucy's recipe collection/)]);
+    expect(publicStatusNotes(['lucys-recipe-collection', 'needs-instructions']))
+      .toEqual([expect.stringMatching(/Lucy's recipe collection/)]);
   });
 
   it('ignores internal-only tags', () => {
     expect(publicStatusNotes(['multi-recipe'])).toEqual([]);
     expect(publicStatusNotes(['possible-duplicate'])).toEqual([]);
     expect(publicStatusNotes(['bulk-photos'])).toEqual([]);
-    // even mixed in: only the public-status tag surfaces
-    expect(publicStatusNotes(['multi-recipe', 'low-confidence'])).toEqual([
-      expect.stringMatching(/Still being checked/),
-    ]);
   });
 });
 
