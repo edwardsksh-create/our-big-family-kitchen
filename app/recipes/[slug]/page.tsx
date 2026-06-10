@@ -280,19 +280,6 @@ export default async function RecipePage({
 
         {/* Main column body. */}
         <div className="mt-6 space-y-6">
-          {statusNotes.length > 0 && (
-            <div className="space-y-3" data-no-print>
-              {statusNotes.map((note, i) => (
-                <p
-                  key={i}
-                  className="rounded-xl border border-rule bg-cream/30 px-4 py-3 text-sm leading-relaxed text-ink-soft"
-                >
-                  <span className="font-serif italic">{note}</span>
-                </p>
-              ))}
-            </div>
-          )}
-
           {/* Actionable needs-prompt. Visible ONLY to admin or this recipe's
               own contributor — the same set of viewers who can act on it.
               Other family members and signed-out visitors see nothing here.
@@ -352,6 +339,22 @@ export default async function RecipePage({
           })}
         </ol>
       </section>
+
+      {/* Provenance note (e.g. "From Lucy's recipe collection") sits in the
+          contextual zone after the cooking content, alongside the kitchen
+          notes and photos — same register as the Family Note box below. */}
+      {statusNotes.length > 0 && (
+        <div className="mt-12 space-y-3" data-no-print>
+          {statusNotes.map((note, i) => (
+            <p
+              key={i}
+              className="rounded-xl border border-rule bg-cream/30 px-4 py-3 text-sm leading-relaxed text-ink-soft"
+            >
+              <span className="font-serif italic">{note}</span>
+            </p>
+          ))}
+        </div>
+      )}
 
       {kitchenNotes.length > 0 && (
         <section className="recipe-notes mt-12">
