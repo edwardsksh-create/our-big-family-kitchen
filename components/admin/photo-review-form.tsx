@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
+import { Plus } from 'lucide-react';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { submitPhotoReview, createOccasionType } from '@/app/admin/photo-review/actions';
 import { suggestExistingOccasions } from '@/lib/photos/occasions';
@@ -42,19 +43,20 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
   // Local copy so newly-created occasions show up immediately without a
   // full server-round-trip / re-render.
   const [occasions, setOccasions] = useState<OccasionType[]>(initialOccasions);
-  // Form state.
+  // Form state. Year and Occasion start from whatever the photo already has
+  // saved; the AI hints (visible in the panel above) are NOT pre-applied
+  // because the model's year ranges are wide and its occasion guesses miss
+  // often enough that auto-checked defaults create more correction work
+  // than they save. The AI hints stay displayed read-only for reference.
   const [caption,          setCaption]          = useState(photo.caption          ?? '');
-  const [year,             setYear]             = useState(photo.year             ?? photo.ai_hints?.estimated_year ?? '');
+  const [year,             setYear]             = useState(photo.year             ?? '');
   const [place,            setPlace]            = useState(photo.place            ?? '');
   const [additionalPeople, setAdditionalPeople] = useState(photo.additional_people ?? '');
   const [pets,             setPets]             = useState(photo.pets             ?? '');
   const [selectedPeople, setSelectedPeople] = useState<string[]>(
     photo.people.map((p) => personRefOfTag(p)),
   );
-  const [selectedOccasions, setSelectedOccasions] = useState<string[]>(() => {
-    if (photo.occasions.length > 0) return photo.occasions;
-    return photo.ai_hints?.probable_occasions ?? [];
-  });
+  const [selectedOccasions, setSelectedOccasions] = useState<string[]>(photo.occasions);
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>(
     photo.recipes.map((r) => r.id),
   );
@@ -315,13 +317,15 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
 
         {/* Add a new reusable occasion. Persists to family_photo_occasion_types
             and becomes available everywhere (review form and /album filter).
-            Visual emphasis: solid border + cream backdrop + accent CTA so
-            it reads as an action, not as a passive footnote. */}
-        <div className="mt-4 rounded-2xl border border-rule bg-cream/40 p-4">
-          <p className="font-serif text-base italic text-ink">
+            Visual treatment is intentionally loud: solid accent border + tinted
+            backdrop + Plus icon + accent CTA. Earlier dashed-border versions
+            were reading as a passive footnote and admins were missing it. */}
+        <div className="mt-5 rounded-2xl border-2 border-accent/40 bg-accent/10 p-5">
+          <p className="flex items-center gap-2 font-serif text-lg italic text-ink">
+            <Plus size={18} className="text-accent" aria-hidden="true" />
             Don&rsquo;t see your occasion? Add one.
           </p>
-          <p className="mt-1 text-xs text-ink-soft">
+          <p className="mt-1 text-sm text-ink-soft">
             New occasions persist for every future photo and the /album filter.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -331,15 +335,16 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
               onChange={(e) => { setNewOccasionInput(e.target.value); setNewOccasionFeedback(null); }}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddOccasion(); } }}
               placeholder="e.g. St. Patrick's Day, Confirmation, Crawfish boil…"
-              className="min-w-[12rem] flex-1 rounded-xl border border-rule bg-paper px-3 py-2 text-sm outline-none focus:border-ink focus:ring-2 focus:ring-ink/10"
+              className="min-w-[14rem] flex-1 rounded-xl border border-rule bg-paper px-3 py-2 text-sm outline-none focus:border-ink focus:ring-2 focus:ring-ink/10"
             />
             <button
               type="button"
               onClick={handleAddOccasion}
               disabled={creatingOccasion || newOccasionInput.trim().length < 2}
-              className="rounded-full bg-primary px-4 py-2 font-sans text-sm font-medium text-paper transition-colors hover:bg-ink disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 font-sans text-sm font-medium text-paper transition-colors hover:bg-ink disabled:opacity-50"
             >
-              {creatingOccasion ? 'Adding…' : '+ Add occasion'}
+              <Plus size={14} aria-hidden="true" />
+              {creatingOccasion ? 'Adding…' : 'Add occasion'}
             </button>
           </div>
           {occasionSuggestions.length > 0 && (
