@@ -18,6 +18,9 @@ type Props = {
   people:          PickerPerson[];
   recipes:         PickerRecipe[];
   previous:        FamilyPhotoFull | null;
+  /** Current queue filter; carried through to the action so post-action
+   *  redirects stay on the same filter. */
+  filterSource:    'family' | null;
 };
 
 function personRefOfTag(p: { person_type: 'contributor' | 'family_member'; id: string }): string {
@@ -39,7 +42,7 @@ export function PhotoReviewForm(props: Props) {
   return <PhotoReviewFormInner key={props.photo.id} {...props} />;
 }
 
-function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, recipes, previous }: Props) {
+function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, recipes, previous, filterSource }: Props) {
   // Local copy so newly-created occasions show up immediately without a
   // full server-round-trip / re-render.
   const [occasions, setOccasions] = useState<OccasionType[]>(initialOccasions);
@@ -153,7 +156,10 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
     window.scrollTo({ top: 0 });
   }
 
-  function submitWith(intent: 'save_and_next' | 'skip' | 'not_for_archive' | 'done') {
+  function submitWith(intent: 'save_and_next' | 'skip' | 'not_for_archive' | 'reject' | 'done') {
+    if (intent === 'reject' && !confirm('Reject this submission? The file will be deleted and the row hidden. The uploader is not notified.')) {
+      return;
+    }
     startTransition(async () => {
       await submitPhotoReview({
         photoId:          photo.id,
@@ -168,12 +174,33 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
         needsEditing,
         editingNote,
         intent,
+        filterSource,
       });
     });
   }
 
   return (
     <div className="space-y-8">
+      {/* Family-submission banner — prominent so Kate sees who sent it and
+          their note (her main tagging context) without hunting. Only renders
+          for source='family' submissions; archive imports skip it. */}
+      {photo.source === 'family' && (
+        <div className="rounded-2xl border-2 border-accent/40 bg-accent/10 p-5">
+          <p className="label mb-2 text-ink-soft">Family submission</p>
+          <p className="font-serif text-lg text-ink">
+            Submitted by{' '}
+            <span className="italic">
+              {photo.uploaded_by?.displayName ?? 'a family member'}
+            </span>
+          </p>
+          {photo.submitter_note && (
+            <p className="mt-3 whitespace-pre-wrap rounded-xl border border-rule bg-paper px-3 py-2 text-sm text-ink-soft">
+              <span className="font-serif italic">{photo.submitter_note}</span>
+            </p>
+          )}
+        </div>
+      )}
+
       {/* AI hints — collapsed by default so the photo + tagging fields are
           immediately reachable without scrolling past suggestions. Native
           <details> keeps state per-photo without React bookkeeping. */}
@@ -501,6 +528,17 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
             className="btn-ghost"
           >
             Copy tags from previous
+          </button>
+        )}
+        {photo.source === 'family' && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => submitWith('reject')}
+            className="btn-ghost text-accent hover:text-accent"
+            title="Decline this submission. File deleted, uploader not notified."
+          >
+            Reject submission
           </button>
         )}
         <button

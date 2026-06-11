@@ -6,6 +6,7 @@ import {
   fetchFirstUnreviewedPhoto,
   fetchMostRecentlyReviewedPhoto,
   fetchPhotoReviewProgress,
+  fetchPhotoReviewSourceCounts,
   fetchAllPeopleForPicker,
   fetchAllRecipesForPicker,
   fetchOccasionTypes,
@@ -16,7 +17,11 @@ import { PhotoReviewForm } from '@/components/admin/photo-review-form';
 export const metadata = { title: 'Photo review' };
 export const dynamic   = 'force-dynamic';
 
-export default async function PhotoReviewPage() {
+export default async function PhotoReviewPage({
+  searchParams,
+}: {
+  searchParams: { source?: string };
+}) {
   const session = await auth();
   if (!session?.user) redirect('/sign-in?next=/admin/photo-review');
   if (session.user.role !== 'admin') {
@@ -28,10 +33,13 @@ export default async function PhotoReviewPage() {
     );
   }
 
-  const [photo, previous, progress, occasions, people, recipes, flaggedCount] = await Promise.all([
-    fetchFirstUnreviewedPhoto(),
+  const filterSource: 'family' | null = searchParams.source === 'family' ? 'family' : null;
+
+  const [photo, previous, progress, sourceCounts, occasions, people, recipes, flaggedCount] = await Promise.all([
+    fetchFirstUnreviewedPhoto(filterSource ? { source: filterSource } : undefined),
     fetchMostRecentlyReviewedPhoto(),
     fetchPhotoReviewProgress(),
+    fetchPhotoReviewSourceCounts(),
     fetchOccasionTypes(),
     fetchAllPeopleForPicker(),
     fetchAllRecipesForPicker(),
@@ -59,6 +67,33 @@ export default async function PhotoReviewPage() {
           )}
         </div>
       </header>
+
+      {/* Queue filter — lets Kate batch through family submissions without
+          interleaving them with archive imports. */}
+      <nav className="mb-6 flex flex-wrap items-center gap-2" data-no-print>
+        <Link
+          href="/admin/photo-review"
+          className={
+            'rounded-full border px-3 py-1.5 font-sans text-sm transition-colors ' +
+            (filterSource === null
+              ? 'border-ink bg-ink text-paper'
+              : 'border-rule bg-paper text-ink hover:border-ink')
+          }
+        >
+          All ({sourceCounts.all})
+        </Link>
+        <Link
+          href="/admin/photo-review?source=family"
+          className={
+            'rounded-full border px-3 py-1.5 font-sans text-sm transition-colors ' +
+            (filterSource === 'family'
+              ? 'border-ink bg-ink text-paper'
+              : 'border-rule bg-paper text-ink hover:border-ink')
+          }
+        >
+          Family submissions ({sourceCounts.family})
+        </Link>
+      </nav>
 
       {!photo ? (
         <div className="rounded-2xl border border-dashed border-rule p-12 text-center">
@@ -89,6 +124,7 @@ export default async function PhotoReviewPage() {
             occasions={occasions}
             people={people}
             recipes={recipes}
+            filterSource={filterSource}
           />
         </>
       )}

@@ -19,7 +19,10 @@ type SubmitPayload = {
   recipeIds:        string[];
   needsEditing:     boolean;
   editingNote:      string;
-  intent:           'save_and_next' | 'skip' | 'not_for_archive' | 'done';
+  intent:           'save_and_next' | 'skip' | 'not_for_archive' | 'reject' | 'done';
+  /** When set, the post-action redirect carries the queue filter forward
+   *  so admin batch-processing family submissions stays on that filter. */
+  filterSource?:    'family' | null;
 };
 
 export async function submitPhotoReview(payload: SubmitPayload): Promise<void> {
@@ -31,6 +34,11 @@ export async function submitPhotoReview(payload: SubmitPayload): Promise<void> {
   const db = supabaseAdmin();
   const trimmed = (s: string) => s.trim() || null;
 
+  // Preserve any active queue filter through redirects so admin can keep
+  // batch-processing one source.
+  const filterQuery = payload.filterSource === 'family' ? '?source=family' : '';
+  const nextUrl = `/admin/photo-review${filterQuery}`;
+
   if (payload.intent === 'done') {
     redirect('/admin');
   }
@@ -41,7 +49,29 @@ export async function submitPhotoReview(payload: SubmitPayload): Promise<void> {
       .update({ not_for_archive: true })
       .eq('id', payload.photoId);
     revalidatePath('/admin/photo-review');
-    redirect('/admin/photo-review');
+    redirect(nextUrl);
+  }
+
+  if (payload.intent === 'reject') {
+    // Rejection on a family submission: drop the stored file so it can't
+    // leak via the public bucket URL, then mark not_for_archive so the
+    // row is excluded from both the queue and /album. We keep the row
+    // (audit trail) rather than hard-deleting it. The uploader is never
+    // notified — quiet decline by design.
+    const { data: existing } = await db
+      .from('family_photos')
+      .select('storage_path')
+      .eq('id', payload.photoId)
+      .maybeSingle();
+    if (existing?.storage_path) {
+      await db.storage.from('family-photos').remove([existing.storage_path]);
+    }
+    await db
+      .from('family_photos')
+      .update({ not_for_archive: true })
+      .eq('id', payload.photoId);
+    revalidatePath('/admin/photo-review');
+    redirect(nextUrl);
   }
 
   if (payload.intent === 'skip') {
@@ -53,7 +83,7 @@ export async function submitPhotoReview(payload: SubmitPayload): Promise<void> {
       .update({ uploaded_at: new Date().toISOString() })
       .eq('id', payload.photoId);
     revalidatePath('/admin/photo-review');
-    redirect('/admin/photo-review');
+    redirect(nextUrl);
   }
 
   // intent === 'save_and_next'
@@ -98,7 +128,7 @@ export async function submitPhotoReview(payload: SubmitPayload): Promise<void> {
   }
 
   revalidatePath('/admin/photo-review');
-  redirect('/admin/photo-review');
+  redirect(nextUrl);
 }
 
 export type CreateOccasionResult =

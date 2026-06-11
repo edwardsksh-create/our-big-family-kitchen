@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { familyPhotoUrl } from '@/lib/storage/photos';
+import { formatDisplayName } from '@/lib/contributors/display-name';
 import type { FamilyPhotoHints } from '@/lib/photos/family-photo-hints';
 
 export type FamilyPhotoTagPerson = {
@@ -31,6 +32,12 @@ export type FamilyPhotoFull = {
   not_for_archive: boolean;
   needs_editing:   boolean;        // admin-only — never rendered on public pages
   editing_note:    string | null;  // admin-only
+  /** 'import' for the original bulk archive; 'family' for community submissions. */
+  source:          'import' | 'family';
+  /** Free-text context the uploader left during family submission. */
+  submitter_note:  string | null;
+  /** Resolved display name of the person who submitted the photo, when known. */
+  uploaded_by:     { displayName: string } | null;
   uploaded_at:  string;
   people:       FamilyPhotoTagPerson[];
   occasions:    string[];
@@ -50,6 +57,9 @@ type Joined = {
   not_for_archive: boolean;
   needs_editing: boolean;
   editing_note:  string | null;
+  source:        'import' | 'family';
+  submitter_note: string | null;
+  uploaded_by_id: string | null;
   uploaded_at: string;
   people:    { person_type: 'contributor' | 'family_member'; contributor_id: string | null; family_member_id: string | null }[];
   occasions: { occasion_slug: string }[];
@@ -60,7 +70,9 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
   if (rows.length === 0) return [];
   const db = supabaseAdmin();
 
-  // Pull all referenced contributors + family_members in one shot.
+  // Pull all referenced contributors + family_members in one shot. The
+  // uploaded_by_id (submitter for family-submitted photos) is also a
+  // contributor reference, so we resolve it through the same lookup.
   const contributorIds = new Set<string>();
   const familyMemberIds = new Set<string>();
   for (const r of rows) {
@@ -68,6 +80,7 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
       if (p.contributor_id)   contributorIds.add(p.contributor_id);
       if (p.family_member_id) familyMemberIds.add(p.family_member_id);
     }
+    if (r.uploaded_by_id) contributorIds.add(r.uploaded_by_id);
   }
 
   const [{ data: contribRows }, { data: memberRows }] = await Promise.all([
@@ -101,6 +114,21 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
     not_for_archive:   r.not_for_archive,
     needs_editing:     r.needs_editing,
     editing_note:      r.editing_note,
+    source:            r.source,
+    submitter_note:    r.submitter_note,
+    uploaded_by:       (() => {
+      if (!r.uploaded_by_id) return null;
+      const c = contribById.get(r.uploaded_by_id);
+      const fullName = c?.name || '';
+      if (!fullName) return null;
+      return {
+        displayName: formatDisplayName({
+          fullName,
+          nickname:   c?.nickname,
+          birth_name: c?.birth_name,
+        }),
+      };
+    })(),
     uploaded_at:       r.uploaded_at,
     people: r.people.map((p): FamilyPhotoTagPerson => {
       if (p.person_type === 'contributor' && p.contributor_id) {
@@ -134,23 +162,42 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
 
 const COMMON_SELECT = `
   id, storage_path, caption, year, place, additional_people, pets,
-  ai_hints, reviewed, not_for_archive, needs_editing, editing_note, uploaded_at,
+  ai_hints, reviewed, not_for_archive, needs_editing, editing_note,
+  source, submitter_note, uploaded_by_id, uploaded_at,
   people:family_photo_people ( person_type, contributor_id, family_member_id ),
   occasions:family_photo_occasions ( occasion_slug ),
   recipes:family_photo_recipes ( recipe:recipes!family_photo_recipes_recipe_id_fkey ( id, slug, title ) )
 `;
 
-export async function fetchFirstUnreviewedPhoto(): Promise<FamilyPhotoFull | null> {
+/**
+ * Next unreviewed photo. When `source='family'` is passed, the queue is
+ * narrowed to family submissions so Kate can batch-process what people send
+ * in. Default returns the next of any source.
+ */
+export async function fetchFirstUnreviewedPhoto(
+  filter?: { source?: 'family' | 'import' },
+): Promise<FamilyPhotoFull | null> {
   const db = supabaseAdmin();
-  const { data } = await db
+  let q = db
     .from('family_photos')
     .select(COMMON_SELECT)
     .eq('reviewed', false)
-    .eq('not_for_archive', false)
-    .order('uploaded_at', { ascending: true })
-    .limit(1);
+    .eq('not_for_archive', false);
+  if (filter?.source) q = q.eq('source', filter.source);
+  const { data } = await q.order('uploaded_at', { ascending: true }).limit(1);
   const hydrated = await hydratePhotos((data ?? []) as unknown as Joined[]);
   return hydrated[0] ?? null;
+}
+
+export async function fetchPhotoReviewSourceCounts(): Promise<{ all: number; family: number }> {
+  const db = supabaseAdmin();
+  const [{ count: all }, { count: family }] = await Promise.all([
+    db.from('family_photos').select('*', { count: 'exact', head: true })
+      .eq('reviewed', false).eq('not_for_archive', false),
+    db.from('family_photos').select('*', { count: 'exact', head: true })
+      .eq('reviewed', false).eq('not_for_archive', false).eq('source', 'family'),
+  ]);
+  return { all: all ?? 0, family: family ?? 0 };
 }
 
 export async function fetchMostRecentlyReviewedPhoto(): Promise<FamilyPhotoFull | null> {

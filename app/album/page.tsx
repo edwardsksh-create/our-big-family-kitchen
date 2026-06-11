@@ -1,29 +1,43 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { AlbumClient } from '@/components/album-client';
+import { AlbumUploadButton } from '@/components/album-upload-button';
 import { fetchAllReviewedPhotos, fetchOccasionTypes } from '@/lib/queries/family-photos';
+import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const metadata = { title: 'Family archive' };
-export const revalidate = 60;
+// Per-request because the upload affordance depends on the signed-in viewer's
+// can_sign_in flag, which doesn't fit the static ISR model.
+export const dynamic = 'force-dynamic';
 
 export default async function AlbumPage() {
   const session = await auth();
-  if (!session?.user) redirect('/sign-in?next=/album');
+  if (!session?.user?.email) redirect('/sign-in?next=/album');
 
-  const [photos, occasions] = await Promise.all([
+  const db = supabaseAdmin();
+  const [{ data: viewer }, photos, occasions] = await Promise.all([
+    db.from('contributors').select('id, can_sign_in').ilike('email', session.user.email).maybeSingle(),
     fetchAllReviewedPhotos(),
     fetchOccasionTypes(),
   ]);
 
+  const canUpload = !!viewer?.can_sign_in;
+
   return (
     <div className="mx-auto max-w-page px-6 py-16">
-      <p className="label mb-3">Family archive</p>
-      <h1 className="font-serif text-4xl leading-tight text-ink md:text-5xl">
-        The kitchen across decades.
-      </h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-4">
+        <div>
+          <p className="label mb-3">Family archive</p>
+          <h1 className="font-serif text-4xl leading-tight text-ink md:text-5xl">
+            The kitchen across decades.
+          </h1>
+        </div>
+        {canUpload && <AlbumUploadButton />}
+      </div>
+
       <p className="mt-4 max-w-prose text-lg text-ink-soft">
         Photos of us cooking, gathering, and celebrating. Tap any photo to see
-        who’s in it and what we were doing.
+        who&rsquo;s in it and what we were doing.
       </p>
 
       <div className="mt-12">

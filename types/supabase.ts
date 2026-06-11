@@ -362,7 +362,9 @@ export type Database = {
           pets: string | null
           place: string | null
           reviewed: boolean
+          source: string
           storage_path: string
+          submitter_note: string | null
           uploaded_at: string
           uploaded_by_id: string | null
           year: string | null
@@ -379,7 +381,9 @@ export type Database = {
           pets?: string | null
           place?: string | null
           reviewed?: boolean
+          source?: string
           storage_path: string
+          submitter_note?: string | null
           uploaded_at?: string
           uploaded_by_id?: string | null
           year?: string | null
@@ -396,7 +400,9 @@ export type Database = {
           pets?: string | null
           place?: string | null
           reviewed?: boolean
+          source?: string
           storage_path?: string
+          submitter_note?: string | null
           uploaded_at?: string
           uploaded_by_id?: string | null
           year?: string | null
