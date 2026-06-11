@@ -12,6 +12,7 @@ function c(id: string, name = id): ContributorSummary {
     slug:                name.toLowerCase().replace(/\s+/g, '-'),
     joined_at:           null,
     can_sign_in:         true,
+    can_publish:         false,
     deceased:            false,
     nickname:            null,
     birth_name:          null,

@@ -20,7 +20,12 @@ export default async function ManualPage() {
     <div className="mx-auto max-w-page px-6 py-12">
       <p className="label mb-3">Add → Enter manually</p>
       <h1 className="font-serif text-3xl text-ink md:text-4xl">Add a recipe</h1>
-      <RecipeForm options={options} initial={draft} isAdmin={(session.user.role ?? '') === 'admin'} />
+      <RecipeForm
+        options={options}
+        initial={draft}
+        isAdmin={(session.user.role ?? '') === 'admin'}
+        canPublish={options.currentContributorCanPublish}
+      />
     </div>
   );
 }

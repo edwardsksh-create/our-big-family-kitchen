@@ -17,13 +17,17 @@ export type FormOptions = {
   sections:      SectionOption[];
   tags:          TagOption[];
   currentContributor: ContributorOption | null;
+  /** Whether the signed-in viewer is a trusted contributor (can_publish=true).
+   *  Used for button labelling only — the server re-checks the flag on every
+   *  submit so a tampered client cannot bypass review. */
+  currentContributorCanPublish: boolean;
 };
 
 export async function fetchFormOptions(currentEmail?: string | null): Promise<FormOptions> {
   const db = supabaseAdmin();
   const [contribRes, flRes, secRes, tagRes, cflRes] = await Promise.all([
     // Include viewers — stubs are valid attribution targets even though they can't sign in.
-    db.from('contributors').select('id, email, name').order('name'),
+    db.from('contributors').select('id, email, name, can_publish').order('name'),
     db.from('family_lines').select('id, slug, name').order('sort_order'),
     db.from('sections').select('id, slug, name').order('sort_order'),
     db.from('tags').select('slug, name').order('name'),
@@ -45,6 +49,12 @@ export async function fetchFormOptions(currentEmail?: string | null): Promise<Fo
     primary_family_line_id: primaryFamilyByContributor.get(c.id) ?? null,
   }));
 
+  // can_publish lookup is keyed off the raw row so we don't have to widen
+  // ContributorOption (which is exposed to the attribution picker too).
+  const canPublishById = new Map(
+    (contribRes.data ?? []).map((c) => [c.id, !!c.can_publish]),
+  );
+
   const currentContributor =
     contributors.find((c) => c.email.toLowerCase() === (currentEmail ?? '').toLowerCase()) ?? null;
 
@@ -54,5 +64,6 @@ export async function fetchFormOptions(currentEmail?: string | null): Promise<Fo
     sections:    secRes.data ?? [],
     tags:        tagRes.data ?? [],
     currentContributor,
+    currentContributorCanPublish: currentContributor ? !!canPublishById.get(currentContributor.id) : false,
   };
 }

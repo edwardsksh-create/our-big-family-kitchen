@@ -18,7 +18,7 @@ export default async function PhotoIntakePage() {
       <p className="mt-3 max-w-prose text-ink-soft">
         Take a photo or choose from your phone. We’ll do the rest.
       </p>
-      <AddViaPhoto options={options} isAdmin={isAdmin} />
+      <AddViaPhoto options={options} isAdmin={isAdmin} canPublish={options.currentContributorCanPublish} />
     </div>
   );
 }

@@ -44,6 +44,7 @@ export function RecipeForm({
   options,
   initial,
   isAdmin,
+  canPublish = false,
   mode = 'create',
   cancelHref,
   queueContext,
@@ -51,6 +52,11 @@ export function RecipeForm({
   options: FormOptions;
   initial: RecipeDraft;
   isAdmin: boolean;
+  /** Non-admin trusted contributor. When true, the submit button reads
+   *  "Publish" and the server promotes their submit_for_review to a direct
+   *  publish. The server re-verifies the flag from the DB on every call —
+   *  this prop is for UI labeling and redirect only. */
+  canPublish?: boolean;
   mode?: RecipeFormMode;
   cancelHref?: string; // where the Cancel button (edit mode) returns to
   // Present in mode='admin_review' when the page was opened from the
@@ -170,7 +176,14 @@ export function RecipeForm({
       if (action === 'publish' && result.slug) {
         router.push(`/recipes/${result.slug}`);
       } else if (action === 'submit_for_review') {
-        router.push('/add/thanks');
+        // A trusted contributor's submit publishes directly server-side;
+        // redirect to the live recipe instead of the thanks page so they
+        // see their post is up.
+        if (result.status === 'published' && result.slug) {
+          router.push(`/recipes/${result.slug}`);
+        } else {
+          router.push('/add/thanks');
+        }
       } else if (action === 'admin_reject') {
         router.push('/admin/queue?rejected=1');
       } else if ((action === 'edit' || action === 'unpublish') && result.slug) {
@@ -589,6 +602,12 @@ export function RecipeForm({
             {isAdmin ? (
               <button type="button" onClick={() => doSave('publish')} disabled={pending} className="btn-primary disabled:opacity-60">
                 {pending ? 'Saving…' : 'Save and publish'}
+              </button>
+            ) : canPublish ? (
+              // Trusted contributor: action is still submit_for_review, but
+              // the server re-checks can_publish and publishes directly.
+              <button type="button" onClick={() => doSave('submit_for_review')} disabled={pending} className="btn-primary disabled:opacity-60">
+                {pending ? 'Publishing…' : 'Publish'}
               </button>
             ) : (
               <button type="button" onClick={() => doSave('submit_for_review')} disabled={pending} className="btn-primary disabled:opacity-60">

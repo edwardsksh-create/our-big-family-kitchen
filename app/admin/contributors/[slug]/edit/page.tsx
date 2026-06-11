@@ -46,6 +46,7 @@ export default async function AdminContributorEditPage({ params }: { params: { s
           email:                    contributor.email,
           bio:                      contributor.bio ?? '',
           role:                     contributor.role,
+          can_publish:              contributor.can_publish,
           primary_family_line_id:   findFamilyLineId(options.familyLines, contributor.primary_family_line?.slug),
           secondary_family_line_id: findFamilyLineId(options.familyLines, contributor.secondary_family_line?.slug),
         }}

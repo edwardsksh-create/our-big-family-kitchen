@@ -28,7 +28,7 @@ const FAILURE_HEADLINES: Record<FailureReason, string> = {
   parse_failed:      'We fetched the page but couldn’t find a recipe in it.',
 };
 
-export function AddViaUrl({ options, isAdmin }: { options: FormOptions; isAdmin: boolean }) {
+export function AddViaUrl({ options, isAdmin, canPublish = false }: { options: FormOptions; isAdmin: boolean; canPublish?: boolean }) {
   const router = useRouter();
   const [url, setUrl]         = useState('');
   const [draft, setDraft]     = useState<RecipeDraft | null>(null);
@@ -85,7 +85,7 @@ export function AddViaUrl({ options, isAdmin }: { options: FormOptions; isAdmin:
           </span>{' '}
           Review the fields before saving.
         </p>
-        <RecipeForm options={options} initial={draft} isAdmin={isAdmin} />
+        <RecipeForm options={options} initial={draft} isAdmin={isAdmin} canPublish={canPublish} />
       </div>
     );
   }

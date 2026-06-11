@@ -9,10 +9,12 @@ import type { ParsedRecipe } from '@/lib/recipe-parser';
 export function AddViaPaste({
   options,
   isAdmin,
+  canPublish = false,
   originallyFromUrl,
 }: {
   options: FormOptions;
   isAdmin: boolean;
+  canPublish?: boolean;
   originallyFromUrl?: string | null;
 }) {
   const [text, setText]       = useState('');
@@ -72,7 +74,7 @@ export function AddViaPaste({
             <span className="font-serif italic">{error}</span>
           </p>
         )}
-        <RecipeForm options={options} initial={draft} isAdmin={isAdmin} />
+        <RecipeForm options={options} initial={draft} isAdmin={isAdmin} canPublish={canPublish} />
       </div>
     );
   }

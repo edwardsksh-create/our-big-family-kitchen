@@ -18,7 +18,7 @@ const LOADING_MESSAGES = [
   'Almost done…',
 ];
 
-export function AddViaPhoto({ options, isAdmin }: { options: FormOptions; isAdmin: boolean }) {
+export function AddViaPhoto({ options, isAdmin, canPublish = false }: { options: FormOptions; isAdmin: boolean; canPublish?: boolean }) {
   const [sessionId, setSessionId] = useState<string | undefined>();
   const [photos, setPhotos]       = useState<PhotoEntry[]>([]);
   const [parsing, setParsing]     = useState(false);
@@ -94,7 +94,7 @@ export function AddViaPhoto({ options, isAdmin }: { options: FormOptions; isAdmi
             <span className="font-serif italic">{error}</span>
           </p>
         )}
-        <RecipeForm options={options} initial={draft} isAdmin={isAdmin} />
+        <RecipeForm options={options} initial={draft} isAdmin={isAdmin} canPublish={canPublish} />
       </div>
     );
   }

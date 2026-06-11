@@ -30,7 +30,12 @@ export default async function PastePage({
           <span className="font-mono break-all">{originallyFromUrl}</span>
         </p>
       )}
-      <AddViaPaste options={options} isAdmin={isAdmin} originallyFromUrl={originallyFromUrl} />
+      <AddViaPaste
+        options={options}
+        isAdmin={isAdmin}
+        canPublish={options.currentContributorCanPublish}
+        originallyFromUrl={originallyFromUrl}
+      />
     </div>
   );
 }

@@ -20,7 +20,7 @@ export default async function UrlPage() {
         best for sites with structured recipe data (NYT Cooking, Smitten Kitchen,
         Serious Eats, most food blogs).
       </p>
-      <AddViaUrl options={options} isAdmin={isAdmin} />
+      <AddViaUrl options={options} isAdmin={isAdmin} canPublish={options.currentContributorCanPublish} />
     </div>
   );
 }

@@ -24,7 +24,13 @@ export type SaveOutcome =
   | { ok: true; recipeId: string; slug: string; status: 'draft' | 'pending_review' | 'published' | 'rejected' }
   | { ok: false; error: string };
 
-type ContributorRow = { id: string; email: string; name: string | null; role: 'admin' | 'contributor' | 'viewer' };
+type ContributorRow = {
+  id:          string;
+  email:       string;
+  name:        string | null;
+  role:        'admin' | 'contributor' | 'viewer';
+  can_publish: boolean;
+};
 
 async function ensureUniqueSlug(base: string, existingId?: string): Promise<string> {
   const db = supabaseAdmin();
@@ -200,14 +206,18 @@ export async function saveRecipe(
   const db = supabaseAdmin();
   const { data: contributorRow } = await db
     .from('contributors')
-    .select('id, email, name, role')
+    .select('id, email, name, role, can_publish')
     .ilike('email', session.user.email)
     .maybeSingle();
   // role is a text column with a CHECK constraint enforcing the union.
   const contributor = contributorRow as unknown as ContributorRow | null;
   if (!contributor) return { ok: false, error: 'not_a_contributor' };
 
-  const isAdmin = contributor.role === 'admin';
+  const isAdmin   = contributor.role === 'admin';
+  // can_publish is re-read from the DB at submit time — a client-passed flag
+  // would not be trusted here. When true, a non-admin contributor's
+  // submit_for_review action is promoted to direct publish below.
+  const isTrustedToPublish = isAdmin || !!contributor.can_publish;
   if ((action === 'publish' || action === 'admin_save' || action === 'admin_reject' || action === 'unpublish') && !isAdmin) {
     return { ok: false, error: 'admin_only' };
   }
@@ -257,9 +267,12 @@ export async function saveRecipe(
     existingSlug        = existing?.slug ?? null;
   }
 
+  // Trusted contributors (admin OR can_publish=true) skip the review queue:
+  // their submit_for_review action publishes immediately instead of landing
+  // in pending_review.
   const nextStatus: 'draft' | 'pending_review' | 'published' | 'rejected' =
     action === 'publish' ? 'published'
-    : action === 'submit_for_review' ? 'pending_review'
+    : action === 'submit_for_review' ? (isTrustedToPublish ? 'published' : 'pending_review')
     : action === 'admin_save' ? existingStatus
     : action === 'admin_reject' ? 'rejected'
     : action === 'edit' ? existingStatus

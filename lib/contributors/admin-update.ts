@@ -11,6 +11,9 @@ export type AdminContributorPatch = {
   email:                 string;
   bio:                   string;
   role:                  'admin' | 'contributor' | 'viewer';
+  /** Trusted-contributor flag: when true, this person's submissions publish
+   *  directly. Admin is always effectively trusted regardless of this flag. */
+  can_publish:           boolean;
   primary_family_line_id?: string;
   secondary_family_line_id?: string;
 };
@@ -63,8 +66,9 @@ export async function updateContributorAsAdmin(
     .update({
       name,
       email,
-      bio:  patch.bio.trim() || null,
-      role: patch.role,
+      bio:         patch.bio.trim() || null,
+      role:        patch.role,
+      can_publish: !!patch.can_publish,
     })
     .eq('id', patch.id);
   if (updErr) {

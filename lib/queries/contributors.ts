@@ -12,6 +12,9 @@ export type ContributorSummary = {
   slug: string;
   joined_at: string | null;
   can_sign_in: boolean;
+  /** Trusted-contributor flag — their submissions publish directly instead
+   *  of landing in pending_review. Admin is always effectively trusted. */
+  can_publish: boolean;
   deceased: boolean;
   nickname: string | null;
   birth_name: string | null;
@@ -31,7 +34,7 @@ function isStubEmail(email: string): boolean {
 export async function fetchAllContributors(): Promise<ContributorSummary[]> {
   const db = supabaseAdmin();
   const [{ data: rows }, { data: cflRows }, { data: flRows }] = await Promise.all([
-    db.from('contributors').select('id, email, name, bio, role, joined_at, can_sign_in, deceased, nickname, birth_name, hero_photo_path').order('name'),
+    db.from('contributors').select('id, email, name, bio, role, joined_at, can_sign_in, can_publish, deceased, nickname, birth_name, hero_photo_path').order('name'),
     db.from('contributor_family_lines').select('contributor_id, family_line_id, rank'),
     db.from('family_lines').select('id, slug, name'),
   ]);
@@ -59,6 +62,7 @@ export async function fetchAllContributors(): Promise<ContributorSummary[]> {
       slug:         slugify(name),
       joined_at:    c.joined_at,
       can_sign_in:  !!c.can_sign_in,
+      can_publish:  !!c.can_publish,
       deceased:     !!c.deceased,
       nickname:     c.nickname ?? null,
       birth_name:   c.birth_name ?? null,

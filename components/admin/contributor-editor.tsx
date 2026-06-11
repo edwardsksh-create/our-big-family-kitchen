@@ -76,6 +76,26 @@ export function AdminContributorEditor({ contributor, familyLines }: Props) {
         </select>
       </label>
 
+      <label className="flex items-start gap-3 rounded-2xl border border-rule bg-cream/30 p-4">
+        <input
+          type="checkbox"
+          checked={!!patch.can_publish}
+          onChange={(e) => update('can_publish', e.target.checked)}
+          disabled={patch.role === 'admin'}
+          className="mt-1 h-4 w-4 rounded border-rule"
+        />
+        <span>
+          <span className="font-serif text-base italic text-ink">
+            Trusted contributor — recipes publish directly.
+          </span>
+          <p className="mt-1 text-sm text-ink-soft">
+            When on, this person&rsquo;s submissions skip the review queue
+            and go live immediately. Admins are always trusted, so this
+            toggle is disabled for admin rows.
+          </p>
+        </span>
+      </label>
+
       <label className="block">
         <span className="label">Bio</span>
         <textarea
