@@ -2,7 +2,8 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import type { FamilyPhotoFull, OccasionType } from '@/lib/queries/family-photos';
 
@@ -80,15 +81,15 @@ export function AlbumClient({
 
   const openPhoto = openPhotoId ? photos.find((p) => p.id === openPhotoId) ?? null : null;
 
-  // Close lightbox on Escape.
-  useEffect(() => {
-    if (!openPhoto) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpenPhotoId(null);
-    }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [openPhoto]);
+  // Position of the open photo inside the *filtered* set so next/prev paging
+  // respects whichever filter is active. -1 when the open photo doesn't
+  // belong to the filtered list (e.g. the user just typed a filter that
+  // excludes it). In that case paging is disabled until they reset.
+  const currentIndex = openPhoto ? filtered.findIndex((p) => p.id === openPhoto.id) : -1;
+  const hasPrev      = currentIndex > 0;
+  const hasNext      = currentIndex >= 0 && currentIndex < filtered.length - 1;
+  const goPrev       = () => { if (hasPrev) setOpenPhotoId(filtered[currentIndex - 1].id); };
+  const goNext       = () => { if (hasNext) setOpenPhotoId(filtered[currentIndex + 1].id); };
 
   return (
     <>
@@ -182,7 +183,15 @@ export function AlbumClient({
       )}
 
       {openPhoto && (
-        <Lightbox photo={openPhoto} occasions={occasions} onClose={() => setOpenPhotoId(null)} />
+        <Lightbox
+          photo={openPhoto}
+          occasions={occasions}
+          onClose={() => setOpenPhotoId(null)}
+          hasPrev={hasPrev}
+          hasNext={hasNext}
+          onPrev={goPrev}
+          onNext={goNext}
+        />
       )}
     </>
   );
@@ -192,12 +201,58 @@ function Lightbox({
   photo,
   occasions,
   onClose,
+  hasPrev,
+  hasNext,
+  onPrev,
+  onNext,
 }: {
   photo: FamilyPhotoFull;
   occasions: OccasionType[];
   onClose: () => void;
+  hasPrev: boolean;
+  hasNext: boolean;
+  onPrev: () => void;
+  onNext: () => void;
 }) {
   const occasionName = (slug: string) => occasions.find((o) => o.slug === slug)?.name ?? slug;
+
+  // Single keyboard listener for the lightbox lifetime: paging arrows +
+  // Escape to close. Re-bound when handler identities change so the latest
+  // hasPrev/hasNext from the parent's filtered-set computation is honored.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape')         { onClose(); return; }
+      if (e.key === 'ArrowRight' && hasNext) { e.preventDefault(); onNext(); return; }
+      if (e.key === 'ArrowLeft'  && hasPrev) { e.preventDefault(); onPrev(); return; }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [hasNext, hasPrev, onNext, onPrev, onClose]);
+
+  // Swipe detection. We only count it as a horizontal swipe when |Δx| clears
+  // the SWIPE_THRESHOLD and the gesture is dominantly horizontal (avoids
+  // hijacking the user's vertical scroll on tall metadata).
+  const SWIPE_THRESHOLD = 50;
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  function onTouchStart(e: React.TouchEvent) {
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY };
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+    if (Math.abs(dy) > Math.abs(dx)) return;
+    // Mobile-gallery convention: swipe LEFT (Δx negative) advances; swipe
+    // RIGHT goes back.
+    if (dx < 0 && hasNext) onNext();
+    else if (dx > 0 && hasPrev) onPrev();
+  }
+
   return (
     <div
       role="dialog"
@@ -208,6 +263,8 @@ function Lightbox({
       <div
         className="relative max-h-full max-w-5xl overflow-y-auto rounded-2xl bg-paper p-4 shadow-2xl md:p-6"
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
       >
         <button
           type="button"
@@ -217,6 +274,7 @@ function Lightbox({
         >
           ×
         </button>
+
         <div className="relative w-full" style={{ aspectRatio: '4/3' }}>
           <Image
             src={photo.public_url}
@@ -225,6 +283,30 @@ function Lightbox({
             sizes="(min-width: 1024px) 80vw, 100vw"
             className="object-contain"
           />
+          {/* Previous / next chevrons live INSIDE the image area so they
+              vertically center on the photo regardless of metadata height
+              below. Hidden at the ends of the filtered set so the visual
+              chrome reflects what's actually reachable. */}
+          {hasPrev && (
+            <button
+              type="button"
+              onClick={onPrev}
+              aria-label="Previous photo"
+              className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-rule bg-paper/90 p-2 text-ink shadow-md hover:bg-paper md:left-4"
+            >
+              <ChevronLeft size={20} aria-hidden="true" />
+            </button>
+          )}
+          {hasNext && (
+            <button
+              type="button"
+              onClick={onNext}
+              aria-label="Next photo"
+              className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-rule bg-paper/90 p-2 text-ink shadow-md hover:bg-paper md:right-4"
+            >
+              <ChevronRight size={20} aria-hidden="true" />
+            </button>
+          )}
         </div>
         <div className="mt-4 space-y-3 text-sm text-ink-soft">
           {photo.caption && <p className="font-serif text-lg italic text-ink">{photo.caption}</p>}
