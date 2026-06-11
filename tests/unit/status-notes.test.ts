@@ -33,6 +33,34 @@ describe('publicStatusNotes', () => {
     expect(publicStatusNotes(['possible-duplicate'])).toEqual([]);
     expect(publicStatusNotes(['bulk-photos'])).toEqual([]);
   });
+
+  describe('Aunt Laura provenance — parity with Lucy', () => {
+    it('emits an Aunt Laura provenance note when originally_from mentions her', () => {
+      const notes = publicStatusNotes([], "Aunt Laura's 2003 cookbook");
+      expect(notes).toHaveLength(1);
+      expect(notes[0]).toMatch(/Aunt Laura's 2003 cookbook/);
+    });
+
+    it('matches Aunt Laura case-insensitively and inside longer strings', () => {
+      expect(publicStatusNotes([], 'aunt laura'))
+        .toEqual([expect.stringMatching(/Aunt Laura/)]);
+      expect(publicStatusNotes([], "Discovered in Toledo (via Aunt Laura's 2003 cookbook)"))
+        .toEqual([expect.stringMatching(/Aunt Laura/)]);
+    });
+
+    it('returns no note when originally_from is null / empty / unrelated', () => {
+      expect(publicStatusNotes([], null)).toEqual([]);
+      expect(publicStatusNotes([], '')).toEqual([]);
+      expect(publicStatusNotes([], 'Bon Appétit')).toEqual([]);
+    });
+
+    it('does not stack — Lucy wins when both apply (more specific signal)', () => {
+      const notes = publicStatusNotes(['lucys-recipe-collection'], "Aunt Laura's 2003 cookbook");
+      expect(notes).toHaveLength(1);
+      expect(notes[0]).toMatch(/Lucy's recipe collection/);
+      expect(notes[0]).not.toMatch(/Aunt Laura/);
+    });
+  });
 });
 
 describe('INTERNAL_TAG_SLUGS', () => {
