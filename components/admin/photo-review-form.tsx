@@ -181,6 +181,21 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
 
   return (
     <div className="space-y-8">
+      {/* Top-of-form Skip control. Same behavior as the bottom Skip button so
+          when Kate opens a photo and immediately knows she wants to defer it,
+          she doesn't have to scroll past the whole tagging form to reach the
+          skip control. */}
+      <div className="flex justify-end" data-no-print>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => submitWith('skip')}
+          className="inline-flex items-center gap-1 rounded-full border border-rule bg-paper px-3 py-1.5 font-sans text-sm text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
+        >
+          Skip for now →
+        </button>
+      </div>
+
       {/* Family-submission banner — prominent so Kate sees who sent it and
           their note (her main tagging context) without hunting. Only renders
           for source='family' submissions; archive imports skip it. */}
