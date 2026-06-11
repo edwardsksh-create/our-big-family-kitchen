@@ -172,11 +172,9 @@ export function AlbumClient({
                     loading="lazy"
                   />
                 </div>
-                {(p.caption || p.year) && (
-                  <p className="truncate px-3 py-2 text-left text-xs text-ink-soft">
-                    {p.caption ?? p.year}
-                  </p>
-                )}
+                {/* Captions and metadata live in the lightbox only — the
+                    grid stays purely visual so browsing feels like a
+                    photo wall. */}
               </button>
             </li>
           ))}
