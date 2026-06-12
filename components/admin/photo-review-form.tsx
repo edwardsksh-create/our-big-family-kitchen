@@ -64,8 +64,6 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
   const [selectedRecipes, setSelectedRecipes] = useState<string[]>(
     photo.recipes.map((r) => r.id),
   );
-  const [needsEditing, setNeedsEditing] = useState(photo.needs_editing);
-  const [editingNote,  setEditingNote]  = useState(photo.editing_note ?? '');
 
   // Manual rotation, applied on Save. Clockwise degrees in {0, 90, 180, 270}.
   // The Part-1 batch script already handles EXIF-tagged photos; this control
@@ -182,8 +180,6 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
         occasionSlugs:    selectedOccasions,
         personRefs:       selectedPeople,
         recipeIds:        selectedRecipes,
-        needsEditing,
-        editingNote,
         // Rotation is only consumed by the action when intent ===
         // 'save_and_next'. Skip/Reject/Not-for-archive intentionally drop
         // any pending rotation: they're "I'm not editing this row right
@@ -463,29 +459,6 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
             </ul>
           )}
         </div>
-      </section>
-
-      {/* Needs editing — independent of reviewed; admin-only flag for photos
-          that need cropping/rotation/etc. outside this tool. */}
-      <section className="rounded-2xl border border-dashed border-rule bg-cream/20 p-4">
-        <label className="flex items-center gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
-            checked={needsEditing}
-            onChange={(e) => setNeedsEditing(e.target.checked)}
-            className="h-4 w-4 rounded border-rule"
-          />
-          Needs editing (crop, rotate, color-fix outside this tool)
-        </label>
-        {needsEditing && (
-          <input
-            type="text"
-            value={editingNote}
-            onChange={(e) => setEditingNote(e.target.value)}
-            placeholder='Short note — e.g. "crop tighter, too much background" or "rotate"'
-            className="mt-3 w-full rounded-xl border border-rule bg-paper px-4 py-2 text-sm"
-          />
-        )}
       </section>
 
       <Field

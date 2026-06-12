@@ -18,8 +18,6 @@ type SubmitPayload = {
   // person rows: format 'contributor:<id>' or 'family_member:<id>'
   personRefs:       string[];
   recipeIds:        string[];
-  needsEditing:     boolean;
-  editingNote:      string;
   /** Clockwise rotation in degrees to apply on Save. Only honored when
    *  intent === 'save_and_next'; other intents discard the rotation. */
   rotation?:        0 | 90 | 180 | 270;
@@ -159,9 +157,6 @@ export async function submitPhotoReview(payload: SubmitPayload): Promise<void> {
     additional_people: trimmed(payload.additionalPeople),
     pets:              trimmed(payload.pets),
     reviewed:          true,
-    needs_editing:     payload.needsEditing,
-    // Clear the note when the flag is off, so we don't carry over stale text.
-    editing_note:      payload.needsEditing ? trimmed(payload.editingNote) : null,
   };
   await db.from('family_photos').update(update).eq('id', payload.photoId);
 
