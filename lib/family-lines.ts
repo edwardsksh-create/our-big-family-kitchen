@@ -25,7 +25,7 @@ export const FAMILY_LINES: FamilyLine[] = [
   { slug: 'leusch',        name: 'Leusch',        type: 'primary',   color: 'burgundy', photo: '/families/leusch.jpg' },
   { slug: 'quinn',         name: 'Quinn',         type: 'secondary', color: 'olive', photo: '/families/quinn.jpg' },
   { slug: 'branion',       name: 'Branion',       type: 'secondary', color: 'slate', photo: '/families/branion.jpg' },
-  { slug: 'sundy',         name: 'Sundy',         type: 'primary',   color: 'gold' },
+  { slug: 'sundy',         name: 'Sundy',         type: 'primary',   color: 'gold', photo: '/families/sundy.jpg' },
   { slug: 'richs-family',  name: "Rich's family", type: 'secondary', color: 'navy', photo: '/families/richs-family.jpg' },
   { slug: 'edwards',       name: 'Edwards',       type: 'primary',   color: 'rose' },
   { slug: 'hong',          name: 'Hong',          type: 'primary',   color: 'sky', photo: '/families/hong.jpg' },
