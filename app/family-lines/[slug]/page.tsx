@@ -64,7 +64,7 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
   const [native, members, photos, federatedCount] = await Promise.all([
     fetchPublishedRecipesForFamilyLine(line.slug),
     fetchFamilyMembersForLine(line.slug),
-    fetchPhotosForFamilyLine(line.slug, 12),
+    fetchPhotosForFamilyLine(line.slug, 6),
     federation ? fetchFederatedCount() : Promise.resolve(0),
   ]);
 
@@ -77,6 +77,21 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
         {line.name} family recipes
       </h1>
       <div aria-hidden="true" className={cn('mt-5 h-1.5 w-24 rounded-full', FAMILY_BG[line.color])} />
+
+      {/* The family photo, when one exists. */}
+      {line.photo && (
+        <figure className="mt-8 max-w-2xl overflow-hidden rounded-2xl border border-rule">
+          <Image
+            src={line.photo}
+            alt={`The ${line.name} family`}
+            width={1400}
+            height={1050}
+            sizes="(min-width: 768px) 672px, 100vw"
+            className="h-auto w-full"
+            priority
+          />
+        </figure>
+      )}
 
       {/* The family tree where one exists (the structured version of
           "who's here"); the flat member list only on lines without a tree. */}
@@ -103,22 +118,6 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
         </section>
       )}
 
-      {/* Recipes from this line */}
-      <section className="mt-16">
-        <h2 className="font-serif text-3xl text-ink md:text-4xl">
-          Recipes from this line
-        </h2>
-        {native.length > 0 ? (
-          <div className="mt-6">
-            <NativeRecipeGrid recipes={native} />
-          </div>
-        ) : (
-          <div className="mt-6 rounded-2xl border border-dashed border-rule p-12 text-center">
-            <p className="font-serif italic text-2xl text-ink-soft">No recipes yet.</p>
-          </div>
-        )}
-      </section>
-
       {/* From the album — photos in which this line's people are tagged.
           Hidden entirely when none exist; a line with no tagged photos
           shows no empty heading. */}
@@ -130,7 +129,7 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
               Open the album →
             </Link>
           </div>
-          <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          <ul className="mt-6 grid grid-cols-3 gap-3 md:grid-cols-6">
             {photos.map((p) => (
               <li key={p.id} className="overflow-hidden rounded-2xl border border-rule bg-paper">
                 <Link href={`/album?photo=${p.id}`} className="block">
@@ -150,6 +149,23 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
           </ul>
         </section>
       )}
+
+      {/* Recipes from this line */}
+      <section className="mt-16">
+        <h2 className="font-serif text-3xl text-ink md:text-4xl">
+          Recipes from this line
+        </h2>
+        {native.length > 0 ? (
+          <div className="mt-6">
+            <NativeRecipeGrid recipes={native} />
+          </div>
+        ) : (
+          <div className="mt-6 rounded-2xl border border-dashed border-rule p-12 text-center">
+            <p className="font-serif italic text-2xl text-ink-soft">No recipes yet.</p>
+          </div>
+        )}
+      </section>
+
 
       {/* Federated banner — Leusch only */}
       {federation && federatedCount > 0 && (

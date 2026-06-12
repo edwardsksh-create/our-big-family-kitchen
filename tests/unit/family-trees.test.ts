@@ -40,7 +40,8 @@ describe('family trees', () => {
   });
 
   it('the Leusch top shows all eight kids', () => {
-    expect(FAMILY_TREES.leusch.children.map((c) => c.name)).toEqual([
+    // First names only — nicknames may come and go without breaking order.
+    expect(FAMILY_TREES.leusch.children.map((c) => c.name.split(' ')[0])).toEqual([
       'Michael', 'Susan', 'Nancy', 'Laura', 'Rich', 'Martha', 'Annie', 'Lucy',
     ]);
   });

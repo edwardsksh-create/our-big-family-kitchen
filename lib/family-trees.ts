@@ -37,21 +37,21 @@ export type FamilyTree = {
 
 export const FAMILY_TREES: Record<string, FamilyTree> = {
   leusch: {
-    root: 'Dick & Dorothy (MacNamara) Leusch',
+    root: 'Dick ‘Papa’ & Dorothy ‘Gramie’ (MacNamara) Leusch',
     children: [
       { name: 'Michael' },
-      { name: 'Susan', partners: [{ name: 'Scott Schenone' }] },
-      { name: 'Nancy', partners: [{ name: 'Tom Quinn' }], continuesOn: 'quinn' },
+      { name: 'Susan ‘Aunt Sue’', partners: [{ name: 'Scott Schenone' }] },
+      { name: 'Nancy ‘Nanook’', partners: [{ name: 'Tom ‘CG’ Quinn' }], continuesOn: 'quinn' },
       { name: 'Laura' },
-      { name: 'Rich', partners: [{ name: 'Mary Ann Hogan' }], continuesOn: 'richs-family' },
-      { name: 'Martha', partners: [{ name: 'Bob Branion' }], continuesOn: 'branion' },
-      { name: 'Annie', partners: [{ name: 'Gary Sundy' }], continuesOn: 'sundy' },
-      { name: 'Lucy', partners: [{ name: 'Jay Williams' }] },
+      { name: 'Rich ‘George’', partners: [{ name: 'Mary Ann ‘Miss Katie’ Hogan' }], continuesOn: 'richs-family' },
+      { name: 'Martha ‘Minnie’', partners: [{ name: 'Bob Branion' }], continuesOn: 'branion' },
+      { name: 'Annie ‘Nannie’', partners: [{ name: 'Gary ‘Poppy’ Sundy' }], continuesOn: 'sundy' },
+      { name: 'Lucy ‘Gal’', partners: [{ name: 'Jay ‘Guj’ Williams' }] },
     ],
   },
 
   quinn: {
-    root: 'Nancy (Leusch) Quinn & Tom Quinn',
+    root: 'Nancy ‘Nanook’ (Leusch) Quinn & Tom ‘CG’ Quinn',
     children: [
       {
         name: 'Michael',
@@ -85,7 +85,7 @@ export const FAMILY_TREES: Record<string, FamilyTree> = {
   },
 
   'richs-family': {
-    root: 'Rich Leusch & Mary Ann Hogan',
+    root: 'Rich ‘George’ Leusch & Mary Ann ‘Miss Katie’ Hogan',
     rootNote: 'First wife: Barb Brooks, the children’s mother.',
     children: [
       {
@@ -118,7 +118,7 @@ export const FAMILY_TREES: Record<string, FamilyTree> = {
   },
 
   branion: {
-    root: 'Martha (Leusch) Branion & Bob Branion',
+    root: 'Martha ‘Minnie’ (Leusch) Branion & Bob Branion',
     children: [
       { name: 'Tim', partners: [{ name: 'Colleen' }] },
       {
@@ -130,7 +130,7 @@ export const FAMILY_TREES: Record<string, FamilyTree> = {
   },
 
   sundy: {
-    root: 'Annie (Leusch) Sundy & Gary Sundy',
+    root: 'Annie ‘Nannie’ (Leusch) Sundy & Gary ‘Poppy’ Sundy',
     children: [
       {
         name: 'Kate',
@@ -149,19 +149,19 @@ export const FAMILY_TREES: Record<string, FamilyTree> = {
   },
 
   edwards: {
-    root: 'Jim Edwards & Susan (Daugherty) Edwards',
+    root: 'Jim ‘Papa’ Edwards & Susan ‘Grandma’ (Daugherty) Edwards',
     children: [
       {
         name: 'Brian',
         partners: [{ name: 'Kate' }],
         children: [{ name: 'Charlotte' }, { name: 'Nora' }],
       },
-      { name: 'Elizabeth' },
+      { name: 'Elizabeth ‘Lizzie’' },
     ],
   },
 
   hong: {
-    root: 'Lawrence Hong & Darlene (Steiger) Hong',
+    root: 'Lawrence ‘YeYe’ Hong & Darlene ‘Grandma’ (Steiger) Hong',
     rootNote: 'Lawrence’s siblings: Theresa, Ignatius & Cecilia.',
     children: [
       { name: 'Kylene' },

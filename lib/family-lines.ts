@@ -15,17 +15,20 @@ export type FamilyLine = {
   name: string;
   type: FamilyType;
   color: FamilyColorToken;
+  /** Public family photo (repo asset under public/families/). Cards show
+   *  it above the name; the line page shows it under the heading. */
+  photo?: string;
 };
 
 // Canonical order — must match the family_lines.sort_order column in the DB.
 export const FAMILY_LINES: FamilyLine[] = [
-  { slug: 'leusch',        name: 'Leusch',        type: 'primary',   color: 'burgundy' },
+  { slug: 'leusch',        name: 'Leusch',        type: 'primary',   color: 'burgundy', photo: '/families/leusch.jpg' },
   { slug: 'quinn',         name: 'Quinn',         type: 'secondary', color: 'olive' },
   { slug: 'branion',       name: 'Branion',       type: 'secondary', color: 'slate' },
   { slug: 'sundy',         name: 'Sundy',         type: 'primary',   color: 'gold' },
-  { slug: 'richs-family',  name: "Rich's family", type: 'secondary', color: 'navy' },
+  { slug: 'richs-family',  name: "Rich's family", type: 'secondary', color: 'navy', photo: '/families/richs-family.jpg' },
   { slug: 'edwards',       name: 'Edwards',       type: 'primary',   color: 'rose' },
-  { slug: 'hong',          name: 'Hong',          type: 'primary',   color: 'sky' },
+  { slug: 'hong',          name: 'Hong',          type: 'primary',   color: 'sky', photo: '/families/hong.jpg' },
   { slug: 'chosen-family', name: 'Chosen Family', type: 'secondary', color: 'mauve' },
 ];
 
