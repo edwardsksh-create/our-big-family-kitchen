@@ -150,9 +150,19 @@ export async function updatePhotoDetails(
   photoId: string,
   details: { caption: string; year: string; place: string },
 ): Promise<PhotoDetailsResult> {
+  // Admin, or a contributor with the photo-editor capability (re-read from
+  // the DB — never trusted from the client).
   const session = await auth();
-  if (!session?.user || session.user.role !== 'admin') {
-    return { ok: false, error: 'not_authorized' };
+  const email = session?.user?.email?.toLowerCase();
+  if (!email) return { ok: false, error: 'not_authorized' };
+  const isAdmin = session?.user?.role === 'admin';
+  if (!isAdmin) {
+    const { data: row } = await supabaseAdmin()
+      .from('contributors')
+      .select('can_edit_photos')
+      .ilike('email', email)
+      .maybeSingle();
+    if (!row?.can_edit_photos) return { ok: false, error: 'not_authorized' };
   }
   const trimmed = (v: string) => v.trim() || null;
   const { error } = await supabaseAdmin()

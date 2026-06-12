@@ -13,6 +13,7 @@ function c(id: string, name = id): ContributorSummary {
     joined_at:           null,
     can_sign_in:         true,
     can_publish:         false,
+    can_edit_photos:     false,
     deceased:            false,
     nickname:            null,
     birth_name:          null,

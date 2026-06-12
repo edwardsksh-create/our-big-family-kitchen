@@ -25,13 +25,14 @@ export default async function AlbumPage({
 
   const db = supabaseAdmin();
   const [{ data: viewer }, photos, occasions] = await Promise.all([
-    db.from('contributors').select('id, can_sign_in').ilike('email', session.user.email).maybeSingle(),
+    db.from('contributors').select('id, can_sign_in, can_edit_photos').ilike('email', session.user.email).maybeSingle(),
     fetchAllReviewedPhotos(),
     fetchOccasionTypes(),
   ]);
 
   const canUpload = !!viewer?.can_sign_in;
   const isAdmin = session.user.role === 'admin';
+  const canEditPhotos = isAdmin || !!viewer?.can_edit_photos;
   const commentViewer = viewer
     ? { isAdmin, contributorId: viewer.id, canSignIn: !!viewer.can_sign_in }
     : null;
@@ -69,6 +70,7 @@ export default async function AlbumPage({
             occasions={occasions}
             initialPhotoId={initialPhotoId}
             isAdmin={isAdmin}
+            canEditPhotos={canEditPhotos}
             viewer={commentViewer}
           />
         )}

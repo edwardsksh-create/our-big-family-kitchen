@@ -19,6 +19,7 @@ export function AlbumClient({
   occasions,
   initialPhotoId = null,
   isAdmin = false,
+  canEditPhotos = false,
   viewer,
 }: {
   photos:    FamilyPhotoFull[];
@@ -26,6 +27,9 @@ export function AlbumClient({
   /** Shows the admin-only hero toggle in the lightbox. The server action
    *  re-checks the role; this prop is display-only. */
   isAdmin?:  boolean;
+  /** Admin or a contributor with the photo-editor capability (server
+   *  re-checks on save). Shows the Edit-details affordance. */
+  canEditPhotos?: boolean;
   /** Comment permissions for the lightbox composer (server re-checks). */
   viewer:    CommentViewer | null;
   /** From /album?photo=<id> — recipe and contributor pages deep-link a
@@ -221,6 +225,7 @@ export function AlbumClient({
           photo={openPhoto}
           occasions={occasions}
           isAdmin={isAdmin}
+          canEditPhotos={canEditPhotos}
           viewer={viewer}
           onClose={() => setOpenPhotoId(null)}
           hasPrev={hasPrev}
@@ -255,6 +260,7 @@ function Lightbox({
   photo,
   occasions,
   isAdmin,
+  canEditPhotos,
   viewer,
   onClose,
   hasPrev,
@@ -265,6 +271,7 @@ function Lightbox({
   photo: FamilyPhotoFull;
   occasions: OccasionType[];
   isAdmin: boolean;
+  canEditPhotos: boolean;
   viewer: CommentViewer | null;
   onClose: () => void;
   hasPrev: boolean;
@@ -428,17 +435,19 @@ function Lightbox({
             </p>
           )}
           <PhotoComments photo={photo} viewer={viewer} />
-          {isAdmin && (
+          {(isAdmin || canEditPhotos) && (
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
               <DetailsEditor photo={photo} />
-              <HeroToggle photo={photo} />
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="mt-3 rounded-full border border-rule bg-paper px-3 py-1 text-xs text-ink-soft hover:border-ink hover:text-ink"
-              >
-                Crop &amp; rotate
-              </button>
+              {isAdmin && <HeroToggle photo={photo} />}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="mt-3 rounded-full border border-rule bg-paper px-3 py-1 text-xs text-ink-soft hover:border-ink hover:text-ink"
+                >
+                  Crop &amp; rotate
+                </button>
+              )}
             </div>
           )}
         </div>

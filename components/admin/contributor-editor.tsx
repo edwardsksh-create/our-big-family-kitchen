@@ -96,6 +96,26 @@ export function AdminContributorEditor({ contributor, familyLines }: Props) {
         </span>
       </label>
 
+      <label className="flex items-start gap-3 rounded-2xl border border-rule bg-cream/30 p-4">
+        <input
+          type="checkbox"
+          checked={!!patch.can_edit_photos}
+          onChange={(e) => update('can_edit_photos', e.target.checked)}
+          disabled={patch.role === 'admin'}
+          className="mt-1 h-4 w-4 rounded border-rule"
+        />
+        <span>
+          <span className="font-serif text-base italic text-ink">
+            Photo editor — can fix photo details in the album.
+          </span>
+          <p className="mt-1 text-sm text-ink-soft">
+            When on, this person can edit a photo&rsquo;s caption, year, and
+            place from the album. Cropping, the home-page pool, and the
+            review queue stay admin-only.
+          </p>
+        </span>
+      </label>
+
       <label className="block">
         <span className="label">Bio</span>
         <textarea

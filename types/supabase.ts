@@ -121,6 +121,7 @@ export type Database = {
         Row: {
           bio: string | null
           birth_name: string | null
+          can_edit_photos: boolean
           can_publish: boolean
           can_sign_in: boolean
           created_at: string
@@ -139,6 +140,7 @@ export type Database = {
         Insert: {
           bio?: string | null
           birth_name?: string | null
+          can_edit_photos?: boolean
           can_publish?: boolean
           can_sign_in?: boolean
           created_at?: string
@@ -157,6 +159,7 @@ export type Database = {
         Update: {
           bio?: string | null
           birth_name?: string | null
+          can_edit_photos?: boolean
           can_publish?: boolean
           can_sign_in?: boolean
           created_at?: string

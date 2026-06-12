@@ -14,6 +14,8 @@ export type AdminContributorPatch = {
   /** Trusted-contributor flag: when true, this person's submissions publish
    *  directly. Admin is always effectively trusted regardless of this flag. */
   can_publish:           boolean;
+  /** Photo-editor flag: may fix caption/year/place in the album lightbox. */
+  can_edit_photos:       boolean;
   primary_family_line_id?: string;
   secondary_family_line_id?: string;
 };
@@ -69,6 +71,7 @@ export async function updateContributorAsAdmin(
       bio:         patch.bio.trim() || null,
       role:        patch.role,
       can_publish: !!patch.can_publish,
+      can_edit_photos: !!patch.can_edit_photos,
     })
     .eq('id', patch.id);
   if (updErr) {
