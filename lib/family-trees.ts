@@ -9,13 +9,14 @@
 
 export type TreePartner = {
   name: string;
-  /** e.g. 'partner', 'late husband', "children's mother" */
+  /** Used sparingly — e.g. 'late husband'. Relationship labels like
+   *  'partner' or 'stepson' are deliberately NOT noted (Kate's call). */
   label?: string;
 };
 
 export type TreeNode = {
   name: string;
-  /** e.g. 'stepson', 'kept Leusch' */
+  /** e.g. 'kept Leusch' */
   note?: string;
   partners?: TreePartner[];
   children?: TreeNode[];
@@ -59,8 +60,7 @@ export const FAMILY_TREES: Record<string, FamilyTree> = {
           { name: 'Tommy' },
           {
             name: 'RJ Mancuso',
-            note: 'stepson',
-            partners: [{ name: 'Kadi', label: 'partner' }],
+            partners: [{ name: 'Kadi' }],
             children: [
               { name: 'Sykora Mancuso' },
               { name: 'Luca Mancuso' },
@@ -78,7 +78,7 @@ export const FAMILY_TREES: Record<string, FamilyTree> = {
       },
       {
         name: 'Kara',
-        partners: [{ name: 'David Hope', label: 'partner' }],
+        partners: [{ name: 'David Hope' }],
         children: [{ name: 'Matthew Richards' }],
       },
     ],
@@ -149,7 +149,7 @@ export const FAMILY_TREES: Record<string, FamilyTree> = {
   },
 
   edwards: {
-    root: 'Jim Edwards & Susan (Daughterty) Edwards',
+    root: 'Jim Edwards & Susan (Daugherty) Edwards',
     children: [
       {
         name: 'Brian',
