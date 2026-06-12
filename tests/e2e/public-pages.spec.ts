@@ -14,7 +14,7 @@ test.describe('public pages render', () => {
 
   test('/recipes lists native recipes', async ({ page }) => {
     await page.goto('/recipes');
-    await expect(page.getByRole('heading', { name: /All recipes/i })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Everything in the kitchen/i })).toBeVisible();
   });
 
   test('/family-lines/leusch shows the federation banner', async ({ page }) => {

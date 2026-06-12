@@ -6,7 +6,7 @@ import type { RecipeIndexItem } from '@/lib/queries/recipes';
 import { RecipeIndexGrid } from '@/components/recipe-index-card';
 import type { Viewer } from '@/lib/recipes/badges';
 import { canSeeNeedsFor } from '@/lib/recipes/badges';
-import { SECTIONS } from '@/lib/sections';
+import { SECTIONS, SECTION_BG, SECTION_TEXT } from '@/lib/sections';
 import { cn } from '@/lib/utils';
 
 type SortKey = 'newest' | 'updated' | 'az' | 'type' | 'contributor';
@@ -98,14 +98,37 @@ export function RecipeIndex({ recipes, viewer, now }: { recipes: RecipeIndexItem
 
   return (
     <div>
+      {/* The colorful boxes, doing real work: section chips that filter the
+          grid in place. Click to narrow, click again to clear; the other
+          chips dim so the active one reads at a glance. */}
+      <ul className="mb-5 flex flex-wrap gap-2">
+        {sectionOptions.map((s) => {
+          const active = filters.section === s.slug;
+          return (
+            <li key={s.slug}>
+              <button
+                type="button"
+                aria-pressed={active}
+                onClick={() => setFilters((f) => ({ ...f, section: active ? '' : s.slug }))}
+                className={cn(
+                  'inline-flex items-center rounded-full px-4 py-2 font-serif text-sm transition-all md:text-base',
+                  SECTION_BG[s.color],
+                  SECTION_TEXT[s.color],
+                  active
+                    ? 'ring-2 ring-ink ring-offset-2 ring-offset-paper'
+                    : 'card-hover',
+                  filters.section && !active && 'opacity-40',
+                )}
+              >
+                {s.name}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
       <div className="rounded-2xl border border-rule bg-cream/30 px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Select
-            label="Recipe type"
-            value={filters.section}
-            onChange={(v) => setFilters((f) => ({ ...f, section: v }))}
-            options={[{ value: '', label: 'All types' }, ...sectionOptions.map((s) => ({ value: s.slug, label: s.name }))]}
-          />
           <Select
             label="Contributor"
             value={filters.contributor}
