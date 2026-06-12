@@ -80,31 +80,31 @@ export function badgesFor(item: RecipeIndexItem, viewer: Viewer, now = Date.now(
   const showNeeds = canSeeNeedsFor(viewer, item.contributor_id);
 
   if (item.has_method && item.has_ingredients) {
-    out.push({ key: 'ready-to-cook', label: 'Ready to cook', kind: 'affirmative' });
+    out.push({ key: 'ready-to-cook', label: 'ready to cook', kind: 'affirmative' });
   }
   // Driven SOLELY by whether the structured method field is empty — a
   // source-page scan doesn't satisfy the requirement, so a recipe can show
   // both "Original page" and "Needs method".
   if (!item.has_method && showNeeds) {
-    out.push({ key: 'needs-method', label: 'Needs method', kind: 'needs' });
+    out.push({ key: 'needs-method', label: 'needs the method', kind: 'needs' });
   }
 
   if (item.has_story) {
-    out.push({ key: 'family-note', label: 'Family note', kind: 'affirmative' });
+    out.push({ key: 'family-note', label: 'has a family note', kind: 'affirmative' });
   } else if (showNeeds) {
-    out.push({ key: 'needs-story', label: 'Needs story', kind: 'needs' });
+    out.push({ key: 'needs-story', label: 'needs its story', kind: 'needs' });
   }
 
   if (item.has_source_photo) {
-    out.push({ key: 'original-page', label: 'Original page', kind: 'affirmative' });
+    out.push({ key: 'original-page', label: 'has the original card', kind: 'affirmative' });
   }
 
   if (isFromAuntLaura(item.originally_from)) {
-    out.push({ key: 'from-aunt-laura', label: "From Aunt Laura's archive", kind: 'affirmative' });
+    out.push({ key: 'from-aunt-laura', label: "from Aunt Laura's archive", kind: 'affirmative' });
   }
 
   if (isRecentlyAdded(item.published_at, now)) {
-    out.push({ key: 'recently-added', label: 'Recently added', kind: 'affirmative' });
+    out.push({ key: 'recently-added', label: 'recently added', kind: 'affirmative' });
   }
 
   return out;

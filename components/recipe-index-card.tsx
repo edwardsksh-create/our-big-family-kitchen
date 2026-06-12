@@ -53,7 +53,7 @@ export function RecipeIndexCard({ recipe, viewer, now }: { recipe: RecipeIndexIt
           )}
         </div>
         {badges.length > 0 && (
-          <ul className="-mb-1 flex flex-wrap gap-1.5">
+          <ul className="flex flex-wrap gap-x-3 gap-y-1">
             {badges.map((b) => (
               <li key={b.key}>
                 <BadgePill badge={b} />
@@ -67,24 +67,16 @@ export function RecipeIndexCard({ recipe, viewer, now }: { recipe: RecipeIndexIt
 }
 
 function BadgePill({ badge }: { badge: Badge }) {
-  // Two visual treatments — affirmative state vs. awaiting-input — distinct
-  // enough to read at a glance but using the existing palette tokens.
+  // Quiet editorial notes rather than status pills: small italic serif,
+  // sentence case, no dots or uppercase tracking. Awaiting-input notes keep
+  // the accent color so they still read as an invitation at a glance.
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-sans text-[10px] uppercase tracking-[0.1em]',
-        badge.kind === 'affirmative'
-          ? 'border-rule bg-cream/40 text-ink-soft'
-          : 'border-accent/40 bg-accent/10 text-accent',
+        'font-serif text-xs italic',
+        badge.kind === 'affirmative' ? 'text-ink-soft' : 'text-accent',
       )}
     >
-      <span
-        aria-hidden="true"
-        className={cn(
-          'h-1.5 w-1.5 rounded-full',
-          badge.kind === 'affirmative' ? 'bg-ink-soft/60' : 'bg-accent',
-        )}
-      />
       {badge.label}
     </span>
   );

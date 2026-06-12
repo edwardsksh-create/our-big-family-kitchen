@@ -54,9 +54,10 @@ h1, h2, h3, h4, h5, h6 {
     @apply mb-4;
   }
 
+  /* Sentence-case, untracked: buttons are quiet utilities, not branding. */
   .btn {
     @apply inline-flex items-center justify-center rounded-full px-6 py-3 font-sans text-sm
-           uppercase tracking-[0.14em] transition-all duration-200 ease-out-soft;
+           transition-all duration-200 ease-out-soft;
   }
 
   .btn-primary {
