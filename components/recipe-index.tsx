@@ -165,7 +165,7 @@ export function RecipeIndex({ recipes, viewer, now }: { recipes: RecipeIndexItem
 
       <div className="mt-4">
         {filtered.length > 0 ? (
-          <RecipeIndexGrid recipes={filtered} viewer={viewer} now={now} />
+          <RecipeIndexGrid recipes={filtered} viewer={viewer} now={now} plain />
         ) : (
           <p className="rounded-2xl border border-dashed border-rule p-12 text-center font-serif italic text-ink-soft">
             No recipes match those filters.

@@ -59,8 +59,8 @@ The 16 sections cycle through the 9 colors; the 8 family lines each own one colo
 - **Cream boxes** (`bg-cream/30`–`/40` + rule border): the *emotional/aside* register — Family Note, comment composer, provenance notes, recipe-index filter bar.
 - **Accent boxes** (`bg-accent/10` + `border-accent/40`): the *awaiting-input* register — needs prompts.
 - **Colored tiles**: the /sections index only — `aspect-[5/6]`, name bottom-left in serif 2xl–3xl. On home and /recipes, section browsing is a compact pill row instead.
-- **Card photos**: recipe cards show a 3:2 image when one exists — dish photo first, else a top-crop of the first source scan (handwriting is the photography for heritage recipes); the text-only card is the dignified fallback. Served as 640px `thumbs/` derivatives, never originals.
-- Badges: quiet editorial notes — small italic serif, sentence case ("ready to cook", "has the original card"); accent color marks awaiting-input states. No pills, dots, or uppercase tracking.
+- **Card photos**: the curated strips (home "New in the kitchen", occasion pages) show a 3:2 **dish photo** when one exists; the **/recipes index is text-only** — at archive scale the images and notes read as clutter there (owner's call, June 2026). Source scans never appear on any card (most are computer printouts, not handwriting); they belong on the recipe page's Original Page section, where provenance is the point. Card images are 640px `thumbs/` derivatives, never originals.
+- Badges: quiet editorial notes — small italic serif, sentence case ("ready to cook", "has the original card"); accent color marks awaiting-input states. No pills, dots, or uppercase tracking. **Hidden entirely on the /recipes index** (same owner's call); shown on the curated strips.
 - Buttons: pill-shaped, sentence-case sans (`.btn`); `btn-primary` burgundy → ink on hover; `btn-ghost` hairline.
 - Album lightbox metadata composes as a photo-book caption ("Thanksgiving 1987, at Grandma's — Nancy, Laura, and Annie"), not labeled fields; the album grid groups under decade headers.
 

@@ -129,11 +129,13 @@ export type RecipeIndexItem = {
   has_ingredients:  boolean;
   has_source_photo: boolean;
   tag_slugs:        string[];
-  /** Card image (web-sized thumb): the dish shot when one exists, else a
-   *  detail crop of the first source scan — the handwritten card IS the
-   *  photography for heritage recipes. Null → text-only card (a dignified
-   *  fallback, not an error state). */
-  card_image: { url: string; kind: 'dish' | 'source' } | null;
+  /** Card image (web-sized thumb): the recipe's dish shot, when one exists.
+   *  Null → text-only card (a dignified fallback, not an error state).
+   *  Source scans are deliberately NOT used here — most are old computer
+   *  printouts, not handwriting, and they made the grid ugly (Kate's call,
+   *  June 2026). Scans still appear on the recipe page's Original Page
+   *  section, where provenance is the point. */
+  card_image: { url: string; kind: 'dish' } | null;
 };
 
 type IndexRow = {
@@ -223,17 +225,13 @@ export async function fetchRecipeIndex(): Promise<RecipeIndexItem[]> {
     photoRows.filter((r) => r.photo_type === 'source').map((r) => r.recipe_id),
   );
 
-  // Card image per recipe: first dish thumb wins; else first source thumb.
-  // Two passes (dish then source) with a has() guard, so a source thumb
-  // never displaces a dish thumb. Rows arrive ordered by sort_order within
-  // each chunk, so the first hit per type matches the recipe page's lead.
-  const cardImageByRecipe = new Map<string, { url: string; kind: 'dish' | 'source' }>();
-  for (const kind of ['dish', 'source'] as const) {
-    for (const r of photoRows) {
-      if (r.photo_type !== kind || !r.thumb_path) continue;
-      if (!cardImageByRecipe.has(r.recipe_id)) {
-        cardImageByRecipe.set(r.recipe_id, { url: publicUrl(r.thumb_path), kind });
-      }
+  // Card image per recipe: the first dish thumb (by sort_order, matching
+  // the recipe page's hero). Source scans never appear on cards.
+  const cardImageByRecipe = new Map<string, { url: string; kind: 'dish' }>();
+  for (const r of photoRows) {
+    if (r.photo_type !== 'dish' || !r.thumb_path) continue;
+    if (!cardImageByRecipe.has(r.recipe_id)) {
+      cardImageByRecipe.set(r.recipe_id, { url: publicUrl(r.thumb_path), kind: 'dish' });
     }
   }
 

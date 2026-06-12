@@ -4,8 +4,22 @@ import type { RecipeIndexItem } from '@/lib/queries/recipes';
 import { badgesFor, type Badge, type Viewer } from '@/lib/recipes/badges';
 import { cn } from '@/lib/utils';
 
-export function RecipeIndexCard({ recipe, viewer, now }: { recipe: RecipeIndexItem; viewer: Viewer; now?: number }) {
-  const badges = badgesFor(recipe, viewer, now);
+export function RecipeIndexCard({
+  recipe,
+  viewer,
+  now,
+  plain = false,
+}: {
+  recipe: RecipeIndexItem;
+  viewer: Viewer;
+  now?: number;
+  /** Text-only card: no photo, no status notes. The /recipes index uses
+   *  this — at 155 recipes the images and notes read as clutter there
+   *  (Kate's call); the curated strips on home and occasion pages keep
+   *  the photo treatment. */
+  plain?: boolean;
+}) {
+  const badges = plain ? [] : badgesFor(recipe, viewer, now);
   const subline = [recipe.contributor?.display, recipe.section?.name].filter(Boolean).join(' · ');
   const thirdLine =
     recipe.family_line?.name ??
@@ -13,18 +27,17 @@ export function RecipeIndexCard({ recipe, viewer, now }: { recipe: RecipeIndexIt
       ? `Originally from ${recipe.originally_from}`
       : null);
 
-  const image = recipe.card_image;
+  const image = plain ? null : recipe.card_image;
 
   return (
     <Link
       href={`/recipes/${recipe.slug}`}
       className="group flex h-full flex-col overflow-hidden rounded-2xl border border-rule bg-paper card-hover hover:border-ink hover:shadow-[0_12px_40px_-20px_rgba(42,37,34,0.35)]"
     >
-      {/* Card photo: the dish when one exists, else a detail crop of the
-          first source scan — handwriting is the photography for heritage
-          recipes. Scans crop from the top, where the card's own title
-          usually sits; one consistent 3:2 window keeps the grid calm.
-          No image → the text-only card below stands on its own. */}
+      {/* Card photo: the dish shot, when one exists (source scans are
+          deliberately excluded — see RecipeIndexItem.card_image). One
+          consistent 3:2 window keeps the grid calm; no image → the
+          text-only card below stands on its own. */}
       {image && (
         <div className="relative aspect-[3/2] w-full border-b border-rule">
           <Image
@@ -32,10 +45,7 @@ export function RecipeIndexCard({ recipe, viewer, now }: { recipe: RecipeIndexIt
             alt=""
             fill
             sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 92vw"
-            className={cn(
-              'object-cover',
-              image.kind === 'source' && 'object-top',
-            )}
+            className="object-cover"
             loading="lazy"
           />
         </div>
@@ -82,13 +92,23 @@ function BadgePill({ badge }: { badge: Badge }) {
   );
 }
 
-export function RecipeIndexGrid({ recipes, viewer, now }: { recipes: RecipeIndexItem[]; viewer: Viewer; now?: number }) {
+export function RecipeIndexGrid({
+  recipes,
+  viewer,
+  now,
+  plain = false,
+}: {
+  recipes: RecipeIndexItem[];
+  viewer: Viewer;
+  now?: number;
+  plain?: boolean;
+}) {
   if (recipes.length === 0) return null;
   return (
     <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {recipes.map((r) => (
         <li key={r.id}>
-          <RecipeIndexCard recipe={r} viewer={viewer} now={now} />
+          <RecipeIndexCard recipe={r} viewer={viewer} now={now} plain={plain} />
         </li>
       ))}
     </ul>

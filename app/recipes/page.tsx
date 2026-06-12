@@ -88,7 +88,7 @@ export default async function RecipesIndexPage() {
         <section className="mt-16">
           <h2 className="font-serif text-2xl text-ink md:text-3xl">Recently added</h2>
           <div className="mt-6">
-            <RecipeIndexGrid recipes={recent} viewer={viewer} now={now} />
+            <RecipeIndexGrid recipes={recent} viewer={viewer} now={now} plain />
           </div>
         </section>
       )}
@@ -101,7 +101,7 @@ export default async function RecipesIndexPage() {
             These recipes are missing a method, a memory, a photo, or someone&rsquo;s best guess.
           </p>
           <div className="mt-6">
-            <RecipeIndexGrid recipes={needingHelp} viewer={viewer} now={now} />
+            <RecipeIndexGrid recipes={needingHelp} viewer={viewer} now={now} plain />
           </div>
         </section>
       )}
