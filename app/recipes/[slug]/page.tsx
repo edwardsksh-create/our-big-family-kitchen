@@ -336,11 +336,19 @@ export default async function RecipePage({
             const needsMethod = (instructions ?? []).length === 0;
             const needsStory  = !recipe.story || recipe.story.trim().length === 0;
             if (!needsMethod && !needsStory) return null;
+            // Say exactly what's missing — a vague "missing information" on
+            // a recipe with a full method reads like a bug. Memories are
+            // the communal layer and deliberately don't satisfy the family
+            // note, which is the cook's own story.
+            const missing =
+              needsMethod && needsStory ? 'its method and a family note'
+              : needsMethod ? 'its method'
+              : 'a family note';
             if (isAdmin) {
               return (
                 <div data-no-print>
                   <NeedsPrompt
-                    headline="This recipe is missing information."
+                    headline={`This recipe is missing ${missing}.`}
                     href={`/admin/recipes/${params.slug}/ask`}
                     cta="Ask the family"
                   />
@@ -350,9 +358,9 @@ export default async function RecipePage({
             return (
               <div data-no-print>
                 <NeedsPrompt
-                  headline="This recipe is missing information — would you help fix it?"
+                  headline={`This recipe is missing ${missing} — would you help fix it?`}
                   href={`/recipes/${params.slug}/edit`}
-                  cta="Add the steps"
+                  cta={needsMethod ? 'Add the steps' : 'Add a family note'}
                 />
               </div>
             );
