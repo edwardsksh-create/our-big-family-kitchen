@@ -55,8 +55,12 @@ async function applyRotation(photoId: string, rotation: 90 | 180 | 270): Promise
 
   // Lazy import — sharp's native binary loads only when a rotation is
   // actually applied, never as part of rendering the review page.
+  // autoOrient first: EXIF-oriented phone uploads must be normalized to
+  // how the browser displayed them, or the saved rotation won't match
+  // the admin's CSS preview.
   const { default: sharp } = await import('sharp');
   const outputBytes = await sharp(inputBytes)
+    .autoOrient()
     .rotate(rotation)
     .jpeg({ quality: 92 })
     .toBuffer();
