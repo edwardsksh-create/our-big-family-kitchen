@@ -213,9 +213,14 @@ export default async function HomePage() {
               The original Leusch family cookbook lives at leuschfamilyrecipes.com,
               with {federatedCount} preserved recipes, scans, and stories.
             </p>
-            <Link href="/family-lines/leusch" className="btn-ghost mt-5 inline-flex">
-              Browse Aunt Laura’s original collection
-            </Link>
+            <div className="mt-5 flex flex-wrap items-center gap-4">
+              <Link href="/family-lines/leusch" className="btn-ghost">
+                Browse Aunt Laura’s original collection
+              </Link>
+              <Link href="/letter" className="font-serif text-sm italic text-ink-soft hover:text-primary">
+                Read her letter →
+              </Link>
+            </div>
           </div>
         </section>
       )}

@@ -44,7 +44,9 @@ export default function AboutPage() {
             the original Leusch family archive
           </a>
           , which preserves Aunt Laura’s 2003 cookbook and the recipes passed
-          down through that branch of the family. Our Big Family Kitchen is the
+          down through that branch of the family. The letter she sent with
+          the original books is{' '}
+          <a href="/letter" className="text-primary underline decoration-rule underline-offset-4 hover:decoration-primary">here</a>. Our Big Family Kitchen is the
           growing side: the place for the Sundy, Edwards, Hong, Quinn, Branion,
           and Leusch lines to add what we cook now, what we remember, and what
           we want the next generation to be able to find.
