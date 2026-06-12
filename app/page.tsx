@@ -8,17 +8,8 @@ import { fetchRecentMemories } from '@/lib/queries/recipe-comments';
 import { fetchRecipeIndex } from '@/lib/queries/recipes';
 import { fetchRandomHeroPhoto, fetchRecentReviewedPhotos, type FamilyPhotoFull } from '@/lib/queries/family-photos';
 import { captionLead } from '@/lib/photos/photo-caption';
-import { fetchOccasionSlugsWithContent } from '@/lib/queries/occasions';
 import { RecipeIndexGrid } from '@/components/recipe-index-card';
 import { ANONYMOUS_VIEWER } from '@/lib/recipes/badges';
-
-// The few editorial doorways into occasion pages — major gatherings only,
-// and each link renders only when its page has something behind it.
-const MAJOR_OCCASIONS = [
-  { slug: 'thanksgiving',  name: 'Thanksgiving'  },
-  { slug: 'christmas',     name: 'Christmas'     },
-  { slug: 'sunday-dinner', name: 'Sunday Dinner' },
-];
 
 // Per-request: the album strip is shown only to signed-in family (the album
 // itself is sign-in-only), so the page reads the session. The data sections
@@ -29,16 +20,14 @@ export default async function HomePage() {
   const session = await auth();
   const signedIn = !!session?.user;
 
-  const [federatedCount, memories, recipes, albumPhotos, occasionsWithContent, heroPhoto] = await Promise.all([
+  const [federatedCount, memories, recipes, albumPhotos, heroPhoto] = await Promise.all([
     fetchFederatedCount(),
     fetchRecentMemories(3),
     fetchRecipeIndex(),
     signedIn ? fetchRecentReviewedPhotos(6) : Promise.resolve([] as FamilyPhotoFull[]),
-    fetchOccasionSlugsWithContent(),
     fetchRandomHeroPhoto(),
   ]);
   const recent = recipes.slice(0, 3);
-  const holidayDoorways = MAJOR_OCCASIONS.filter((o) => occasionsWithContent.has(o.slug));
 
   // A fresh photo from the curated pool on every page load; the original
   // archival photo stands in whenever the pool is empty (never breaks).
@@ -51,7 +40,7 @@ export default async function HomePage() {
   return (
     <div className="mx-auto max-w-page px-6">
       {/* Hero */}
-      <section className="grid gap-10 py-12 md:grid-cols-[1.1fr_1fr] md:items-center md:gap-16 md:py-16">
+      <section className="grid gap-8 py-6 md:grid-cols-[1.1fr_1fr] md:items-center md:gap-14 md:py-8">
         <div className="order-2 md:order-1">
           <p className="label mb-4">A living family cookbook</p>
           <h1 className="font-serif text-4xl leading-[1.05] tracking-tight text-ink md:text-6xl">
@@ -97,9 +86,9 @@ export default async function HomePage() {
 
       {/* Recent family memories */}
       {memories.length > 0 && (
-        <section className="py-8 md:py-10">
+        <section className="py-5 md:py-6">
           <h2 className="font-serif text-2xl text-ink md:text-3xl">Family memories</h2>
-          <ul className="mt-8 max-w-prose space-y-8">
+          <ul className="mt-6 max-w-prose space-y-7">
             {memories.map((m) => (
               <li key={m.id}>
                 <blockquote className="font-serif text-lg italic leading-relaxed text-ink">
@@ -119,14 +108,14 @@ export default async function HomePage() {
 
       {/* Recently added recipes */}
       {recent.length > 0 && (
-        <section className="py-8 md:py-10">
+        <section className="py-5 md:py-6">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-serif text-2xl text-ink md:text-3xl">New in the kitchen</h2>
             <Link href="/recipes" className="font-serif text-sm italic text-ink-soft hover:text-primary">
               All recipes →
             </Link>
           </div>
-          <div className="mt-8">
+          <div className="mt-5">
             <RecipeIndexGrid recipes={recent} viewer={ANONYMOUS_VIEWER} />
           </div>
         </section>
@@ -134,14 +123,14 @@ export default async function HomePage() {
 
       {/* Album strip — family only, like the album itself. */}
       {signedIn && albumPhotos.length > 0 && (
-        <section className="py-8 md:py-10">
+        <section className="py-5 md:py-6">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-serif text-2xl text-ink md:text-3xl">From the album</h2>
             <Link href="/album" className="font-serif text-sm italic text-ink-soft hover:text-primary">
               Open the album →
             </Link>
           </div>
-          <ul className="mt-8 grid grid-cols-3 gap-3 md:grid-cols-6">
+          <ul className="mt-5 grid grid-cols-3 gap-3 md:grid-cols-6">
             {albumPhotos.map((p) => (
               <li key={p.id} className="overflow-hidden rounded-2xl border border-rule bg-paper">
                 <Link href={`/album?photo=${p.id}`} className="block">
@@ -162,26 +151,10 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* The holiday tables — a few doorways into the occasion pages. */}
-      {holidayDoorways.length > 0 && (
-        <section className="py-8 md:py-10">
-          <h2 className="font-serif text-2xl text-ink md:text-3xl">The holiday tables</h2>
-          <ul className="mt-6 flex flex-wrap gap-3">
-            {holidayDoorways.map((o) => (
-              <li key={o.slug}>
-                <Link href={`/occasions/${o.slug}`} className="btn-ghost">
-                  {o.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       {/* Browse by recipe type — demoted from the 16-tile grid to the same
           quiet pill row /recipes uses; browsing stays one click away without
           dominating the page. */}
-      <section className="py-8 md:py-10">
+      <section className="py-5 md:py-6">
         <h2 className="font-serif text-2xl text-ink md:text-3xl">Browse by recipe type</h2>
         <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
           {SECTIONS.map((section) => (
