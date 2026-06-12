@@ -165,7 +165,7 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
             <span className="sr-only">Opens Aunt Laura&rsquo;s original collection in a new tab.</span>
           </a>
           <p className="mt-4 text-sm italic text-ink-soft">
-            <Link href="/letter" className="hover:text-primary">
+            <Link href="/about#letter" className="hover:text-primary">
               Read the letter Aunt Laura sent with the original books →
             </Link>
           </p>

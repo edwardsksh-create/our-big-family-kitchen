@@ -98,10 +98,10 @@ export function RecipeIndex({ recipes, viewer, now }: { recipes: RecipeIndexItem
 
   return (
     <div>
-      {/* The colorful boxes, doing real work: section chips that filter the
-          grid in place. Click to narrow, click again to clear; the other
-          chips dim so the active one reads at a glance. */}
-      <ul className="mb-5 flex flex-wrap gap-2">
+      {/* The colorful boxes, doing real work: the brand-style tiles filter
+          the grid in place. Click to narrow, click again to clear; the
+          other tiles dim so the active one reads at a glance. */}
+      <ul className="mb-6 grid grid-cols-3 gap-3 sm:grid-cols-4 sm:gap-4 lg:grid-cols-5">
         {sectionOptions.map((s) => {
           const active = filters.section === s.slug;
           return (
@@ -111,7 +111,7 @@ export function RecipeIndex({ recipes, viewer, now }: { recipes: RecipeIndexItem
                 aria-pressed={active}
                 onClick={() => setFilters((f) => ({ ...f, section: active ? '' : s.slug }))}
                 className={cn(
-                  'inline-flex items-center rounded-full px-4 py-2 font-serif text-sm transition-all md:text-base',
+                  'flex aspect-[5/6] w-full flex-col justify-end rounded-2xl p-4 text-left transition-all sm:p-5',
                   SECTION_BG[s.color],
                   SECTION_TEXT[s.color],
                   active
@@ -120,7 +120,9 @@ export function RecipeIndex({ recipes, viewer, now }: { recipes: RecipeIndexItem
                   filters.section && !active && 'opacity-40',
                 )}
               >
-                {s.name}
+                <span className="font-serif text-base leading-tight sm:text-xl md:text-2xl">
+                  {s.name}
+                </span>
               </button>
             </li>
           );

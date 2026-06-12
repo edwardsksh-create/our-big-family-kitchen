@@ -1,12 +1,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { auth } from '@/auth';
-import { SECTIONS, SECTION_BG, SECTION_TEXT } from '@/lib/sections';
-import { cn } from '@/lib/utils';
+import { SECTIONS } from '@/lib/sections';
+import { SectionCard } from '@/components/section-card';
 import { fetchFederatedCount } from '@/lib/queries/federated';
 import { fetchRecentMemories } from '@/lib/queries/recipe-comments';
 import { fetchRecipeIndex } from '@/lib/queries/recipes';
-import { fetchDailyHeroPhoto, fetchRecentReviewedPhotos, type FamilyPhotoFull } from '@/lib/queries/family-photos';
+import { fetchRandomHeroPhoto, fetchRecentReviewedPhotos, type FamilyPhotoFull } from '@/lib/queries/family-photos';
 import { captionLead } from '@/lib/photos/photo-caption';
 import { fetchOccasionSlugsWithContent } from '@/lib/queries/occasions';
 import { RecipeIndexGrid } from '@/components/recipe-index-card';
@@ -29,20 +29,19 @@ export default async function HomePage() {
   const session = await auth();
   const signedIn = !!session?.user;
 
-  const today = new Date().toISOString().slice(0, 10);
   const [federatedCount, memories, recipes, albumPhotos, occasionsWithContent, heroPhoto] = await Promise.all([
     fetchFederatedCount(),
     fetchRecentMemories(3),
     fetchRecipeIndex(),
     signedIn ? fetchRecentReviewedPhotos(6) : Promise.resolve([] as FamilyPhotoFull[]),
     fetchOccasionSlugsWithContent(),
-    fetchDailyHeroPhoto(today),
+    fetchRandomHeroPhoto(),
   ]);
   const recent = recipes.slice(0, 3);
   const holidayDoorways = MAJOR_OCCASIONS.filter((o) => occasionsWithContent.has(o.slug));
 
-  // Photo of the day from the admin-curated pool; the original archival
-  // photo stands in whenever the pool is empty (the hero never breaks).
+  // A fresh photo from the curated pool on every page load; the original
+  // archival photo stands in whenever the pool is empty (never breaks).
   const heroSrc = heroPhoto?.public_url || '/hero/leusch-sisters-thanksgiving.jpg';
   const heroCaption = heroPhoto
     ? (heroPhoto.caption ?? captionLead({ occasionNames: [], year: heroPhoto.year, place: heroPhoto.place }))
@@ -52,7 +51,7 @@ export default async function HomePage() {
   return (
     <div className="mx-auto max-w-page px-6">
       {/* Hero */}
-      <section className="grid gap-10 py-16 md:grid-cols-[1.1fr_1fr] md:items-center md:gap-16 md:py-24">
+      <section className="grid gap-10 py-12 md:grid-cols-[1.1fr_1fr] md:items-center md:gap-16 md:py-16">
         <div className="order-2 md:order-1">
           <p className="label mb-4">A living family cookbook</p>
           <h1 className="font-serif text-4xl leading-[1.05] tracking-tight text-ink md:text-6xl">
@@ -69,11 +68,9 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* Photo of the day: one priority-loaded image (no carousel — kind
-            to LCP and to readers), picked deterministically per day from
-            the admin-curated hero pool. The caption is the archive
-            speaking — names, place, era — in the quiet italic-serif
-            provenance treatment. */}
+        {/* One priority-loaded image (no carousel — kind to LCP and to
+            readers), picked at random from the curated pool on each page
+            load. The caption is the archive speaking — names, place, era. */}
         <figure className="order-1 md:order-2">
           <div className="relative aspect-[7/5] overflow-hidden rounded-3xl border border-rule">
             <Image
@@ -100,7 +97,7 @@ export default async function HomePage() {
 
       {/* Recent family memories */}
       {memories.length > 0 && (
-        <section className="py-14 md:py-16">
+        <section className="py-8 md:py-10">
           <h2 className="font-serif text-2xl text-ink md:text-3xl">Family memories</h2>
           <ul className="mt-8 max-w-prose space-y-8">
             {memories.map((m) => (
@@ -122,7 +119,7 @@ export default async function HomePage() {
 
       {/* Recently added recipes */}
       {recent.length > 0 && (
-        <section className="py-14 md:py-16">
+        <section className="py-8 md:py-10">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-serif text-2xl text-ink md:text-3xl">New in the kitchen</h2>
             <Link href="/recipes" className="font-serif text-sm italic text-ink-soft hover:text-primary">
@@ -137,7 +134,7 @@ export default async function HomePage() {
 
       {/* Album strip — family only, like the album itself. */}
       {signedIn && albumPhotos.length > 0 && (
-        <section className="py-14 md:py-16">
+        <section className="py-8 md:py-10">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-serif text-2xl text-ink md:text-3xl">From the album</h2>
             <Link href="/album" className="font-serif text-sm italic text-ink-soft hover:text-primary">
@@ -167,7 +164,7 @@ export default async function HomePage() {
 
       {/* The holiday tables — a few doorways into the occasion pages. */}
       {holidayDoorways.length > 0 && (
-        <section className="py-14 md:py-16">
+        <section className="py-8 md:py-10">
           <h2 className="font-serif text-2xl text-ink md:text-3xl">The holiday tables</h2>
           <ul className="mt-6 flex flex-wrap gap-3">
             {holidayDoorways.map((o) => (
@@ -184,29 +181,18 @@ export default async function HomePage() {
       {/* Browse by recipe type — demoted from the 16-tile grid to the same
           quiet pill row /recipes uses; browsing stays one click away without
           dominating the page. */}
-      <section className="py-14 md:py-16">
+      <section className="py-8 md:py-10">
         <h2 className="font-serif text-2xl text-ink md:text-3xl">Browse by recipe type</h2>
-        <ul className="mt-6 flex flex-wrap gap-2">
-          {SECTIONS.map((s) => (
-            <li key={s.slug}>
-              <Link
-                href={`/sections/${s.slug}`}
-                className={cn(
-                  'inline-flex items-center rounded-full px-4 py-2 font-serif text-sm transition-transform card-hover md:text-base',
-                  SECTION_BG[s.color],
-                  SECTION_TEXT[s.color],
-                )}
-              >
-                {s.name}
-              </Link>
-            </li>
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          {SECTIONS.map((section) => (
+            <SectionCard key={section.slug} section={section} />
           ))}
-        </ul>
+        </div>
       </section>
 
       {/* From Aunt Laura’s archive */}
       {federatedCount > 0 && (
-        <section className="pb-20 pt-2 md:pb-24">
+        <section className="pb-16 pt-2 md:pb-20">
           <div className="rounded-2xl border border-rule bg-paper p-6 md:p-8">
             <h2 className="font-serif text-2xl text-ink md:text-3xl">From Aunt Laura’s archive</h2>
             <p className="mt-3 max-w-prose text-ink-soft">
@@ -217,7 +203,7 @@ export default async function HomePage() {
               <Link href="/family-lines/leusch" className="btn-ghost">
                 Browse Aunt Laura’s original collection
               </Link>
-              <Link href="/letter" className="font-serif text-sm italic text-ink-soft hover:text-primary">
+              <Link href="/about#letter" className="font-serif text-sm italic text-ink-soft hover:text-primary">
                 Read her letter →
               </Link>
             </div>

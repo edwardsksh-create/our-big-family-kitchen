@@ -259,23 +259,21 @@ export async function countPhotosNeedingEditing(): Promise<number> {
   return count ?? 0;
 }
 
-/** The home page's "photo of the day": a deterministic daily pick from the
- *  admin-curated hero pool (hero_eligible, reviewed, archived-in). Returns
- *  null when the pool is empty — the page falls back to its static hero.
- *  Ordered by id so the day-index mapping is stable as the pool grows. */
-export async function fetchDailyHeroPhoto(dateISO: string): Promise<FamilyPhotoFull | null> {
+/** The home hero: a random pick per page load from the admin-curated pool
+ *  (hero_eligible, reviewed, archived-in) — a fresh photo on every refresh,
+ *  the same one for the length of a visit. Returns null when the pool is
+ *  empty; the page falls back to its static hero. */
+export async function fetchRandomHeroPhoto(): Promise<FamilyPhotoFull | null> {
   const db = supabaseAdmin();
   const { data } = await db
     .from('family_photos')
     .select(COMMON_SELECT)
     .eq('hero_eligible', true)
     .eq('reviewed', true)
-    .eq('not_for_archive', false)
-    .order('id');
+    .eq('not_for_archive', false);
   const pool = (data ?? []) as unknown as Joined[];
   if (pool.length === 0) return null;
-  const { dailyHeroIndex } = await import('@/lib/photos/hero');
-  const pick = pool[dailyHeroIndex(dateISO, pool.length)];
+  const pick = pool[Math.floor(Math.random() * pool.length)];
   const hydrated = await hydratePhotos([pick]);
   return hydrated[0] ?? null;
 }
