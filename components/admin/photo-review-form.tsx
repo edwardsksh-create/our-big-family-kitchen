@@ -158,6 +158,7 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
     setSelectedOccasions(previous.occasions);
     setYear(previous.year ?? '');
     setPlace(previous.place ?? '');
+    setCaption(previous.caption ?? '');
     // Pull the viewport back up so the just-prefilled fields and the photo
     // are in view, matching the post-advance scroll behavior.
     window.scrollTo({ top: 0 });
@@ -212,14 +213,26 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
 
       {/* Crop & rotate + top-of-form Skip. */}
       <div className="flex flex-wrap items-center justify-between gap-3" data-no-print>
-        <button
-          type="button"
-          disabled={pending || editingPhoto}
-          onClick={() => setEditingPhoto(true)}
-          className="rounded-full border border-rule bg-paper px-3 py-1.5 font-sans text-sm text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
-        >
-          Crop &amp; rotate
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            disabled={pending || editingPhoto}
+            onClick={() => setEditingPhoto(true)}
+            className="rounded-full border border-rule bg-paper px-3 py-1.5 font-sans text-sm text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
+          >
+            Crop &amp; rotate
+          </button>
+          {previous && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={copyFromPrevious}
+              className="rounded-full border border-rule bg-paper px-3 py-1.5 font-sans text-sm text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
+            >
+              Copy tags &amp; caption from previous
+            </button>
+          )}
+        </div>
         <button
           type="button"
           disabled={pending}
@@ -553,7 +566,7 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
             onClick={copyFromPrevious}
             className="btn-ghost"
           >
-            Copy tags from previous
+            Copy tags &amp; caption from previous
           </button>
         )}
         {photo.source === 'family' && (
