@@ -203,6 +203,36 @@ export async function fetchFirstUnreviewedPhoto(
   return hydrated[0] ?? null;
 }
 
+/** A specific unreviewed photo, for jumping the queue from the picker
+ *  grid. Returns null if it's been reviewed/archived meanwhile. */
+export async function fetchUnreviewedPhotoById(id: string): Promise<FamilyPhotoFull | null> {
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from('family_photos')
+    .select(COMMON_SELECT)
+    .eq('id', id)
+    .eq('reviewed', false)
+    .eq('not_for_archive', false)
+    .limit(1);
+  const hydrated = await hydratePhotos((data ?? []) as unknown as Joined[]);
+  return hydrated[0] ?? null;
+}
+
+/** Every photo waiting for review, in queue order — the picker grid. */
+export async function fetchAllUnreviewedPhotos(
+  filter?: { source?: 'family' | 'import' },
+): Promise<FamilyPhotoFull[]> {
+  const db = supabaseAdmin();
+  let q = db
+    .from('family_photos')
+    .select(COMMON_SELECT)
+    .eq('reviewed', false)
+    .eq('not_for_archive', false);
+  if (filter?.source) q = q.eq('source', filter.source);
+  const { data } = await q.order('uploaded_at', { ascending: true });
+  return hydratePhotos((data ?? []) as unknown as Joined[]);
+}
+
 export async function fetchPhotoReviewSourceCounts(): Promise<{ all: number; family: number }> {
   const db = supabaseAdmin();
   const [{ count: all }, { count: family }] = await Promise.all([

@@ -2,7 +2,9 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { Plus, RotateCcw, RotateCw } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Plus } from 'lucide-react';
+import { PhotoEditor } from '@/components/photo-editor';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { submitPhotoReview, createOccasionType } from '@/app/admin/photo-review/actions';
 import { suggestExistingOccasions } from '@/lib/photos/occasions';
@@ -65,15 +67,11 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
     photo.recipes.map((r) => r.id),
   );
 
-  // Manual rotation, applied on Save. Clockwise degrees in {0, 90, 180, 270}.
-  // The Part-1 batch script already handles EXIF-tagged photos; this control
-  // is for visually-sideways photos that have no metadata for the script to
-  // act on. AI vision is deliberately NOT used to auto-rotate — its
-  // orientation guesses are unreliable enough that auto-applying them would
-  // corrupt photos that are already correct.
-  const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
-  function rotateLeft()  { setRotation((r) => (((r + 270) % 360) as 0 | 90 | 180 | 270)); }
-  function rotateRight() { setRotation((r) => (((r +  90) % 360) as 0 | 90 | 180 | 270)); }
+  const router = useRouter();
+  // In-place crop & rotate (the shared PhotoEditor). Edits apply
+  // immediately and non-destructively; the refreshed page shows the
+  // edited image.
+  const [editingPhoto, setEditingPhoto] = useState(false);
 
   // Scroll the viewport to the top whenever a fresh photo loads. The outer
   // PhotoReviewForm keys this inner component on photo.id, so the mount-only
@@ -180,11 +178,6 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
         occasionSlugs:    selectedOccasions,
         personRefs:       selectedPeople,
         recipeIds:        selectedRecipes,
-        // Rotation is only consumed by the action when intent ===
-        // 'save_and_next'. Skip/Reject/Not-for-archive intentionally drop
-        // any pending rotation: they're "I'm not editing this row right
-        // now" actions.
-        rotation,
         intent,
         filterSource,
       });
@@ -193,67 +186,40 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
 
   return (
     <div className="space-y-8">
-      {/* Photo preview. Rendered inside the form so the rotation control can
-          drive a CSS-transform preview without round-tripping. The container
-          aspect stays 4/3 for layout stability; rotated portraits get
-          letterboxed via object-contain. */}
-      <figure className="overflow-hidden rounded-2xl border border-rule bg-paper">
-        <div className="relative" style={{ aspectRatio: '4/3' }}>
-          <Image
-            src={photo.public_url}
-            alt={photo.caption ?? 'Family photo'}
-            fill
-            priority
-            sizes="(min-width: 768px) 800px, 100vw"
-            className="object-contain transition-transform duration-200"
-            style={{ transform: `rotate(${rotation}deg)` }}
-          />
-        </div>
-      </figure>
+      {/* Photo preview, or the crop & rotate editor in its place. Edits
+          save immediately (non-destructive — the untouched original is
+          kept); the refreshed photo renders when the editor closes. */}
+      {editingPhoto ? (
+        <PhotoEditor
+          photoId={photo.id}
+          imageUrl={photo.public_url}
+          onDone={() => { setEditingPhoto(false); router.refresh(); }}
+        />
+      ) : (
+        <figure className="overflow-hidden rounded-2xl border border-rule bg-paper">
+          <div className="relative" style={{ aspectRatio: '4/3' }}>
+            <Image
+              src={photo.public_url}
+              alt={photo.caption ?? 'Family photo'}
+              fill
+              priority
+              sizes="(min-width: 768px) 800px, 100vw"
+              className="object-contain"
+            />
+          </div>
+        </figure>
+      )}
 
-      {/* Rotate controls + top-of-form Skip. Rotation here is a non-destructive
-          intent: the actual pixels are only rewritten on Save (server-side
-          via sharp, writing a new file to rotated/ and pointing storage_path
-          at it while preserving original_storage_path). Skip discards the
-          pending rotation. */}
+      {/* Crop & rotate + top-of-form Skip. */}
       <div className="flex flex-wrap items-center justify-between gap-3" data-no-print>
-        <div className="flex items-center gap-2 text-sm text-ink-soft">
-          <span className="hidden sm:inline">Rotate:</span>
-          <button
-            type="button"
-            onClick={rotateLeft}
-            disabled={pending}
-            className="inline-flex items-center gap-1 rounded-full border border-rule bg-paper px-3 py-1.5 font-sans text-sm text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
-            aria-label="Rotate left 90 degrees"
-          >
-            <RotateCcw size={14} aria-hidden="true" />
-            Left
-          </button>
-          <button
-            type="button"
-            onClick={rotateRight}
-            disabled={pending}
-            className="inline-flex items-center gap-1 rounded-full border border-rule bg-paper px-3 py-1.5 font-sans text-sm text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
-            aria-label="Rotate right 90 degrees"
-          >
-            <RotateCw size={14} aria-hidden="true" />
-            Right
-          </button>
-          {rotation !== 0 && (
-            <>
-              <span className="ml-1 font-serif italic text-ink">{rotation}°</span>
-              <button
-                type="button"
-                onClick={() => setRotation(0)}
-                disabled={pending}
-                className="text-xs text-ink-soft underline hover:text-primary disabled:opacity-50"
-              >
-                undo
-              </button>
-              <span className="hidden text-xs italic text-ink-soft sm:inline">· applied on Save</span>
-            </>
-          )}
-        </div>
+        <button
+          type="button"
+          disabled={pending || editingPhoto}
+          onClick={() => setEditingPhoto(true)}
+          className="rounded-full border border-rule bg-paper px-3 py-1.5 font-sans text-sm text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
+        >
+          Crop &amp; rotate
+        </button>
         <button
           type="button"
           disabled={pending}

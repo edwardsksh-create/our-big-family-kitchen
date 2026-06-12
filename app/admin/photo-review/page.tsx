@@ -1,8 +1,10 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import {
-  fetchFirstUnreviewedPhoto,
+  fetchUnreviewedPhotoById,
+  fetchAllUnreviewedPhotos,
   fetchMostRecentlyReviewedPhoto,
   fetchPhotoReviewProgress,
   fetchPhotoReviewSourceCounts,
@@ -19,7 +21,7 @@ export const dynamic   = 'force-dynamic';
 export default async function PhotoReviewPage({
   searchParams,
 }: {
-  searchParams: { source?: string };
+  searchParams: { source?: string; photo?: string };
 }) {
   const session = await auth();
   if (!session?.user) redirect('/sign-in?next=/admin/photo-review');
@@ -34,8 +36,14 @@ export default async function PhotoReviewPage({
 
   const filterSource: 'family' | null = searchParams.source === 'family' ? 'family' : null;
 
-  const [photo, previous, progress, sourceCounts, occasions, people, recipes, flaggedCount] = await Promise.all([
-    fetchFirstUnreviewedPhoto(filterSource ? { source: filterSource } : undefined),
+  // ?photo= jumps the queue to a chosen photo (from the picker grid below);
+  // a stale id falls back to queue order.
+  const requested = searchParams.photo
+    ? await fetchUnreviewedPhotoById(searchParams.photo)
+    : null;
+
+  const [queue, previous, progress, sourceCounts, occasions, people, recipes, flaggedCount] = await Promise.all([
+    fetchAllUnreviewedPhotos(filterSource ? { source: filterSource } : undefined),
     fetchMostRecentlyReviewedPhoto(),
     fetchPhotoReviewProgress(),
     fetchPhotoReviewSourceCounts(),
@@ -44,6 +52,7 @@ export default async function PhotoReviewPage({
     fetchAllRecipesForPicker(),
     countPhotosNeedingEditing(),
   ]);
+  const photo = requested ?? queue[0] ?? null;
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">
@@ -111,6 +120,47 @@ export default async function PhotoReviewPage({
           recipes={recipes}
           filterSource={filterSource}
         />
+      )}
+
+      {/* The waiting queue, browsable — tap any photo to review it next
+          instead of taking them strictly in order. */}
+      {queue.length > 1 && (
+        <section className="mt-14">
+          <p className="label mb-4 text-ink-soft">
+            Waiting in the queue ({queue.length}) — tap any photo to jump to it
+          </p>
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6">
+            {queue.map((p) => {
+              const isCurrent = photo?.id === p.id;
+              const href = `/admin/photo-review?photo=${p.id}${filterSource ? '&source=family' : ''}`;
+              return (
+                <li key={p.id}>
+                  <Link
+                    href={href}
+                    aria-current={isCurrent ? 'true' : undefined}
+                    className={
+                      'block overflow-hidden rounded-xl border ' +
+                      (isCurrent
+                        ? 'border-ink ring-2 ring-ink ring-offset-2 ring-offset-paper'
+                        : 'border-rule hover:border-ink')
+                    }
+                  >
+                    <div className="relative aspect-square w-full">
+                      <Image
+                        src={p.public_url}
+                        alt={p.caption ?? 'Waiting photo'}
+                        fill
+                        sizes="(min-width: 768px) 16vw, 33vw"
+                        className="object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
     </div>
   );
