@@ -53,10 +53,11 @@ export default async function AlbumPage({
         {photos.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-rule p-12 text-center">
             <p className="font-serif italic text-2xl text-ink-soft">
-              The archive is being tagged.
+              The first photos are on their way.
             </p>
             <p className="mt-2 text-sm text-ink-soft">
-              Photos will appear here as Kate reviews and tags them.
+              The family albums are open and the earliest pictures are being
+              gathered in. Check back soon.
             </p>
           </div>
         ) : (

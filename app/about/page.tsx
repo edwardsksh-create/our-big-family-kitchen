@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 export const metadata = { title: 'About' };
 
 export default function AboutPage() {
@@ -17,6 +19,20 @@ export default function AboutPage() {
           “Can you send me that again?”
         </p>
         <p>This site gives all of those recipes a place to land.</p>
+        <figure className="my-10">
+          <div className="relative aspect-[7/5] overflow-hidden rounded-2xl border border-rule">
+            <Image
+              src="/hero/leusch-sisters-thanksgiving.jpg"
+              alt="Nancy, Laura, and Annie in the Quinn kitchen on Thanksgiving, 1980s."
+              fill
+              sizes="(min-width: 768px) 70ch, 100vw"
+              className="object-cover"
+            />
+          </div>
+          <figcaption className="mt-3 font-serif text-sm italic text-ink-soft">
+            Nancy, Laura, and Annie in the Quinn kitchen on Thanksgiving, 1980s.
+          </figcaption>
+        </figure>
         <p>
           It sits alongside{' '}
           <a

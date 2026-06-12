@@ -58,9 +58,11 @@ The 16 sections cycle through the 9 colors; the 8 family lines each own one colo
 - **Default card**: `rounded-2xl border border-rule bg-paper p-5` — title in serif (semibold, lg–xl), sans metadata subline, optional italic provenance third line. Cards are **text-only**; no imagery on recipe, section-listing, contributor, or family cards.
 - **Cream boxes** (`bg-cream/30`–`/40` + rule border): the *emotional/aside* register — Family Note, comment composer, provenance notes, recipe-index filter bar.
 - **Accent boxes** (`bg-accent/10` + `border-accent/40`): the *awaiting-input* register — needs prompts.
-- **Colored tiles**: sections only — `aspect-[5/6]`, name bottom-left in serif 2xl–3xl, no counts or imagery.
-- Badges: 10px uppercase tracked pills with a status dot; neutral (cream tint) for affirmative states, accent tint for awaiting-input.
-- Buttons: pill-shaped, uppercase tracked sans (`.btn`); `btn-primary` burgundy → ink on hover; `btn-ghost` hairline.
+- **Colored tiles**: the /sections index only — `aspect-[5/6]`, name bottom-left in serif 2xl–3xl. On home and /recipes, section browsing is a compact pill row instead.
+- **Card photos**: recipe cards show a 3:2 image when one exists — dish photo first, else a top-crop of the first source scan (handwriting is the photography for heritage recipes); the text-only card is the dignified fallback. Served as 640px `thumbs/` derivatives, never originals.
+- Badges: quiet editorial notes — small italic serif, sentence case ("ready to cook", "has the original card"); accent color marks awaiting-input states. No pills, dots, or uppercase tracking.
+- Buttons: pill-shaped, sentence-case sans (`.btn`); `btn-primary` burgundy → ink on hover; `btn-ghost` hairline.
+- Album lightbox metadata composes as a photo-book caption ("Thanksgiving 1987, at Grandma's — Nancy, Laura, and Annie"), not labeled fields; the album grid groups under decade headers.
 
 ### Established interaction rules (enforced in code, with in-code comments)
 

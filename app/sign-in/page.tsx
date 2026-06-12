@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { signIn } from '@/auth';
 
 export const metadata = { title: 'Sign in' };
@@ -20,12 +21,27 @@ export default function SignInPage({ searchParams }: { searchParams: SearchParam
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-6 py-16">
+      {/* One archival photo at the door — this is a family kitchen, not a
+          login portal. */}
+      <figure className="mb-8">
+        <div className="relative aspect-[7/5] overflow-hidden rounded-2xl border border-rule">
+          <Image
+            src="/hero/leusch-sisters-thanksgiving.jpg"
+            alt="Nancy, Laura, and Annie in the Quinn kitchen on Thanksgiving, 1980s."
+            fill
+            priority
+            sizes="448px"
+            className="object-cover"
+          />
+        </div>
+      </figure>
       <p className="label mb-4">Sign in</p>
       <h1 className="font-serif text-3xl leading-tight text-ink md:text-4xl">
         Welcome to Our Big Family Kitchen.
       </h1>
       <p className="mt-3 text-ink-soft">
-        Sign in with the email Kate invited.
+        The family&rsquo;s recipes, photos, and memories are inside. Sign in
+        with the email Kate invited.
       </p>
 
       <form action={send} className="mt-8 space-y-4">
@@ -36,7 +52,7 @@ export default function SignInPage({ searchParams }: { searchParams: SearchParam
             name="email"
             required
             autoComplete="email"
-            placeholder="you@example.com"
+            placeholder="the email your invitation came to"
             className="mt-2 w-full rounded-full border border-rule bg-paper px-5 py-3 text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink/10"
           />
         </label>
