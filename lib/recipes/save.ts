@@ -8,6 +8,7 @@ import { normalizeOccasionSlugs } from '@/lib/recipes/occasions';
 import { slugify } from '@/lib/utils';
 import type { RecipeDraft } from '@/lib/recipes/draft';
 import type { Database } from '@/types/supabase';
+import { FAMILY } from '@/config/family';
 
 type RecipeInsert = Database['public']['Tables']['recipes']['Insert'];
 type RecipeUpdate = Database['public']['Tables']['recipes']['Update'];
@@ -202,7 +203,7 @@ async function notifyAdminOfSubmission(args: {
   const apiKey      = process.env.RESEND_API_KEY;
   const adminEmail  = process.env.ADMIN_EMAIL;
   const fromAddress = process.env.EMAIL_FROM || 'onboarding@resend.dev';
-  const base        = process.env.NEXTAUTH_URL || 'https://bigfamilykitchen.com';
+  const base        = process.env.NEXTAUTH_URL || FAMILY.baseUrl;
   if (!apiKey || !adminEmail) return;
 
   const resend = new Resend(apiKey);

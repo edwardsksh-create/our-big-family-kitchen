@@ -15,6 +15,7 @@ import {
 import { saveRecipe, type SaveAction, type SaveOutcome } from '@/lib/recipes/save';
 import { ContributorPicker } from '@/components/contributor-picker';
 import { PhotoUploader } from '@/components/photo-uploader';
+import { FAMILY } from '@/config/family';
 
 const AUTO_SAVE_INTERVAL_MS = 30_000;
 const ADVANCE_DELAY_MS = 1500;
@@ -675,8 +676,8 @@ export function RecipeForm({
 function humanError(code: string): string {
   switch (code) {
     case 'unauthorized':       return 'You need to be signed in to save.';
-    case 'admin_only':         return 'Only Kate can do that — try “Submit for review”.';
-    case 'not_recipe_owner':   return 'Only the recipe’s contributor or Kate can edit this recipe.';
+    case 'admin_only':         return `Only ${FAMILY.adminName} can do that — try “Submit for review”.`;
+    case 'not_recipe_owner':   return `Only the recipe’s contributor or ${FAMILY.adminName} can edit this recipe.`;
     case 'missing_recipe_id':  return 'No recipe to update — try refreshing.';
     case 'missing_title':       return 'Add a title before saving.';
     case 'missing_family_line': return 'Pick a primary family line.';

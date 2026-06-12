@@ -3,8 +3,9 @@
 import { useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { composeAskDraft, type EmailRecipient } from '@/lib/recipes/ask-family';
+import { composeAskDraft, ASK_SUBJECT, type EmailRecipient } from '@/lib/recipes/ask-family';
 import { sendAskFamily } from '@/app/admin/recipes/[slug]/ask/actions';
+import { FAMILY } from '@/config/family';
 
 type Props = {
   recipeId:           string;
@@ -37,7 +38,7 @@ export function AskFamilyForm({
     if (!initialRecipient) {
       // No default — leave subject/body editable but populate the subject
       // with the canonical one. Body stays empty until a recipient is picked.
-      return { subject: 'A recipe on Our Big Family Kitchen needs your help', bodyPlain: '', bodyHtml: '' };
+      return { subject: ASK_SUBJECT, bodyPlain: '', bodyHtml: '' };
     }
     return composeAskDraft({
       recipientName:             initialRecipient.displayName,
@@ -216,8 +217,11 @@ function bodyPlainToHtml(plain: string): string {
   return paragraphs
     .map((p) => {
       const safe = esc(p).replace(/\n/g, '<br>');
-      // Italicize the brand name reference.
-      return `<p>${safe.replace(/Our Big Family Kitchen/g, '<em>Our Big Family Kitchen</em>')}</p>`;
+      // Italicize the brand name reference. The name is matched in its
+      // HTML-escaped form since `safe` is already escaped.
+      const brand = esc(FAMILY.siteName);
+      const brandRe = new RegExp(brand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      return `<p>${safe.replace(brandRe, `<em>${brand}</em>`)}</p>`;
     })
     .join('\n');
 }

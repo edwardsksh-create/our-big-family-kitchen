@@ -12,6 +12,7 @@ import { FederatedRecipeCard } from '@/components/federated-recipe-card';
 import { NativeRecipeCard } from '@/components/native-recipe-card';
 import type { FederatedRecipe } from '@/lib/federated';
 import type { NativeRecipeSummary } from '@/lib/queries/recipes';
+import { FAMILY } from '@/config/family';
 
 export const metadata = { title: 'Search' };
 export const revalidate = 60;
@@ -32,8 +33,11 @@ export default async function SearchPage({
 
       {!query ? (
         <p className="mt-6 max-w-prose text-ink-soft">
-          Type in the search box above — this collection and Aunt Laura&rsquo;s
-          cookbook are searched together.
+          {FAMILY.federation ? (
+            <>Type in the search box above — this collection and {FAMILY.federation.cookbookShortName} are searched together.</>
+          ) : (
+            <>Type in the search box above to search the collection.</>
+          )}
         </p>
       ) : (
         <Suspense fallback={<p className="mt-10 text-ink-soft">Searching…</p>}>
@@ -75,7 +79,7 @@ async function Results({ query }: { query: string }) {
   const federatedCount = results.length - nativeCount;
   const summaryParts: string[] = [];
   if (nativeCount > 0)    summaryParts.push(`${nativeCount} from this collection`);
-  if (federatedCount > 0) summaryParts.push(`${federatedCount} from Aunt Laura’s 2003 cookbook`);
+  if (federatedCount > 0 && FAMILY.federation) summaryParts.push(`${federatedCount} from ${FAMILY.federation.archiveName}`);
   const summary = summaryParts.join(' · ');
 
   return (

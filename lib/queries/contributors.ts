@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { slugify } from '@/lib/utils';
+import { FAMILY } from '@/config/family';
 
 export type FamilyLineRef = { slug: string; name: string };
 
@@ -28,7 +29,7 @@ export function displayName(c: { name: string | null; email: string }): string {
 }
 
 function isStubEmail(email: string): boolean {
-  return email.endsWith('@ourbigfamilykitchen.local');
+  return email.endsWith(FAMILY.stubEmailSuffix);
 }
 
 export async function fetchAllContributors(): Promise<ContributorSummary[]> {

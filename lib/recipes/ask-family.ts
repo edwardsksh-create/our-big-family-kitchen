@@ -4,12 +4,15 @@
 // recipient is the recipe's own contributor or someone else (e.g. asking a
 // living sibling about a deceased contributor's recipe).
 
-const STUB_EMAIL_SUFFIX = '@ourbigfamilykitchen.local';
+import { FAMILY } from '@/config/family';
 
 export function isStubEmail(email: string | null | undefined): boolean {
   if (!email) return true;
-  return email.endsWith(STUB_EMAIL_SUFFIX);
+  return email.endsWith(FAMILY.stubEmailSuffix);
 }
+
+/** Canonical subject line, shared with the form's empty-draft state. */
+export const ASK_SUBJECT = `A recipe on ${FAMILY.siteName} needs your help`;
 
 export type EmailRecipient = {
   id:          string;
@@ -76,7 +79,7 @@ export type AskDraft = {
 };
 
 export function composeAskDraft(parts: DraftParts): AskDraft {
-  const subject = 'A recipe on Our Big Family Kitchen needs your help';
+  const subject = ASK_SUBJECT;
   if (parts.isRecipientTheContributor) {
     return {
       subject,
@@ -92,25 +95,25 @@ export function composeAskDraft(parts: DraftParts): AskDraft {
 }
 
 function buildContributorBodyPlain(p: DraftParts): string {
-  return `Hi ${p.recipientName}, I'm adding recipes to the collection on Our Big Family Kitchen and ${p.recipeTitle} is missing its preparation steps. Do you remember how you make it?
+  return `Hi ${p.recipientName}, I'm adding recipes to the collection on ${FAMILY.siteName} and ${p.recipeTitle} is missing its preparation steps. Do you remember how you make it?
 
 You can log-in to the site and edit the recipe here: ${p.recipeUrl}, or just reply to this email and I'll get that updated for you.
 
 The rest of the family cooks will be so grateful!
 
 Thanks,
-Kate`;
+${FAMILY.adminName}`;
 }
 
 function buildOthersBodyPlain(p: DraftParts): string {
-  return `Hi ${p.recipientName}, I'm adding recipes to the collection on Our Big Family Kitchen and ${p.contributorName}'s ${p.recipeTitle} is missing its preparation steps. Do you remember how ${p.contributorName} made it?
+  return `Hi ${p.recipientName}, I'm adding recipes to the collection on ${FAMILY.siteName} and ${p.contributorName}'s ${p.recipeTitle} is missing its preparation steps. Do you remember how ${p.contributorName} made it?
 
 You can log-in to the site and edit the recipe here: ${p.recipeUrl}, or just reply to this email and I'll get that updated for you.
 
 The rest of the family cooks will be so grateful!
 
 Thanks,
-Kate`;
+${FAMILY.adminName}`;
 }
 
 function escapeHtml(s: string): string {
@@ -126,10 +129,10 @@ function buildContributorBodyHtml(p: DraftParts): string {
   const e = escapeHtml;
   const url = encodeURI(p.recipeUrl);
   return [
-    `<p>Hi ${e(p.recipientName)}, I'm adding recipes to the collection on <em>Our Big Family Kitchen</em> and ${e(p.recipeTitle)} is missing its preparation steps. Do you remember how you make it?</p>`,
+    `<p>Hi ${e(p.recipientName)}, I'm adding recipes to the collection on <em>${e(FAMILY.siteName)}</em> and ${e(p.recipeTitle)} is missing its preparation steps. Do you remember how you make it?</p>`,
     `<p>You can log-in to the site and edit the recipe here: <a href="${url}">${e(p.recipeUrl)}</a>, or just reply to this email and I'll get that updated for you.</p>`,
     `<p>The rest of the family cooks will be so grateful!</p>`,
-    `<p>Thanks,<br>Kate</p>`,
+    `<p>Thanks,<br>${e(FAMILY.adminName)}</p>`,
   ].join('\n');
 }
 
@@ -137,9 +140,9 @@ function buildOthersBodyHtml(p: DraftParts): string {
   const e = escapeHtml;
   const url = encodeURI(p.recipeUrl);
   return [
-    `<p>Hi ${e(p.recipientName)}, I'm adding recipes to the collection on <em>Our Big Family Kitchen</em> and ${e(p.contributorName)}'s ${e(p.recipeTitle)} is missing its preparation steps. Do you remember how ${e(p.contributorName)} made it?</p>`,
+    `<p>Hi ${e(p.recipientName)}, I'm adding recipes to the collection on <em>${e(FAMILY.siteName)}</em> and ${e(p.contributorName)}'s ${e(p.recipeTitle)} is missing its preparation steps. Do you remember how ${e(p.contributorName)} made it?</p>`,
     `<p>You can log-in to the site and edit the recipe here: <a href="${url}">${e(p.recipeUrl)}</a>, or just reply to this email and I'll get that updated for you.</p>`,
     `<p>The rest of the family cooks will be so grateful!</p>`,
-    `<p>Thanks,<br>Kate</p>`,
+    `<p>Thanks,<br>${e(FAMILY.adminName)}</p>`,
   ].join('\n');
 }

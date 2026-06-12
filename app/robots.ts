@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { FAMILY } from '@/config/family';
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -15,7 +16,7 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
-    sitemap: 'https://bigfamilykitchen.com/sitemap.xml',
-    host:    'https://bigfamilykitchen.com',
+    sitemap: `${FAMILY.baseUrl}/sitemap.xml`,
+    host:    FAMILY.baseUrl,
   };
 }

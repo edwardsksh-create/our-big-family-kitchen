@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { FAMILY } from '@/config/family';
 
 // Dead-man's switch for the nightly backup. The backup cron runs at 07:00
 // UTC and writes backup-YYYY-MM-DD.json to the private `backups` bucket;
@@ -72,7 +73,7 @@ export async function GET(req: Request) {
           `The nightly backup runs at 07:00 UTC (/api/cron/backup). Check the ` +
           `Vercel cron logs and the Supabase backups bucket. Until this is ` +
           `fixed, the most recent good backup is the one we'd restore from.\n\n` +
-          `— Our Big Family Kitchen`,
+          `— ${FAMILY.siteName}`,
       });
     } catch (err) {
       console.error('backup-watchdog: alert email failed', err);

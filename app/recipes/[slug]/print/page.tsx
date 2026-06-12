@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { PrintTrigger } from '@/components/print-trigger';
 import { sectionBySlug } from '@/lib/sections';
+import { FAMILY } from '@/config/family';
 
 export const dynamic = 'force-dynamic';
 
@@ -133,7 +134,7 @@ export default async function RecipePrintPage({ params }: { params: { slug: stri
         </section>
 
         <footer className="print-footer mt-12 text-center text-xs italic text-ink-soft print:mt-8">
-          From Our Big Family Kitchen · bigfamilykitchen.com
+          From {FAMILY.siteName} · {FAMILY.domain}
         </footer>
       </div>
     </>

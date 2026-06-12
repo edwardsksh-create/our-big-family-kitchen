@@ -3,10 +3,11 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { SECTIONS } from '@/lib/sections';
 import { FAMILY_LINES } from '@/lib/family-lines';
 import { slugify } from '@/lib/utils';
+import { FAMILY } from '@/config/family';
 
 export const revalidate = 3600; // refresh once an hour
 
-const BASE_URL = 'https://bigfamilykitchen.com';
+const BASE_URL = FAMILY.baseUrl;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

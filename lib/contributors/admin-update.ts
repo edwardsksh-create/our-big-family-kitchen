@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { slugify } from '@/lib/utils';
+import { FAMILY } from '@/config/family';
 
 export type AdminContributorPatch = {
   id:                    string;
@@ -22,7 +23,7 @@ export type AdminContributorOutcome =
   | { ok: true; slug: string }
   | { ok: false; error: string };
 
-const STUB_EMAIL_DOMAIN = '@ourbigfamilykitchen.local';
+const STUB_EMAIL_DOMAIN = FAMILY.stubEmailSuffix;
 
 export async function updateContributorAsAdmin(
   patch: AdminContributorPatch,
