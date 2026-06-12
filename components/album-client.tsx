@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDisplayName } from '@/lib/contributors/display-name';
+import { captionLead, joinNames } from '@/lib/photos/photo-caption';
 import type { FamilyPhotoFull, OccasionType } from '@/lib/queries/family-photos';
 
 type PersonOption = { ref: string; label: string };
@@ -160,31 +161,38 @@ export function AlbumClient({
           <p className="font-serif italic text-2xl text-ink-soft">No photos match those filters.</p>
         </div>
       ) : (
-        <ul className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
-          {filtered.map((p) => (
-            <li key={p.id}>
-              <button
-                type="button"
-                onClick={() => setOpenPhotoId(p.id)}
-                className="group block w-full overflow-hidden rounded-2xl border border-rule bg-paper"
-              >
-                <div className="relative aspect-[4/3] w-full">
-                  <Image
-                    src={p.public_url}
-                    alt={p.caption ?? 'Family photo'}
-                    fill
-                    sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-                    className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
-                    loading="lazy"
-                  />
-                </div>
-                {/* Captions and metadata live in the lightbox only — the
-                    grid stays purely visual so browsing feels like a
-                    photo wall. */}
-              </button>
-            </li>
+        // Decade headers between groups — the photos arrive sorted year-desc
+        // (undated last), so scrolling reads as time travel. Captions and
+        // metadata still live in the lightbox only; the grid stays a wall.
+        <div className="space-y-12">
+          {groupByDecade(filtered).map((group) => (
+            <section key={group.label}>
+              <h3 className="font-serif text-2xl text-ink">{group.label}</h3>
+              <ul className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+                {group.photos.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenPhotoId(p.id)}
+                      className="group block w-full overflow-hidden rounded-2xl border border-rule bg-paper"
+                    >
+                      <div className="relative aspect-[4/3] w-full">
+                        <Image
+                          src={p.public_url}
+                          alt={p.caption ?? 'Family photo'}
+                          fill
+                          sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+                          className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                          loading="lazy"
+                        />
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
 
       {openPhoto && (
@@ -200,6 +208,24 @@ export function AlbumClient({
       )}
     </>
   );
+}
+
+function decadeOf(year: string | null): string | null {
+  const m = year?.match(/\b(19|20)(\d)/);
+  return m ? `${m[1]}${m[2]}0s` : null;
+}
+
+/** Group an already-sorted (year desc, undated last) photo list into
+ *  contiguous decade groups for the grid's section headers. */
+function groupByDecade(photos: FamilyPhotoFull[]): { label: string; photos: FamilyPhotoFull[] }[] {
+  const groups: { label: string; photos: FamilyPhotoFull[] }[] = [];
+  for (const p of photos) {
+    const label = decadeOf(p.year) ?? 'Undated';
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.photos.push(p);
+    else groups.push({ label, photos: [p] });
+  }
+  return groups;
 }
 
 function Lightbox({
@@ -313,47 +339,55 @@ function Lightbox({
             </button>
           )}
         </div>
-        <div className="mt-4 space-y-3 text-sm text-ink-soft">
+        {/* Metadata composed as a photo-book caption line — "Thanksgiving
+            1987, at Grandma's — Nancy, Laura, and Annie (and Biscuit)" —
+            instead of labeled fields. People keep their contributor links. */}
+        <div className="mt-4 space-y-2 text-sm text-ink-soft">
           {photo.caption && <p className="font-serif text-lg italic text-ink">{photo.caption}</p>}
-          {(photo.year || photo.place) && (
-            <p>
-              {photo.year}
-              {photo.year && photo.place && ' · '}
-              {photo.place}
-            </p>
-          )}
-          {photo.people.length > 0 && (
-            <p>
-              <span className="label mr-2">People:</span>
-              {photo.people.map((p, i) => {
-                const formatted = formatDisplayName({ fullName: p.name, nickname: p.nickname, birth_name: p.birth_name });
-                const node = p.contributor_slug
-                  ? <Link href={`/contributors/${p.contributor_slug}`} className="text-ink hover:text-primary">{formatted}</Link>
-                  : <span className="text-ink">{formatted}</span>;
-                return (
-                  <span key={`${p.person_type}:${p.id}`}>
-                    {node}
-                    {i < photo.people.length - 1 && ', '}
+          {(() => {
+            const lead = captionLead({
+              occasionNames: photo.occasions.map(occasionName),
+              year:          photo.year,
+              place:         photo.place,
+            });
+            const hasPeople = photo.people.length > 0 || !!photo.additional_people;
+            if (!lead && !hasPeople && !photo.pets) return null;
+            return (
+              <p className="leading-relaxed">
+                {lead}
+                {lead && hasPeople && ' — '}
+                {photo.people.map((p, i) => {
+                  const formatted = formatDisplayName({ fullName: p.name, nickname: p.nickname, birth_name: p.birth_name });
+                  const node = p.contributor_slug
+                    ? <Link href={`/contributors/${p.contributor_slug}`} className="text-ink hover:text-primary">{formatted}</Link>
+                    : <span className="text-ink">{formatted}</span>;
+                  const isLast       = i === photo.people.length - 1;
+                  const isSecondLast = i === photo.people.length - 2;
+                  return (
+                    <span key={`${p.person_type}:${p.id}`}>
+                      {node}
+                      {!isLast && (isSecondLast && !photo.additional_people
+                        ? (photo.people.length > 2 ? ', and ' : ' and ')
+                        : ', ')}
+                    </span>
+                  );
+                })}
+                {photo.additional_people && (
+                  <span>
+                    {photo.people.length > 0 && ', and '}
+                    {photo.additional_people}
                   </span>
-                );
-              })}
-            </p>
-          )}
-          {photo.additional_people && (
-            <p><span className="label mr-2">Also:</span>{photo.additional_people}</p>
-          )}
-          {photo.pets && (
-            <p><span className="label mr-2">Pets:</span>{photo.pets}</p>
-          )}
-          {photo.occasions.length > 0 && (
-            <p><span className="label mr-2">Occasion:</span>{photo.occasions.map(occasionName).join(', ')}</p>
-          )}
+                )}
+                {photo.pets && <span> (and {joinNames(photo.pets.split(/,\s*/))})</span>}
+              </p>
+            );
+          })()}
           {photo.recipes.length > 0 && (
-            <p>
-              <span className="label mr-2">Recipes:</span>
+            <p className="font-serif italic">
+              From this table:{' '}
               {photo.recipes.map((r, i) => (
                 <span key={r.id}>
-                  <Link href={`/recipes/${r.slug}`} className="text-primary hover:underline">{r.title}</Link>
+                  <Link href={`/recipes/${r.slug}`} className="not-italic text-primary hover:underline">{r.title}</Link>
                   {i < photo.recipes.length - 1 && ', '}
                 </span>
               ))}
