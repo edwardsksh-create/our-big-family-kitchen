@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
@@ -104,29 +103,14 @@ export default async function PhotoReviewPage({
           </p>
         </div>
       ) : (
-        <>
-          <figure className="mb-8 overflow-hidden rounded-2xl border border-rule bg-paper">
-            <div className="relative" style={{ aspectRatio: '4/3' }}>
-              <Image
-                src={photo.public_url}
-                alt={photo.caption ?? 'Family photo'}
-                fill
-                priority
-                sizes="(min-width: 768px) 800px, 100vw"
-                className="object-contain"
-              />
-            </div>
-          </figure>
-
-          <PhotoReviewForm
-            photo={photo}
-            previous={previous}
-            occasions={occasions}
-            people={people}
-            recipes={recipes}
-            filterSource={filterSource}
-          />
-        </>
+        <PhotoReviewForm
+          photo={photo}
+          previous={previous}
+          occasions={occasions}
+          people={people}
+          recipes={recipes}
+          filterSource={filterSource}
+        />
       )}
     </div>
   );
