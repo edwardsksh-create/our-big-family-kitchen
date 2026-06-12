@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { fetchListedContributors } from '@/lib/queries/contributors';
+import { familyLineBySlug, FAMILY_BG } from '@/lib/family-lines';
+import { SECTION_TEXT } from '@/lib/sections';
+import { cn } from '@/lib/utils';
 
 export const metadata = { title: 'Contributors' };
 export const revalidate = 60;
@@ -20,26 +23,27 @@ export default async function ContributorsPage() {
         recipe came from.
       </p>
 
-      <ul className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-        {all.map((c) => (
-          <li key={c.id}>
-            <Link
-              href={`/contributors/${c.slug}`}
-              className="block rounded-2xl border border-rule p-6 card-hover hover:border-ink"
-            >
-              <p className="font-serif text-xl text-ink">{c.name}</p>
-              {(c.primary_family_line || c.secondary_family_line) && (
-                <p className="mt-2 text-sm text-ink-soft">
-                  {c.primary_family_line?.name}
-                  {c.secondary_family_line && (
-                    <span className="text-ink-soft/70"> · {c.secondary_family_line.name}</span>
-                  )}
-                </p>
-              )}
-              {c.bio && <p className="mt-3 text-sm text-ink-soft">{c.bio}</p>}
-            </Link>
-          </li>
-        ))}
+      {/* Brand-style colored boxes, name only — the color is the person's
+          primary family line. Families and bio live on their page. People
+          without a line get the cream tile. */}
+      <ul className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {all.map((c) => {
+          const line = c.primary_family_line ? familyLineBySlug(c.primary_family_line.slug) : undefined;
+          return (
+            <li key={c.id}>
+              <Link
+                href={`/contributors/${c.slug}`}
+                className={cn(
+                  'flex min-h-[120px] flex-col justify-end rounded-2xl p-5 card-hover',
+                  line ? FAMILY_BG[line.color] : 'bg-cream',
+                  line ? SECTION_TEXT[line.color] : 'text-ink',
+                )}
+              >
+                <span className="font-serif text-xl leading-tight md:text-2xl">{c.name}</span>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

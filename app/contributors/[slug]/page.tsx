@@ -88,6 +88,21 @@ export default async function ContributorPage({ params }: { params: { slug: stri
       {contributor.deceased && (
         <p className="mt-2 text-sm italic text-ink-soft/70">In loving memory</p>
       )}
+      {/* Family lines moved here from the index cards (which are name-only). */}
+      {(contributor.primary_family_line || contributor.secondary_family_line) && (
+        <p className="mt-2 text-sm text-ink-soft">
+          {[contributor.primary_family_line, contributor.secondary_family_line]
+            .filter((l): l is NonNullable<typeof l> => !!l)
+            .map((l, i) => (
+              <span key={l.slug}>
+                {i > 0 && ' · '}
+                <Link href={`/family-lines/${l.slug}`} className="hover:text-primary">
+                  {l.name}
+                </Link>
+              </span>
+            ))}
+        </p>
+      )}
 
       {contributor.bio && (
         <div className="prose-body mt-8 text-ink-soft">{contributor.bio}</div>
