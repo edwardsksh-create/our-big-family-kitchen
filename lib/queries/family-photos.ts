@@ -282,6 +282,28 @@ export async function fetchAllReviewedPhotos(): Promise<FamilyPhotoFull[]> {
   return hydratePhotos((data ?? []) as unknown as Joined[]);
 }
 
+/** Reviewed photos tagged with an occasion — the photo half of an occasion
+ *  page. Ordered like the album (year desc) so the grid spans the decades. */
+export async function fetchPhotosForOccasion(occasionSlug: string, limit = 12): Promise<FamilyPhotoFull[]> {
+  const db = supabaseAdmin();
+  const { data: joins } = await db
+    .from('family_photo_occasions')
+    .select('family_photo_id')
+    .eq('occasion_slug', occasionSlug);
+  const photoIds = [...new Set((joins ?? []).map((j) => j.family_photo_id))];
+  if (photoIds.length === 0) return [];
+  const { data } = await db
+    .from('family_photos')
+    .select(COMMON_SELECT)
+    .in('id', photoIds)
+    .eq('reviewed', true)
+    .eq('not_for_archive', false)
+    .order('year', { ascending: false, nullsFirst: false })
+    .order('uploaded_at', { ascending: false })
+    .limit(limit);
+  return hydratePhotos((data ?? []) as unknown as Joined[]);
+}
+
 /**
  * Album photos in which members of a family line are tagged — the line's
  * people via BOTH membership tables: contributors linked through

@@ -10,6 +10,7 @@ import { publicStatusNotes } from '@/lib/recipes/status-notes';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { fetchPhotosForRecipe } from '@/lib/queries/family-photos';
 import { fetchCommentsForRecipe } from '@/lib/queries/recipe-comments';
+import { fetchOccasionsForRecipe } from '@/lib/queries/occasions';
 import { RecipeComments } from '@/components/recipe-comments';
 import { SIGNED_OUT_COMMENT_VIEWER, type CommentViewer } from '@/lib/recipes/comment-permissions';
 import { slugify } from '@/lib/utils';
@@ -106,13 +107,14 @@ export default async function RecipePage({
   // row) can't edit even their own attributions until they sign up.
   const canEdit = isAdmin || isOwner;
 
-  const [{ data: ingredients }, { data: instructions }, { data: tagJoins }, { data: photoRows }, familyPhotos, comments] = await Promise.all([
+  const [{ data: ingredients }, { data: instructions }, { data: tagJoins }, { data: photoRows }, familyPhotos, comments, occasions] = await Promise.all([
     db.from('ingredients').select('sub_header, item_text, sort_order').eq('recipe_id', recipe.id).order('sort_order'),
     db.from('instructions').select('sub_header, body, sort_order').eq('recipe_id', recipe.id).order('sort_order'),
     db.from('recipe_tags').select('tag:tags!recipe_tags_tag_id_fkey(slug, name)').eq('recipe_id', recipe.id),
     db.from('photos').select('id, url, storage_path, caption, photo_type, sort_order').eq('recipe_id', recipe.id).order('sort_order'),
     fetchPhotosForRecipe(recipe.id),
     fetchCommentsForRecipe(recipe.id),
+    fetchOccasionsForRecipe(recipe.id),
   ]);
 
   // Resolve the comment viewer — needs the viewer's contributor id and
@@ -297,6 +299,22 @@ export default async function RecipePage({
             </>
           )}
         </div>
+
+        {/* Occasions — a quiet provenance-style doorway into the occasion
+            pages. Hidden when the recipe has none. */}
+        {occasions.length > 0 && (
+          <p className="mt-2 font-serif text-sm italic text-ink-soft">
+            On the table at{' '}
+            {occasions.map((o, i) => (
+              <span key={o.slug}>
+                <Link href={`/occasions/${o.slug}`} className="not-italic text-primary hover:underline">
+                  {o.name}
+                </Link>
+                {i < occasions.length - 1 && ' · '}
+              </span>
+            ))}
+          </p>
+        )}
 
         {/* The Section appears in the breadcrumb above; a full labeled
             "At a glance" box for that single field is redundant, so it's

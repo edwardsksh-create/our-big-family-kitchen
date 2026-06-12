@@ -76,6 +76,45 @@ export async function fetchRecentMemories(limit = 3): Promise<RecentMemory[]> {
     });
 }
 
+/** The latest memories attached to any of the given recipes — the voices
+ *  section of an occasion page. */
+export async function fetchMemoriesForRecipes(recipeIds: string[], limit = 4): Promise<RecentMemory[]> {
+  if (recipeIds.length === 0) return [];
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from('recipe_comments')
+    .select(`
+      id, body, created_at, author_contributor_id,
+      author:contributors!recipe_comments_author_contributor_id_fkey ( name, email, nickname, birth_name ),
+      recipe:recipes!recipe_comments_recipe_id_fkey ( slug, title, status )
+    `)
+    .in('recipe_id', recipeIds)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  type JoinedRow = Row & { recipe: { slug: string | null; title: string; status: string } | null };
+  return ((data ?? []) as unknown as JoinedRow[])
+    .filter((r) => r.recipe?.slug && r.recipe.status === 'published')
+    .map((r) => {
+      const fullName = r.author?.name || (r.author?.email ? r.author.email.split('@')[0] : '') || 'A family member';
+      return {
+        id:                  r.id,
+        body:                r.body,
+        createdAt:           r.created_at,
+        authorContributorId: r.author_contributor_id,
+        author: {
+          displayName: formatDisplayName({
+            fullName,
+            nickname:   r.author?.nickname,
+            birth_name: r.author?.birth_name,
+          }),
+          slug: slugify(fullName),
+        },
+        recipe: { slug: r.recipe!.slug as string, title: r.recipe!.title },
+      };
+    });
+}
+
 export async function fetchCommentsForRecipe(recipeId: string): Promise<RecipeComment[]> {
   const db = supabaseAdmin();
   const { data } = await db
