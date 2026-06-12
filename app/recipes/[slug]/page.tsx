@@ -12,6 +12,7 @@ import { fetchPhotosForRecipe } from '@/lib/queries/family-photos';
 import { fetchCommentsForRecipe } from '@/lib/queries/recipe-comments';
 import { fetchOccasionsForRecipe } from '@/lib/queries/occasions';
 import { RecipeComments } from '@/components/recipe-comments';
+import { RecipePhotoGallery } from '@/components/recipe-photo-gallery';
 import { SIGNED_OUT_COMMENT_VIEWER, type CommentViewer } from '@/lib/recipes/comment-permissions';
 import { slugify } from '@/lib/utils';
 
@@ -261,27 +262,6 @@ export default async function RecipePage({
         )}
       </nav>
 
-      {/* Edit + Print actions — hidden in print. */}
-      <p className="recipe-actions mb-4 flex flex-wrap items-center gap-4 text-sm" data-no-print>
-        {canEdit && (
-          <Link
-            href={`/recipes/${params.slug}/edit`}
-            className="font-serif italic text-ink-soft hover:text-primary"
-          >
-            Edit this recipe →
-          </Link>
-        )}
-        <a
-          href={`/recipes/${params.slug}/print`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 font-serif italic text-ink-soft hover:text-primary"
-        >
-          <Printer size={14} aria-hidden="true" />
-          Print recipe
-        </a>
-      </p>
-
       <h1 className="font-serif text-4xl leading-tight text-primary md:text-5xl">{recipe.title}</h1>
 
       <div className="mt-3">
@@ -315,6 +295,28 @@ export default async function RecipePage({
             ))}
           </p>
         )}
+
+        {/* Edit + Print actions — utility sits below identity (title and
+            byline), never above it. Hidden in print. */}
+        <p className="recipe-actions mt-4 flex flex-wrap items-center gap-4 text-sm" data-no-print>
+          {canEdit && (
+            <Link
+              href={`/recipes/${params.slug}/edit`}
+              className="font-serif italic text-ink-soft hover:text-primary"
+            >
+              Edit this recipe →
+            </Link>
+          )}
+          <a
+            href={`/recipes/${params.slug}/print`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 font-serif italic text-ink-soft hover:text-primary"
+          >
+            <Printer size={14} aria-hidden="true" />
+            Print recipe
+          </a>
+        </p>
 
         {/* The Section appears in the breadcrumb above; a full labeled
             "At a glance" box for that single field is redundant, so it's
@@ -422,29 +424,12 @@ export default async function RecipePage({
       {dishPhotos.length > 1 && (
         <section className="mt-12" data-no-print>
           <p className="label">More photos of this dish</p>
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {dishPhotos.slice(1).map((p, i) => (
-              <li key={p.id}>
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block overflow-hidden rounded-2xl border border-rule"
-                  title="Open full size"
-                >
-                  <div className="relative aspect-[4/3] w-full">
-                    <Image
-                      src={p.url}
-                      alt={p.caption || `${recipe.title} photo ${i + 2}`}
-                      fill
-                      sizes="(min-width: 1024px) 30vw, 50vw"
-                      className="object-cover"
-                    />
-                  </div>
-                </a>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-4">
+            <RecipePhotoGallery
+              photos={dishPhotos.slice(1).map((p) => ({ id: p.id, url: p.url, caption: p.caption }))}
+              altPrefix={`${recipe.title} photo`}
+            />
+          </div>
         </section>
       )}
 
@@ -469,6 +454,13 @@ export default async function RecipePage({
               </li>
             ))}
           </ul>
+          {familyPhotos.length > 3 && (
+            <p className="mt-4 text-sm italic text-ink-soft">
+              <Link href="/album" className="hover:text-primary">
+                See all {familyPhotos.length} family photos in the album →
+              </Link>
+            </p>
+          )}
         </section>
       )}
 
@@ -480,29 +472,13 @@ export default async function RecipePage({
               ? "Photographed from Lucy's collection."
               : 'Photographed from the original.'}
           </p>
-          <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {sourcePhotos.map((p, i) => (
-              <li key={p.id}>
-                <a
-                  href={p.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block overflow-hidden rounded-2xl border border-rule"
-                  title="Open full size"
-                >
-                  <div className="relative aspect-[4/5] w-full">
-                    <Image
-                      src={p.url}
-                      alt={p.caption || `Original page ${i + 1}`}
-                      fill
-                      sizes="(min-width: 1024px) 30vw, 50vw"
-                      className="object-cover"
-                    />
-                  </div>
-                </a>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-6">
+            <RecipePhotoGallery
+              photos={sourcePhotos.map((p) => ({ id: p.id, url: p.url, caption: p.caption }))}
+              aspect="4/5"
+              altPrefix="Original page"
+            />
+          </div>
         </section>
       )}
 
