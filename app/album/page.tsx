@@ -31,6 +31,10 @@ export default async function AlbumPage({
   ]);
 
   const canUpload = !!viewer?.can_sign_in;
+  const isAdmin = session.user.role === 'admin';
+  const commentViewer = viewer
+    ? { isAdmin, contributorId: viewer.id, canSignIn: !!viewer.can_sign_in }
+    : null;
 
   return (
     <div className="mx-auto max-w-page px-6 py-16">
@@ -64,7 +68,8 @@ export default async function AlbumPage({
             photos={photos}
             occasions={occasions}
             initialPhotoId={initialPhotoId}
-            isAdmin={session.user.role === 'admin'}
+            isAdmin={isAdmin}
+            viewer={commentViewer}
           />
         )}
       </div>

@@ -7,7 +7,8 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { captionLead, joinNames } from '@/lib/photos/photo-caption';
-import { setHeroEligible } from '@/app/album/actions';
+import { addPhotoComment, deletePhotoComment, setHeroEligible, updatePhotoDetails } from '@/app/album/actions';
+import { canDeleteComment, canPostComment, type CommentViewer } from '@/lib/recipes/comment-permissions';
 import { PhotoEditor } from '@/components/photo-editor';
 import type { FamilyPhotoFull, OccasionType } from '@/lib/queries/family-photos';
 
@@ -18,12 +19,15 @@ export function AlbumClient({
   occasions,
   initialPhotoId = null,
   isAdmin = false,
+  viewer,
 }: {
   photos:    FamilyPhotoFull[];
   occasions: OccasionType[];
   /** Shows the admin-only hero toggle in the lightbox. The server action
    *  re-checks the role; this prop is display-only. */
   isAdmin?:  boolean;
+  /** Comment permissions for the lightbox composer (server re-checks). */
+  viewer:    CommentViewer | null;
   /** From /album?photo=<id> — recipe and contributor pages deep-link a
    *  specific photo. An id that isn't in the (reviewed) set simply doesn't
    *  open a lightbox: the find() below comes up empty and the grid shows. */
@@ -93,6 +97,16 @@ export function AlbumClient({
   }, [photos, personRef, occasion, decade, place, search]);
 
   const openPhoto = openPhotoId ? photos.find((p) => p.id === openPhotoId) ?? null : null;
+
+  // Keep the address bar in sync with the open photo so "how do I link to
+  // this photo?" is just: copy the URL. replaceState avoids polluting the
+  // back button with every lightbox click.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (openPhotoId) url.searchParams.set('photo', openPhotoId);
+    else url.searchParams.delete('photo');
+    window.history.replaceState(null, '', url);
+  }, [openPhotoId]);
 
   // Position of the open photo inside the *filtered* set so next/prev paging
   // respects whichever filter is active. -1 when the open photo doesn't
@@ -207,6 +221,7 @@ export function AlbumClient({
           photo={openPhoto}
           occasions={occasions}
           isAdmin={isAdmin}
+          viewer={viewer}
           onClose={() => setOpenPhotoId(null)}
           hasPrev={hasPrev}
           hasNext={hasNext}
@@ -240,6 +255,7 @@ function Lightbox({
   photo,
   occasions,
   isAdmin,
+  viewer,
   onClose,
   hasPrev,
   hasNext,
@@ -249,6 +265,7 @@ function Lightbox({
   photo: FamilyPhotoFull;
   occasions: OccasionType[];
   isAdmin: boolean;
+  viewer: CommentViewer | null;
   onClose: () => void;
   hasPrev: boolean;
   hasNext: boolean;
@@ -410,8 +427,10 @@ function Lightbox({
               ))}
             </p>
           )}
+          <PhotoComments photo={photo} viewer={viewer} />
           {isAdmin && (
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <DetailsEditor photo={photo} />
               <HeroToggle photo={photo} />
               <button
                 type="button"
@@ -441,7 +460,7 @@ function HeroToggle({ photo }: { photo: FamilyPhotoFull }) {
     startTransition(async () => {
       const res = await setHeroEligible(photo.id, !photo.hero_eligible);
       if (!res.ok) {
-        setError('Couldn\u2019t save — try again.');
+        setError('Couldn’t save — try again.');
         return;
       }
       router.refresh();
@@ -461,9 +480,143 @@ function HeroToggle({ photo }: { photo: FamilyPhotoFull }) {
         disabled={pending}
         className="rounded-full border border-rule bg-paper px-3 py-1 text-xs text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
       >
-        {pending ? 'Saving\u2026' : photo.hero_eligible ? 'Take it off' : 'Show on the home page'}
+        {pending ? 'Saving…' : photo.hero_eligible ? 'Take it off' : 'Show on the home page'}
       </button>
       {error && <span className="text-xs italic text-accent">{error}</span>}
+    </div>
+  );
+}
+
+/** Memories on a photo — the same communal layer recipes have. */
+function PhotoComments({ photo, viewer }: { photo: FamilyPhotoFull; viewer: CommentViewer | null }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [draft, setDraft] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const mayPost = viewer ? canPostComment(viewer) : false;
+
+  function post() {
+    const body = draft.trim();
+    if (!body) return;
+    setError(null);
+    startTransition(async () => {
+      const res = await addPhotoComment({ photoId: photo.id, body });
+      if (!res.ok) { setError('Couldn’t save — try again.'); return; }
+      setDraft('');
+      router.refresh();
+    });
+  }
+  function remove(commentId: string) {
+    if (!confirm('Delete this memory?')) return;
+    startTransition(async () => {
+      const res = await deletePhotoComment(commentId);
+      if (!res.ok) { setError('Couldn’t delete — try again.'); return; }
+      router.refresh();
+    });
+  }
+
+  if (photo.comments.length === 0 && !mayPost) return null;
+  return (
+    <div className="border-t border-rule pt-3">
+      {photo.comments.length > 0 && (
+        <ul className="space-y-3">
+          {photo.comments.map((c) => (
+            <li key={c.id}>
+              <p className="text-ink">
+                <span className="font-serif italic">“{c.body}\u201D</span>
+                <span className="text-ink-soft"> — {c.author.displayName}</span>
+                {viewer && canDeleteComment(viewer, { authorContributorId: c.authorContributorId }) && (
+                  <button
+                    type="button"
+                    onClick={() => remove(c.id)}
+                    disabled={pending}
+                    className="ml-2 text-xs italic text-ink-soft hover:text-accent disabled:opacity-50"
+                  >
+                    delete
+                  </button>
+                )}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+      {mayPost && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={draft}
+            onChange={(e) => { setDraft(e.target.value); setError(null); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); post(); } }}
+            placeholder="Remember this day? Add a memory…"
+            className="min-w-[16rem] flex-1 rounded-full border border-rule bg-paper px-4 py-2 text-sm text-ink outline-none focus:border-ink focus:ring-2 focus:ring-ink/10"
+          />
+          <button
+            type="button"
+            onClick={post}
+            disabled={pending || draft.trim().length === 0}
+            className="rounded-full bg-primary px-4 py-2 font-sans text-sm text-paper transition-colors hover:bg-ink disabled:opacity-50"
+          >
+            {pending ? 'Saving…' : 'Add memory'}
+          </button>
+          {error && <span className="text-sm italic text-accent">{error}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Admin-only: fix caption / year / place in place. */
+function DetailsEditor({ photo }: { photo: FamilyPhotoFull }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [caption, setCaption] = useState(photo.caption ?? '');
+  const [year, setYear] = useState(photo.year ?? '');
+  const [place, setPlace] = useState(photo.place ?? '');
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function save() {
+    setError(null);
+    startTransition(async () => {
+      const res = await updatePhotoDetails(photo.id, { caption, year, place });
+      if (!res.ok) { setError('Couldn’t save — try again.'); return; }
+      router.refresh();
+      setOpen(false);
+    });
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => { setCaption(photo.caption ?? ''); setYear(photo.year ?? ''); setPlace(photo.place ?? ''); setOpen(true); }}
+        className="mt-3 rounded-full border border-rule bg-paper px-3 py-1 text-xs text-ink-soft hover:border-ink hover:text-ink"
+      >
+        Edit details
+      </button>
+    );
+  }
+  return (
+    <div className="mt-3 w-full space-y-2 rounded-xl border border-rule bg-cream/30 p-3">
+      <input value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Caption"
+        className="w-full rounded-lg border border-rule bg-paper px-3 py-1.5 text-sm" />
+      <div className="flex flex-wrap gap-2">
+        <input value={year} onChange={(e) => setYear(e.target.value)} placeholder="Year"
+          className="w-36 rounded-lg border border-rule bg-paper px-3 py-1.5 text-sm" />
+        <input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Place"
+          className="min-w-[10rem] flex-1 rounded-lg border border-rule bg-paper px-3 py-1.5 text-sm" />
+      </div>
+      <div className="flex items-center gap-2">
+        <button type="button" onClick={save} disabled={pending}
+          className="rounded-full bg-primary px-4 py-1.5 text-sm text-paper hover:bg-ink disabled:opacity-50">
+          {pending ? 'Saving…' : 'Save'}
+        </button>
+        <button type="button" onClick={() => setOpen(false)} disabled={pending}
+          className="rounded-full border border-rule bg-paper px-4 py-1.5 text-sm text-ink-soft hover:border-ink disabled:opacity-50">
+          Cancel
+        </button>
+        {error && <span className="text-sm italic text-accent">{error}</span>}
+      </div>
     </div>
   );
 }

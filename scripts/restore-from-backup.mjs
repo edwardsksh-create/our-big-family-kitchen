@@ -58,6 +58,7 @@ export const INSERT_ORDER = [
   'family_photo_people',
   'family_photo_occasions',
   'family_photo_recipes',
+  'family_photo_comments',
 ];
 
 // First column = the NOT NULL column used as the match-all delete filter
@@ -85,17 +86,19 @@ export const TABLE_KEYS = {
   family_photo_people:         ['family_photo_id', 'person_type'],
   family_photo_occasions:      ['family_photo_id', 'occasion_slug'],
   family_photo_recipes:        ['family_photo_id', 'recipe_id'],
+  family_photo_comments:       ['id'],
 };
 
 // Must match SCHEMA_VERSION in lib/backup/tables.ts (CI-enforced). A backup
 // produced under a different schema version is refused without --force.
-export const EXPECTED_SCHEMA_VERSION = '0029';
+export const EXPECTED_SCHEMA_VERSION = '0030';
 
 // Tables that carry a created_at column — used for the "newer rows exist"
 // staleness check.
 const TABLES_WITH_CREATED_AT = [
   'contributors', 'recipes', 'submissions', 'invitations',
   'federated_recipes', 'recipe_comments', 'family_photos', 'family_members',
+  'family_photo_comments',
 ];
 
 function parseArgs(argv) {

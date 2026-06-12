@@ -43,6 +43,7 @@ export const BACKUP_TABLES = [
   'family_photo_people',
   'family_photo_occasions',
   'family_photo_recipes',
+  'family_photo_comments',
 ] as const satisfies readonly PublicTableName[];
 
 export type BackupTableName = (typeof BACKUP_TABLES)[number];
@@ -81,10 +82,11 @@ export const TABLE_KEYS: Record<BackupTableName, readonly string[]> = {
   family_photo_people:         ['family_photo_id', 'person_type'],
   family_photo_occasions:      ['family_photo_id', 'occasion_slug'],
   family_photo_recipes:        ['family_photo_id', 'recipe_id'],
+  family_photo_comments:       ['id'],
 };
 
 // Bumped whenever a new migration lands. The restore script refuses a
 // backup whose schema_version doesn't match what it expects (--force to
 // override), so a stale backup can't be silently restored into a schema
 // it no longer describes.
-export const SCHEMA_VERSION = '0029';
+export const SCHEMA_VERSION = '0030';

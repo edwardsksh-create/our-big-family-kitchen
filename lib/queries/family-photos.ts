@@ -18,6 +18,14 @@ export type FamilyPhotoTagRecipe = {
   title: string;
 };
 
+export type PhotoComment = {
+  id:                  string;
+  body:                string;
+  createdAt:           string;
+  authorContributorId: string;
+  author: { displayName: string; slug: string };
+};
+
 export type FamilyPhotoFull = {
   id:           string;
   storage_path: string;
@@ -44,6 +52,7 @@ export type FamilyPhotoFull = {
   people:       FamilyPhotoTagPerson[];
   occasions:    string[];
   recipes:      FamilyPhotoTagRecipe[];
+  comments:     PhotoComment[];
 };
 
 type Joined = {
@@ -78,9 +87,22 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
   // people-lookup queries below.
   const signedUrlsPromise = familyPhotoSignedUrls(rows.map((r) => r.storage_path));
 
+  // Comments for the whole set, chunked under PostgREST's URL limits.
+  type CommentRow = { id: string; family_photo_id: string; body: string; created_at: string; author_contributor_id: string };
+  const commentRows: CommentRow[] = [];
+  const photoIds = rows.map((r) => r.id);
+  for (let i = 0; i < photoIds.length; i += 100) {
+    const { data: chunk } = await db
+      .from('family_photo_comments')
+      .select('id, family_photo_id, body, created_at, author_contributor_id')
+      .in('family_photo_id', photoIds.slice(i, i + 100))
+      .order('created_at', { ascending: true });
+    commentRows.push(...((chunk ?? []) as CommentRow[]));
+  }
+
   // Pull all referenced contributors + family_members in one shot. The
-  // uploaded_by_id (submitter for family-submitted photos) is also a
-  // contributor reference, so we resolve it through the same lookup.
+  // uploaded_by_id (submitter) and comment authors are contributor
+  // references too, so they resolve through the same lookup.
   const contributorIds = new Set<string>();
   const familyMemberIds = new Set<string>();
   for (const r of rows) {
@@ -90,6 +112,7 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
     }
     if (r.uploaded_by_id) contributorIds.add(r.uploaded_by_id);
   }
+  for (const c of commentRows) contributorIds.add(c.author_contributor_id);
 
   const [{ data: contribRows }, { data: memberRows }] = await Promise.all([
     contributorIds.size > 0
@@ -166,6 +189,22 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
         contributor_slug: m?.contributor_slug ?? null,
       };
     }),
+    comments: commentRows
+      .filter((c) => c.family_photo_id === r.id)
+      .map((c) => {
+        const a = contribById.get(c.author_contributor_id);
+        const fullName = a?.name || 'A family member';
+        return {
+          id:                  c.id,
+          body:                c.body,
+          createdAt:           c.created_at,
+          authorContributorId: c.author_contributor_id,
+          author: {
+            displayName: formatDisplayName({ fullName, nickname: a?.nickname, birth_name: a?.birth_name }),
+            slug: slugify(fullName),
+          },
+        };
+      }),
     occasions: r.occasions.map((o) => o.occasion_slug),
     recipes: r.recipes
       .map((rr) => rr.recipe)

@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import crypto from 'node:crypto';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { canDeleteComment, canPostComment, type CommentViewer } from '@/lib/recipes/comment-permissions';
 
 const FAMILY_PHOTO_BUCKET = 'family-photos';
 
@@ -121,6 +122,100 @@ export async function applyPhotoEdits(
   }
 
   revalidatePath('/');
+  revalidatePath('/album');
+  return { ok: true };
+}
+
+
+const MAX_COMMENT_LENGTH = 2000;
+
+async function resolveViewer(): Promise<CommentViewer | null> {
+  const session = await auth();
+  const email = session?.user?.email?.toLowerCase();
+  if (!email) return null;
+  const isAdmin = (session?.user?.role ?? '') === 'admin';
+  const { data } = await supabaseAdmin()
+    .from('contributors')
+    .select('id, can_sign_in')
+    .ilike('email', email)
+    .maybeSingle();
+  if (!data) return null;
+  return { isAdmin, contributorId: data.id, canSignIn: !!data.can_sign_in };
+}
+
+export type PhotoDetailsResult = { ok: true } | { ok: false; error: string };
+
+/** Admin-only: fix a photo's caption / year / place after review. */
+export async function updatePhotoDetails(
+  photoId: string,
+  details: { caption: string; year: string; place: string },
+): Promise<PhotoDetailsResult> {
+  const session = await auth();
+  if (!session?.user || session.user.role !== 'admin') {
+    return { ok: false, error: 'not_authorized' };
+  }
+  const trimmed = (v: string) => v.trim() || null;
+  const { error } = await supabaseAdmin()
+    .from('family_photos')
+    .update({ caption: trimmed(details.caption), year: trimmed(details.year), place: trimmed(details.place) })
+    .eq('id', photoId);
+  if (error) {
+    console.error('updatePhotoDetails failed:', error);
+    return { ok: false, error: 'update_failed' };
+  }
+  revalidatePath('/album');
+  revalidatePath('/');
+  return { ok: true };
+}
+
+export type AddPhotoCommentResult =
+  | { ok: true; commentId: string }
+  | { ok: false; error: 'unauthorized' | 'cannot_post' | 'invalid_body' | 'photo_not_found' | 'insert_failed' };
+
+/** Post a memory on a photo — same rules as recipe memories: any signed-in
+ *  contributor with can_sign_in can post; only the commenter's permission
+ *  matters. */
+export async function addPhotoComment(input: { photoId: string; body: string }): Promise<AddPhotoCommentResult> {
+  const viewer = await resolveViewer();
+  if (!viewer) return { ok: false, error: 'unauthorized' };
+  if (!canPostComment(viewer)) return { ok: false, error: 'cannot_post' };
+  const body = (input.body ?? '').trim();
+  if (body.length === 0 || body.length > MAX_COMMENT_LENGTH) return { ok: false, error: 'invalid_body' };
+
+  const db = supabaseAdmin();
+  const { data: photo } = await db.from('family_photos').select('id').eq('id', input.photoId).maybeSingle();
+  if (!photo) return { ok: false, error: 'photo_not_found' };
+
+  const { data: inserted, error } = await db
+    .from('family_photo_comments')
+    .insert({ family_photo_id: input.photoId, author_contributor_id: viewer.contributorId!, body })
+    .select('id')
+    .single();
+  if (error || !inserted) return { ok: false, error: 'insert_failed' };
+  revalidatePath('/album');
+  return { ok: true, commentId: inserted.id };
+}
+
+export type DeletePhotoCommentResult =
+  | { ok: true }
+  | { ok: false; error: 'unauthorized' | 'forbidden' | 'comment_not_found' | 'delete_failed' };
+
+export async function deletePhotoComment(commentId: string): Promise<DeletePhotoCommentResult> {
+  const viewer = await resolveViewer();
+  if (!viewer) return { ok: false, error: 'unauthorized' };
+
+  const db = supabaseAdmin();
+  const { data: comment } = await db
+    .from('family_photo_comments')
+    .select('id, author_contributor_id')
+    .eq('id', commentId)
+    .maybeSingle();
+  if (!comment) return { ok: false, error: 'comment_not_found' };
+  if (!canDeleteComment(viewer, { authorContributorId: comment.author_contributor_id })) {
+    return { ok: false, error: 'forbidden' };
+  }
+  const { error } = await db.from('family_photo_comments').delete().eq('id', commentId);
+  if (error) return { ok: false, error: 'delete_failed' };
   revalidatePath('/album');
   return { ok: true };
 }

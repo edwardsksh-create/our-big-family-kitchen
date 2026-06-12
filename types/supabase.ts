@@ -256,6 +256,45 @@ export type Database = {
           },
         ]
       }
+      family_photo_comments: {
+        Row: {
+          author_contributor_id: string
+          body: string
+          created_at: string
+          family_photo_id: string
+          id: string
+        }
+        Insert: {
+          author_contributor_id: string
+          body: string
+          created_at?: string
+          family_photo_id: string
+          id?: string
+        }
+        Update: {
+          author_contributor_id?: string
+          body?: string
+          created_at?: string
+          family_photo_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_photo_comments_author_contributor_id_fkey"
+            columns: ["author_contributor_id"]
+            isOneToOne: false
+            referencedRelation: "contributors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_photo_comments_family_photo_id_fkey"
+            columns: ["family_photo_id"]
+            isOneToOne: false
+            referencedRelation: "family_photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       family_photo_occasion_types: {
         Row: {
           name: string

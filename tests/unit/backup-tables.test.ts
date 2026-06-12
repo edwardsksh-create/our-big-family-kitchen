@@ -132,6 +132,8 @@ describe('restore dependency order', () => {
     ['family_photos', 'family_photo_people'],
     ['family_photos', 'family_photo_occasions'],
     ['family_photos', 'family_photo_recipes'],
+    ['family_photos', 'family_photo_comments'],
+    ['contributors', 'family_photo_comments'],
     ['family_members', 'family_photo_people'],
     ['family_photo_occasion_types', 'family_photo_occasions'],
   ];
