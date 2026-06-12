@@ -1,13 +1,31 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { SECTIONS } from '@/lib/sections';
-import { SectionCard } from '@/components/section-card';
+import { auth } from '@/auth';
+import { SECTIONS, SECTION_BG, SECTION_TEXT } from '@/lib/sections';
+import { cn } from '@/lib/utils';
 import { fetchFederatedCount } from '@/lib/queries/federated';
+import { fetchRecentMemories } from '@/lib/queries/recipe-comments';
+import { fetchRecipeIndex } from '@/lib/queries/recipes';
+import { fetchRecentReviewedPhotos, type FamilyPhotoFull } from '@/lib/queries/family-photos';
+import { RecipeIndexGrid } from '@/components/recipe-index-card';
+import { ANONYMOUS_VIEWER } from '@/lib/recipes/badges';
 
-export const revalidate = 60;
+// Per-request: the album strip is shown only to signed-in family (the album
+// itself is sign-in-only), so the page reads the session. The data sections
+// are small and the queries are the same ones the index pages already run.
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const federatedCount = await fetchFederatedCount();
+  const session = await auth();
+  const signedIn = !!session?.user;
+
+  const [federatedCount, memories, recipes, albumPhotos] = await Promise.all([
+    fetchFederatedCount(),
+    fetchRecentMemories(3),
+    fetchRecipeIndex(),
+    signedIn ? fetchRecentReviewedPhotos(6) : Promise.resolve([] as FamilyPhotoFull[]),
+  ]);
+  const recent = recipes.slice(0, 3);
 
   return (
     <div className="mx-auto max-w-page px-6">
@@ -25,7 +43,7 @@ export default async function HomePage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/recipes"  className="btn-primary">Browse recipes</Link>
-            <Link href="/sections" className="btn-ghost">Explore by recipe type</Link>
+            <Link href="/album"    className="btn-ghost">Open the album</Link>
           </div>
         </div>
 
@@ -49,22 +67,104 @@ export default async function HomePage() {
         </figure>
       </section>
 
-      {/* Browse by recipe type */}
-      <section className="py-16 md:py-20">
-        <h2 className="font-serif text-3xl text-ink md:text-4xl">Browse by recipe type</h2>
-        <p className="mt-3 max-w-prose text-ink-soft">
-          Find what fits the moment: breakfast, dinner, dessert, sides, snacks, and more.
-        </p>
-        <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {SECTIONS.map((section) => (
-            <SectionCard key={section.slug} section={section} />
+      {/* ------------------------------------------------------------------
+          The living layer: what the family added lately. Each section
+          renders only when it has content — a quiet front hall, not a feed.
+          ------------------------------------------------------------------ */}
+
+      {/* Recent family memories */}
+      {memories.length > 0 && (
+        <section className="py-14 md:py-16">
+          <h2 className="font-serif text-2xl text-ink md:text-3xl">Family memories</h2>
+          <ul className="mt-8 max-w-prose space-y-8">
+            {memories.map((m) => (
+              <li key={m.id}>
+                <blockquote className="font-serif text-lg italic leading-relaxed text-ink">
+                  “{m.body.length > 180 ? `${m.body.slice(0, 180).trimEnd()}…` : m.body}”
+                </blockquote>
+                <p className="mt-2 text-sm text-ink-soft">
+                  — {m.author.displayName}, on{' '}
+                  <Link href={`/recipes/${m.recipe.slug}`} className="text-primary hover:underline">
+                    {m.recipe.title}
+                  </Link>
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Recently added recipes */}
+      {recent.length > 0 && (
+        <section className="py-14 md:py-16">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="font-serif text-2xl text-ink md:text-3xl">New in the kitchen</h2>
+            <Link href="/recipes" className="font-serif text-sm italic text-ink-soft hover:text-primary">
+              All recipes →
+            </Link>
+          </div>
+          <div className="mt-8">
+            <RecipeIndexGrid recipes={recent} viewer={ANONYMOUS_VIEWER} />
+          </div>
+        </section>
+      )}
+
+      {/* Album strip — family only, like the album itself. */}
+      {signedIn && albumPhotos.length > 0 && (
+        <section className="py-14 md:py-16">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="font-serif text-2xl text-ink md:text-3xl">From the album</h2>
+            <Link href="/album" className="font-serif text-sm italic text-ink-soft hover:text-primary">
+              The kitchen across decades →
+            </Link>
+          </div>
+          <ul className="mt-8 grid grid-cols-3 gap-3 md:grid-cols-6">
+            {albumPhotos.map((p) => (
+              <li key={p.id} className="overflow-hidden rounded-2xl border border-rule bg-paper">
+                <Link href={`/album?photo=${p.id}`} className="block">
+                  <div className="relative aspect-square w-full">
+                    <Image
+                      src={p.public_url}
+                      alt={p.caption ?? 'Family photo'}
+                      fill
+                      sizes="(min-width: 768px) 16vw, 33vw"
+                      className="object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Browse by recipe type — demoted from the 16-tile grid to the same
+          quiet pill row /recipes uses; browsing stays one click away without
+          dominating the page. */}
+      <section className="py-14 md:py-16">
+        <h2 className="font-serif text-2xl text-ink md:text-3xl">Browse by recipe type</h2>
+        <ul className="mt-6 flex flex-wrap gap-2">
+          {SECTIONS.map((s) => (
+            <li key={s.slug}>
+              <Link
+                href={`/sections/${s.slug}`}
+                className={cn(
+                  'inline-flex items-center rounded-full px-4 py-2 font-serif text-sm transition-transform card-hover md:text-base',
+                  SECTION_BG[s.color],
+                  SECTION_TEXT[s.color],
+                )}
+              >
+                {s.name}
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
 
       {/* From Aunt Laura’s archive */}
       {federatedCount > 0 && (
-        <section className="pb-20 md:pb-24">
+        <section className="pb-20 pt-2 md:pb-24">
           <div className="rounded-2xl border border-rule bg-paper p-6 md:p-8">
             <h2 className="font-serif text-2xl text-ink md:text-3xl">From Aunt Laura’s archive</h2>
             <p className="mt-3 max-w-prose text-ink-soft">

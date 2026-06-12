@@ -255,6 +255,21 @@ export async function countPhotosNeedingEditing(): Promise<number> {
   return count ?? 0;
 }
 
+/** Most recently added reviewed photos — the home page's album strip.
+ *  Ordered by upload time (what's NEW in the archive), unlike the /album
+ *  grid's year-of-photo ordering. */
+export async function fetchRecentReviewedPhotos(limit = 6): Promise<FamilyPhotoFull[]> {
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from('family_photos')
+    .select(COMMON_SELECT)
+    .eq('reviewed', true)
+    .eq('not_for_archive', false)
+    .order('uploaded_at', { ascending: false })
+    .limit(limit);
+  return hydratePhotos((data ?? []) as unknown as Joined[]);
+}
+
 export async function fetchAllReviewedPhotos(): Promise<FamilyPhotoFull[]> {
   const db = supabaseAdmin();
   const { data } = await db
