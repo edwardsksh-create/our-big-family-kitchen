@@ -84,8 +84,8 @@ async function syncInstructions(recipeId: string, rows: RecipeDraft['instruction
 async function syncPhotos(
   recipeId: string,
   contributorId: string,
-  source: { id?: string; storage_path: string; public_url: string; caption?: string }[],
-  dish:   { id?: string; storage_path: string; public_url: string; caption?: string }[],
+  source: { id?: string; storage_path: string; public_url: string; thumb_path?: string | null; caption?: string }[],
+  dish:   { id?: string; storage_path: string; public_url: string; thumb_path?: string | null; caption?: string }[],
 ) {
   const db = supabaseAdmin();
   // Wholesale-replace approach keyed on storage_path: any existing photo
@@ -129,6 +129,7 @@ async function syncPhotos(
           contributor_id: contributorId,
           url:            photo.public_url,
           storage_path:   photo.storage_path,
+          thumb_path:     photo.thumb_path ?? null,
           caption:        photo.caption ?? null,
           photo_type:     photoType,
           sort_order:     order,

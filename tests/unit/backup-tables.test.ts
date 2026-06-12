@@ -27,8 +27,12 @@ function schemaTableNames(): string[] {
     path.resolve(__dirname, '../../types/supabase.ts'),
     'utf8',
   );
-  const tablesStart = src.indexOf('Tables: {');
-  const viewsStart  = src.indexOf('Views: {');
+  // Newer typegen emits a graphql_public schema before public — anchor on
+  // the public schema block so we parse the right Tables section.
+  const publicStart = src.indexOf('\n  public: {');
+  expect(publicStart, 'types/supabase.ts: could not find public schema block').toBeGreaterThan(-1);
+  const tablesStart = src.indexOf('Tables: {', publicStart);
+  const viewsStart  = src.indexOf('Views: {', tablesStart);
   expect(tablesStart, 'types/supabase.ts: could not find public Tables block').toBeGreaterThan(-1);
   expect(viewsStart,  'types/supabase.ts: could not find Views block').toBeGreaterThan(tablesStart);
   const block = src.slice(tablesStart, viewsStart);

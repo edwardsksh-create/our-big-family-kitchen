@@ -1,4 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { publicUrl } from '@/lib/storage/photos';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { slugify } from '@/lib/utils';
 import { sectionBySlug, type SectionColorToken } from '@/lib/sections';
@@ -128,6 +129,11 @@ export type RecipeIndexItem = {
   has_ingredients:  boolean;
   has_source_photo: boolean;
   tag_slugs:        string[];
+  /** Card image (web-sized thumb): the dish shot when one exists, else a
+   *  detail crop of the first source scan — the handwritten card IS the
+   *  photography for heritage recipes. Null → text-only card (a dignified
+   *  fallback, not an error state). */
+  card_image: { url: string; kind: 'dish' | 'source' } | null;
 };
 
 type IndexRow = {
@@ -186,7 +192,8 @@ export async function fetchRecipeIndex(): Promise<RecipeIndexItem[]> {
     return all.flat();
   }
 
-  const [ingredientRows, instructionRows, sourcePhotoRows, tagJoinRows] = await Promise.all([
+  type PhotoRow = { recipe_id: string; photo_type: 'source' | 'dish'; sort_order: number; thumb_path: string | null };
+  const [ingredientRows, instructionRows, photoRows, tagJoinRows] = await Promise.all([
     gather<{ recipe_id: string }>(async (c) => {
       const { data } = await db.from('ingredients').select('recipe_id').in('recipe_id', c);
       return (data ?? []) as { recipe_id: string }[];
@@ -195,9 +202,12 @@ export async function fetchRecipeIndex(): Promise<RecipeIndexItem[]> {
       const { data } = await db.from('instructions').select('recipe_id').in('recipe_id', c);
       return (data ?? []) as { recipe_id: string }[];
     }),
-    gather<{ recipe_id: string }>(async (c) => {
-      const { data } = await db.from('photos').select('recipe_id').in('recipe_id', c).eq('photo_type', 'source');
-      return (data ?? []) as { recipe_id: string }[];
+    gather<PhotoRow>(async (c) => {
+      const { data } = await db.from('photos')
+        .select('recipe_id, photo_type, sort_order, thumb_path')
+        .in('recipe_id', c)
+        .order('sort_order');
+      return (data ?? []) as PhotoRow[];
     }),
     gather<{ recipe_id: string; tag: { slug: string } | null }>(async (c) => {
       const { data } = await db.from('recipe_tags')
@@ -209,7 +219,23 @@ export async function fetchRecipeIndex(): Promise<RecipeIndexItem[]> {
 
   const hasIngredient  = new Set(ingredientRows.map((r) => r.recipe_id));
   const hasInstruction = new Set(instructionRows.map((r) => r.recipe_id));
-  const hasSourcePhoto = new Set(sourcePhotoRows.map((r) => r.recipe_id));
+  const hasSourcePhoto = new Set(
+    photoRows.filter((r) => r.photo_type === 'source').map((r) => r.recipe_id),
+  );
+
+  // Card image per recipe: first dish thumb wins; else first source thumb.
+  // Two passes (dish then source) with a has() guard, so a source thumb
+  // never displaces a dish thumb. Rows arrive ordered by sort_order within
+  // each chunk, so the first hit per type matches the recipe page's lead.
+  const cardImageByRecipe = new Map<string, { url: string; kind: 'dish' | 'source' }>();
+  for (const kind of ['dish', 'source'] as const) {
+    for (const r of photoRows) {
+      if (r.photo_type !== kind || !r.thumb_path) continue;
+      if (!cardImageByRecipe.has(r.recipe_id)) {
+        cardImageByRecipe.set(r.recipe_id, { url: publicUrl(r.thumb_path), kind });
+      }
+    }
+  }
 
   const tagsByRecipe = new Map<string, string[]>();
   for (const r of tagJoinRows) {
@@ -261,6 +287,7 @@ export async function fetchRecipeIndex(): Promise<RecipeIndexItem[]> {
       has_ingredients:  hasIngredient.has(row.id),
       has_source_photo: hasSourcePhoto.has(row.id),
       tag_slugs:        tagsByRecipe.get(row.id) ?? [],
+      card_image:       cardImageByRecipe.get(row.id) ?? null,
     };
   });
 }

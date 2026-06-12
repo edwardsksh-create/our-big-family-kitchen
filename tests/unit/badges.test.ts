@@ -33,6 +33,7 @@ function baseRecipe(overrides: Partial<RecipeIndexItem> = {}): RecipeIndexItem {
     has_ingredients:  false,
     has_source_photo: false,
     tag_slugs:        [],
+    card_image:       null,
     ...overrides,
   };
 }

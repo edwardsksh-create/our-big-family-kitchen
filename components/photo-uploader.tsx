@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 type UploadedResponse = {
   ok: true;
   session_id: string;
-  photos: { storage_path: string; public_url: string; size_bytes: number; mime_type: string }[];
+  photos: { storage_path: string; public_url: string; size_bytes: number; mime_type: string; thumb_path: string | null }[];
 };
 
 const ACCEPT = 'image/jpeg,image/png,image/heic,image/webp';
@@ -84,6 +84,7 @@ export function PhotoUploader({
       const added: PhotoEntry[] = body.photos.map((p) => ({
         storage_path: p.storage_path,
         public_url:   p.public_url,
+        thumb_path:   p.thumb_path,
         photo_type:   kind,
       }));
       onChange([...photos, ...added]);

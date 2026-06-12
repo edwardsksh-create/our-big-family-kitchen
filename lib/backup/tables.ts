@@ -85,4 +85,4 @@ export const TABLE_KEYS: Record<BackupTableName, readonly string[]> = {
 // backup whose schema_version doesn't match what it expects (--force to
 // override), so a stale backup can't be silently restored into a schema
 // it no longer describes.
-export const SCHEMA_VERSION = '0026';
+export const SCHEMA_VERSION = '0027';

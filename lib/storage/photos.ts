@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'node:crypto';
+import sharp from 'sharp';
 
 export const PHOTO_BUCKET             = 'recipe-photos';
 export const CONTRIBUTOR_PHOTO_BUCKET = 'contributor-photos';
@@ -36,7 +37,51 @@ export type StoredPhoto = {
   public_url:   string;
   size_bytes:   number;
   mime_type:    string;
+  /** Web-sized card derivative under thumbs/ — null when generation isn't
+   *  possible (HEIC originals; sharp's prebuilt binaries can't decode). */
+  thumb_path:   string | null;
 };
+
+// Card thumbnails: ~640px wide is plenty for a 3-up grid (next/image
+// downscales further per device), and a JPEG at this quality lands around
+// 40–120 KB versus multi-MB originals/scans.
+const THUMB_WIDTH = 640;
+const THUMB_QUALITY = 78;
+
+export function thumbPathFor(storagePath: string): string {
+  return `thumbs/${storagePath}.jpg`;
+}
+
+/** Generate and store a card thumbnail for an uploaded photo. Returns the
+ *  thumb path, or null when the source can't be decoded (HEIC) or the
+ *  upload fails — a missing thumbnail must never fail the main upload;
+ *  the card simply renders its text-only form. */
+export async function generateThumb(
+  original: Buffer,
+  storagePath: string,
+): Promise<string | null> {
+  try {
+    const bytes = await sharp(original)
+      .rotate() // honor EXIF orientation before stripping metadata
+      .resize({ width: THUMB_WIDTH, withoutEnlargement: true })
+      .jpeg({ quality: THUMB_QUALITY })
+      .toBuffer();
+    const path = thumbPathFor(storagePath);
+    const { error } = await client().storage.from(PHOTO_BUCKET).upload(path, bytes, {
+      contentType: 'image/jpeg',
+      upsert:      true,
+    });
+    if (error) {
+      console.error('thumb upload failed:', storagePath, error.message);
+      return null;
+    }
+    return path;
+  } catch (err) {
+    // Expected for HEIC sources; anything else is still non-fatal.
+    console.error('thumb generation failed:', storagePath, (err as Error).message);
+    return null;
+  }
+}
 
 export type UploadKind = 'source' | 'dish';
 
@@ -90,16 +135,20 @@ export async function uploadPhoto(
     });
   if (error) throw new Error(`Storage upload failed: ${error.message}`);
 
+  const thumbPath = await generateThumb(bytes, storagePath);
+
   return {
     storage_path: storagePath,
     public_url:   publicUrlFor(storagePath),
     size_bytes:   bytes.byteLength,
     mime_type:    mimeType,
+    thumb_path:   thumbPath,
   };
 }
 
 export async function deletePhotoByPath(storagePath: string): Promise<void> {
-  await client().storage.from(PHOTO_BUCKET).remove([storagePath]);
+  // Remove the conventional thumb alongside; remove() ignores missing paths.
+  await client().storage.from(PHOTO_BUCKET).remove([storagePath, thumbPathFor(storagePath)]);
 }
 
 export function publicUrl(storagePath: string): string {

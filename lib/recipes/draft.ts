@@ -22,6 +22,8 @@ export type PhotoEntry = {
   id?:           string;
   storage_path: string;
   public_url:   string;
+  /** Web-sized card derivative (thumbs/…); null when none could be generated. */
+  thumb_path?:  string | null;
   photo_type:   'source' | 'dish';
   caption?:     string;
 };
