@@ -426,6 +426,45 @@ export function RecipeForm({
         </div>
       </div>
 
+      {/* Occasions — toggle chips over the shared photo/recipe vocabulary
+          (same lightweight pattern as photo review). Selection only; new
+          occasion types stay managed from photo review. */}
+      <div>
+        <p className="label">Occasions</p>
+        <p className="mt-1 text-sm text-ink-soft">
+          When does this recipe come out? Holidays and gatherings connect it to the
+          photos and memories from those days.
+        </p>
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {options.occasions.map((o) => {
+            const selected = draft.occasion_slugs.includes(o.slug);
+            return (
+              <li key={o.slug}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    update(
+                      'occasion_slugs',
+                      selected
+                        ? draft.occasion_slugs.filter((s) => s !== o.slug)
+                        : [...draft.occasion_slugs, o.slug],
+                    )
+                  }
+                  aria-pressed={selected}
+                  className={
+                    selected
+                      ? 'rounded-full border border-primary bg-primary px-3 py-1 text-sm text-paper'
+                      : 'rounded-full border border-rule bg-paper px-3 py-1 text-sm text-ink-soft hover:border-ink hover:text-ink'
+                  }
+                >
+                  {o.name}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
       {/* Kitchen notes — surfaces AI-extracted margin annotations and lets the
           user add/edit/remove them. */}
       <div>

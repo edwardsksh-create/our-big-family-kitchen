@@ -43,6 +43,8 @@ export type RecipeDraft = {
   ingredients:               IngredientRow[];
   instructions:              InstructionRow[];
   tags:                      string[]; // tag slugs or free-text names
+  /** Occasion slugs from the shared family_photo_occasion_types vocabulary. */
+  occasion_slugs:            string[];
   kitchen_notes:             string[];
   source_photos:             PhotoEntry[];
   dish_photos:               PhotoEntry[];
@@ -69,7 +71,8 @@ export function emptyDraft(): RecipeDraft {
     story:        '',
     ingredients:  [{ id: newRowId(), sub_header: '', item_text: '' }],
     instructions: [{ id: newRowId(), sub_header: '', body: '' }],
-    tags:         [],
+    tags:           [],
+    occasion_slugs: [],
     kitchen_notes: [],
     source_photos: [],
     dish_photos:   [],
@@ -109,6 +112,7 @@ export function draftFromParsed(parsed: ParsedRecipe, opts?: { sourceUrl?: strin
     ingredients,
     instructions,
     tags:            [],
+    occasion_slugs:  [],
     kitchen_notes:   [],
     source_photos:   [],
     dish_photos:     [],
@@ -153,6 +157,7 @@ export function draftFromPhotoParse(
     ingredients,
     instructions,
     tags:            [],
+    occasion_slugs:  [],
     kitchen_notes:   parsed.kitchen_notes ?? [],
     source_photos:   uploadedPhotos.filter((p) => p.photo_type === 'source'),
     dish_photos:     uploadedPhotos.filter((p) => p.photo_type === 'dish'),

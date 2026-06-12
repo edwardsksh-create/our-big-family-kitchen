@@ -10,12 +10,15 @@ export type ContributorOption = {
 export type FamilyLineOption  = { id: string; slug: string; name: string };
 export type SectionOption     = { id: string; slug: string; name: string };
 export type TagOption         = { slug: string; name: string };
+export type OccasionOption    = { slug: string; name: string };
 
 export type FormOptions = {
   contributors:  ContributorOption[];
   familyLines:   FamilyLineOption[];
   sections:      SectionOption[];
   tags:          TagOption[];
+  /** The shared photo/recipe occasion vocabulary, in seed order. */
+  occasions:     OccasionOption[];
   currentContributor: ContributorOption | null;
   /** Whether the signed-in viewer is a trusted contributor (can_publish=true).
    *  Used for button labelling only — the server re-checks the flag on every
@@ -25,12 +28,13 @@ export type FormOptions = {
 
 export async function fetchFormOptions(currentEmail?: string | null): Promise<FormOptions> {
   const db = supabaseAdmin();
-  const [contribRes, flRes, secRes, tagRes, cflRes] = await Promise.all([
+  const [contribRes, flRes, secRes, tagRes, occRes, cflRes] = await Promise.all([
     // Include viewers — stubs are valid attribution targets even though they can't sign in.
     db.from('contributors').select('id, email, name, can_publish').order('name'),
     db.from('family_lines').select('id, slug, name').order('sort_order'),
     db.from('sections').select('id, slug, name').order('sort_order'),
     db.from('tags').select('slug, name').order('name'),
+    db.from('family_photo_occasion_types').select('slug, name').order('sort_order'),
     db.from('contributor_family_lines').select('contributor_id, family_line_id, rank'),
   ]);
 
@@ -63,6 +67,7 @@ export async function fetchFormOptions(currentEmail?: string | null): Promise<Fo
     familyLines: flRes.data ?? [],
     sections:    secRes.data ?? [],
     tags:        tagRes.data ?? [],
+    occasions:   occRes.data ?? [],
     currentContributor,
     currentContributorCanPublish: currentContributor ? !!canPublishById.get(currentContributor.id) : false,
   };

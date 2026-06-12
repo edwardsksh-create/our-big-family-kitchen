@@ -19,10 +19,11 @@ export async function fetchRecipeForEdit(id: string): Promise<RecipeForEdit | nu
     .maybeSingle();
   if (!row) return null;
 
-  const [{ data: ings }, { data: instrs }, { data: tagJoins }, { data: photos }] = await Promise.all([
+  const [{ data: ings }, { data: instrs }, { data: tagJoins }, { data: occJoins }, { data: photos }] = await Promise.all([
     db.from('ingredients').select('sub_header, item_text, sort_order').eq('recipe_id', id).order('sort_order'),
     db.from('instructions').select('sub_header, body, sort_order').eq('recipe_id', id).order('sort_order'),
     db.from('recipe_tags').select('tag:tags!recipe_tags_tag_id_fkey(name)').eq('recipe_id', id),
+    db.from('recipe_occasions').select('occasion_slug').eq('recipe_id', id),
     db.from('photos').select('id, url, storage_path, caption, photo_type, sort_order').eq('recipe_id', id).order('sort_order'),
   ]);
 
@@ -65,6 +66,7 @@ export async function fetchRecipeForEdit(id: string): Promise<RecipeForEdit | nu
     tags: ((tagJoins ?? []) as unknown as { tag: { name: string } | null }[])
       .map((j) => j.tag?.name)
       .filter(Boolean) as string[],
+    occasion_slugs: (occJoins ?? []).map((j) => j.occasion_slug),
     kitchen_notes: (row.kitchen_notes as string[] | null) ?? [],
     source_photos: allPhotos.filter((p) => p.photo_type === 'source'),
     dish_photos:   allPhotos.filter((p) => p.photo_type === 'dish'),

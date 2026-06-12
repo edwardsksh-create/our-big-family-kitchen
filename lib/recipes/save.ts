@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { Resend } from 'resend';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { normalizeOccasionSlugs } from '@/lib/recipes/occasions';
 import { slugify } from '@/lib/utils';
 import type { RecipeDraft } from '@/lib/recipes/draft';
 import type { Database } from '@/types/supabase';
@@ -171,6 +172,26 @@ async function syncTags(recipeId: string, names: string[]) {
   await db.from('recipe_tags').insert(
     tagIds.map((tag_id) => ({ recipe_id: recipeId, tag_id })),
   );
+}
+
+async function syncOccasions(recipeId: string, slugs: string[]) {
+  const db = supabaseAdmin();
+  // Validate against the canonical vocabulary — unknown slugs are dropped
+  // (the FK would reject them anyway; this keeps the failure graceful).
+  const { data: types } = await db.from('family_photo_occasion_types').select('slug');
+  const valid = new Set((types ?? []).map((t) => t.slug));
+  const clean = normalizeOccasionSlugs(slugs, valid);
+
+  const { error: delErr } = await db.from('recipe_occasions').delete().eq('recipe_id', recipeId);
+  if (delErr) {
+    console.error('sync occasions: delete failed', delErr);
+    return;
+  }
+  if (clean.length === 0) return;
+  const { error: insErr } = await db.from('recipe_occasions').insert(
+    clean.map((occasion_slug) => ({ recipe_id: recipeId, occasion_slug })),
+  );
+  if (insErr) console.error('sync occasions: insert failed', insErr);
 }
 
 async function notifyAdminOfSubmission(args: {
@@ -346,6 +367,7 @@ export async function saveRecipe(
       syncIngredients(recipeId!, draft.ingredients),
       syncInstructions(recipeId!, draft.instructions),
       syncTags(recipeId!, draft.tags),
+      syncOccasions(recipeId!, draft.occasion_slugs ?? []),
       syncPhotos(recipeId!, contributor.id, draft.source_photos ?? [], draft.dish_photos ?? []),
     ]);
   }
