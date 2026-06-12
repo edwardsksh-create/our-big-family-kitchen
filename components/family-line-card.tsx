@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { type FamilyLine, FAMILY_TEXT } from '@/lib/family-lines';
+import { type FamilyLine, FAMILY_BG } from '@/lib/family-lines';
 import { cn } from '@/lib/utils';
 
 export function FamilyLineCard({
@@ -11,7 +11,7 @@ export function FamilyLineCard({
   members?: string[];
   size?: 'large' | 'small';
 }) {
-  const colorClass = FAMILY_TEXT[line.color];
+  const swatchClass = FAMILY_BG[line.color];
 
   return (
     <Link
@@ -22,21 +22,23 @@ export function FamilyLineCard({
       )}
     >
       <p className="label mb-2">Family line</p>
+      {/* Name and members render in ink — the line's color appears only as
+          the swatch dot. The light tokens (gold, sky, blush) fail contrast
+          as text on paper, and names must be legible everywhere. */}
       <h3
         className={cn(
-          'font-serif',
-          colorClass,
+          'flex items-center gap-2.5 font-serif text-ink',
           size === 'large' ? 'text-3xl md:text-4xl' : 'text-2xl',
         )}
       >
+        <span aria-hidden="true" className={cn('h-3 w-3 shrink-0 rounded-full', swatchClass)} />
         {line.name}
       </h3>
 
       {members && members.length > 0 ? (
         <p
           className={cn(
-            'mt-3',
-            colorClass,
+            'mt-3 text-ink',
             size === 'large' ? 'text-base' : 'text-sm',
           )}
         >

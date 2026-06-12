@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { notFound } from 'next/navigation';
-import { FAMILY_LINES, familyLineBySlug, FAMILY_TEXT } from '@/lib/family-lines';
+import { FAMILY_LINES, familyLineBySlug, FAMILY_BG } from '@/lib/family-lines';
 import { fetchFederatedCount } from '@/lib/queries/federated';
 import { fetchPublishedRecipesForFamilyLine } from '@/lib/queries/recipes';
 import { fetchFamilyMembersForLine, type FamilyMember } from '@/lib/queries/family-members';
@@ -63,14 +63,15 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
     federation ? fetchFederatedCount() : Promise.resolve(0),
   ]);
 
-  const colorClass = FAMILY_TEXT[line.color];
-
   return (
     <div className="mx-auto max-w-page px-6 py-16">
       <p className="label mb-3">Family line</p>
-      <h1 className={cn('font-serif text-5xl leading-tight md:text-6xl', colorClass)}>
+      {/* Ink heading + a short rule in the line's color — the light tokens
+          (gold, sky) fail contrast as text on paper. */}
+      <h1 className="font-serif text-5xl leading-tight text-ink md:text-6xl">
         {line.name} family recipes
       </h1>
+      <div aria-hidden="true" className={cn('mt-5 h-1.5 w-24 rounded-full', FAMILY_BG[line.color])} />
       <p className="mt-6 max-w-prose text-lg text-ink-soft">
         A collection of recipes connected to this branch of the family.
       </p>
@@ -93,7 +94,7 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
 
       {/* Recipes from this line */}
       <section className="mt-16">
-        <h2 className={cn('font-serif text-3xl md:text-4xl', colorClass)}>
+        <h2 className="font-serif text-3xl text-ink md:text-4xl">
           Recipes from this line
         </h2>
         {native.length > 0 ? (

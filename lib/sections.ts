@@ -63,21 +63,10 @@ export const SECTION_BG: Record<SectionColorToken, string> = {
   navy:     'bg-card-navy',
 };
 
-// Heading text color for in-page section headings (used on contributor pages
-// where each section group is colored to match its section card).
-export const SECTION_HEADING_TEXT: Record<SectionColorToken, string> = {
-  blush:    'text-card-blush',
-  olive:    'text-card-olive',
-  sky:      'text-card-sky',
-  gold:     'text-card-gold',
-  mauve:    'text-card-mauve',
-  slate:    'text-card-slate',
-  rose:     'text-card-rose',
-  burgundy: 'text-card-burgundy',
-  navy:     'text-card-navy',
-};
-
 // Light text reads better on every section color in this palette.
+// NOTE: these tokens are for text ON colored tiles. Never render the card
+// colors AS text on paper — the light ones (blush, sky, gold) fail contrast.
+// In-page section identity uses an ink heading + a small SECTION_BG swatch.
 export const SECTION_TEXT: Record<SectionColorToken, string> = {
   blush:    'text-ink',
   olive:    'text-paper',

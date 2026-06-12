@@ -37,15 +37,17 @@ export function familyLineBySlug(slug: string): FamilyLine | undefined {
 export const PRIMARY_LINES   = FAMILY_LINES.filter((f) => f.type === 'primary');
 export const SECONDARY_LINES = FAMILY_LINES.filter((f) => f.type === 'secondary');
 
-// Tailwind text-color class per family color token. Used to render the family
-// name and members list in the family's brand color on cards and headers.
-export const FAMILY_TEXT: Record<FamilyColorToken, string> = {
-  burgundy: 'text-card-burgundy',
-  gold:     'text-card-gold',
-  rose:     'text-card-rose',
-  sky:      'text-card-sky',
-  olive:    'text-card-olive',
-  slate:    'text-card-slate',
-  navy:     'text-card-navy',
-  mauve:    'text-card-mauve',
+// Tailwind background class per family color token. The line's color renders
+// only as an ACCENT (swatch dot on cards, rule under the line-page h1) —
+// never as text on paper: the light tokens (blush, sky, gold) fail contrast
+// badly, and family members' names must be fully legible everywhere.
+export const FAMILY_BG: Record<FamilyColorToken, string> = {
+  burgundy: 'bg-card-burgundy',
+  gold:     'bg-card-gold',
+  rose:     'bg-card-rose',
+  sky:      'bg-card-sky',
+  olive:    'bg-card-olive',
+  slate:    'bg-card-slate',
+  navy:     'bg-card-navy',
+  mauve:    'bg-card-mauve',
 };

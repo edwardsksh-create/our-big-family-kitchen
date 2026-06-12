@@ -6,7 +6,7 @@ import { fetchPhotosForContributor } from '@/lib/queries/family-photos';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { NativeRecipeSummary } from '@/lib/queries/recipes';
 import { NativeRecipeGrid } from '@/components/native-recipe-card';
-import { SECTIONS, SECTION_HEADING_TEXT } from '@/lib/sections';
+import { SECTIONS, SECTION_BG } from '@/lib/sections';
 import { contributorPhotoUrl } from '@/lib/storage/photos';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { cn } from '@/lib/utils';
@@ -103,12 +103,13 @@ export default async function ContributorPage({ params }: { params: { slug: stri
             if (inSection.length === 0) return null;
             return (
               <section key={section.slug}>
-                <h3
-                  className={cn(
-                    'font-serif text-2xl md:text-3xl',
-                    SECTION_HEADING_TEXT[section.color],
-                  )}
-                >
+                {/* Ink heading + small section-color swatch — the light
+                    tokens (blush, sky, gold) fail contrast as text on paper. */}
+                <h3 className="flex items-center gap-2.5 font-serif text-2xl text-ink md:text-3xl">
+                  <span
+                    aria-hidden="true"
+                    className={cn('h-2.5 w-2.5 shrink-0 rounded-full', SECTION_BG[section.color])}
+                  />
                   {section.name}
                 </h3>
                 <p className="label mt-1 text-ink-soft">
