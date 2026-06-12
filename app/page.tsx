@@ -84,28 +84,6 @@ export default async function HomePage() {
           renders only when it has content — a quiet front hall, not a feed.
           ------------------------------------------------------------------ */}
 
-      {/* Recent family memories */}
-      {memories.length > 0 && (
-        <section className="py-5 md:py-6">
-          <h2 className="font-serif text-2xl text-ink md:text-3xl">Family memories</h2>
-          <ul className="mt-6 max-w-prose space-y-7">
-            {memories.map((m) => (
-              <li key={m.id}>
-                <blockquote className="font-serif text-lg italic leading-relaxed text-ink">
-                  “{m.body.length > 180 ? `${m.body.slice(0, 180).trimEnd()}…` : m.body}”
-                </blockquote>
-                <p className="mt-2 text-sm text-ink-soft">
-                  — {m.author.displayName}, on{' '}
-                  <Link href={`/recipes/${m.recipe.slug}`} className="text-primary hover:underline">
-                    {m.recipe.title}
-                  </Link>
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       {/* Recently added recipes */}
       {recent.length > 0 && (
         <section className="py-5 md:py-6">
@@ -145,6 +123,28 @@ export default async function HomePage() {
                     />
                   </div>
                 </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Recent family memories */}
+      {memories.length > 0 && (
+        <section className="py-5 md:py-6">
+          <h2 className="font-serif text-2xl text-ink md:text-3xl">Family memories</h2>
+          <ul className="mt-6 max-w-prose space-y-7">
+            {memories.map((m) => (
+              <li key={m.id}>
+                <blockquote className="font-serif text-lg italic leading-relaxed text-ink">
+                  “{m.body.length > 180 ? `${m.body.slice(0, 180).trimEnd()}…` : m.body}”
+                </blockquote>
+                <p className="mt-2 text-sm text-ink-soft">
+                  — {m.author.displayName}, on{' '}
+                  <Link href={`/recipes/${m.recipe.slug}`} className="text-primary hover:underline">
+                    {m.recipe.title}
+                  </Link>
+                </p>
               </li>
             ))}
           </ul>
