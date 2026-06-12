@@ -1,9 +1,11 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { FAMILY_LINES, familyLineBySlug, FAMILY_BG } from '@/lib/family-lines';
 import { fetchFederatedCount } from '@/lib/queries/federated';
 import { fetchPublishedRecipesForFamilyLine } from '@/lib/queries/recipes';
+import { fetchPhotosForFamilyLine } from '@/lib/queries/family-photos';
 import { fetchFamilyMembersForLine, type FamilyMember } from '@/lib/queries/family-members';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { NativeRecipeGrid } from '@/components/native-recipe-card';
@@ -57,9 +59,10 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
   if (!line) notFound();
 
   const federation = FEDERATED_LINES[line.slug];
-  const [native, members, federatedCount] = await Promise.all([
+  const [native, members, photos, federatedCount] = await Promise.all([
     fetchPublishedRecipesForFamilyLine(line.slug),
     fetchFamilyMembersForLine(line.slug),
+    fetchPhotosForFamilyLine(line.slug, 12),
     federation ? fetchFederatedCount() : Promise.resolve(0),
   ]);
 
@@ -72,8 +75,10 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
         {line.name} family recipes
       </h1>
       <div aria-hidden="true" className={cn('mt-5 h-1.5 w-24 rounded-full', FAMILY_BG[line.color])} />
-      <p className="mt-6 max-w-prose text-lg text-ink-soft">
-        A collection of recipes connected to this branch of the family.
+      {/* The line's blurb — the personality copy that used to live only on
+          cards belongs on the page itself. */}
+      <p className="mt-6 max-w-prose font-serif text-lg italic text-ink-soft">
+        {line.blurb}
       </p>
 
       <section className="mt-8 max-w-prose">
@@ -110,6 +115,38 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
           </div>
         )}
       </section>
+
+      {/* From the album — photos in which this line's people are tagged.
+          Hidden entirely when none exist; a line with no tagged photos
+          shows no empty heading. */}
+      {photos.length > 0 && (
+        <section className="mt-16">
+          <div className="flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="font-serif text-3xl text-ink md:text-4xl">From the album</h2>
+            <Link href="/album" className="font-serif text-sm italic text-ink-soft hover:text-primary">
+              The kitchen across decades →
+            </Link>
+          </div>
+          <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+            {photos.map((p) => (
+              <li key={p.id} className="overflow-hidden rounded-2xl border border-rule bg-paper">
+                <Link href={`/album?photo=${p.id}`} className="block">
+                  <div className="relative aspect-[4/3] w-full">
+                    <Image
+                      src={p.public_url}
+                      alt={p.caption ?? 'Family photo'}
+                      fill
+                      sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+                      className="object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Federated banner — Leusch only */}
       {federation && federatedCount > 0 && (

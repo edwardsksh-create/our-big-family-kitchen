@@ -21,8 +21,9 @@ export function FamilyLineCard({
         size === 'large' ? 'p-8' : 'p-5',
       )}
     >
-      <p className="label mb-2">Family line</p>
-      {/* Name and members render in ink — the line's color appears only as
+      {/* No "Family line" eyebrow: the card lives on pages whose context
+          already says so (no-redundant-eyebrows rule, design.md).
+          Name and members render in ink — the line's color appears only as
           the swatch dot. The light tokens (gold, sky, blush) fail contrast
           as text on paper, and names must be legible everywhere. */}
       <h3

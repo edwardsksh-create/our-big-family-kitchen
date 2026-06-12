@@ -282,6 +282,51 @@ export async function fetchAllReviewedPhotos(): Promise<FamilyPhotoFull[]> {
   return hydratePhotos((data ?? []) as unknown as Joined[]);
 }
 
+/**
+ * Album photos in which members of a family line are tagged — the line's
+ * people via BOTH membership tables: contributors linked through
+ * contributor_family_lines, and family_members rows on the line itself.
+ * Ordered like the album (year desc), so the strip reads across decades.
+ */
+export async function fetchPhotosForFamilyLine(lineSlug: string, limit = 12): Promise<FamilyPhotoFull[]> {
+  const db = supabaseAdmin();
+  const { data: line } = await db.from('family_lines').select('id').eq('slug', lineSlug).maybeSingle();
+  if (!line) return [];
+
+  const [{ data: contribLinks }, { data: memberRows }] = await Promise.all([
+    db.from('contributor_family_lines').select('contributor_id').eq('family_line_id', line.id),
+    db.from('family_members').select('id').eq('family_line_id', line.id),
+  ]);
+  const contributorIds = (contribLinks ?? []).map((c) => c.contributor_id);
+  const memberIds      = (memberRows ?? []).map((m) => m.id);
+  if (contributorIds.length === 0 && memberIds.length === 0) return [];
+
+  const [byContrib, byMember] = await Promise.all([
+    contributorIds.length > 0
+      ? db.from('family_photo_people').select('family_photo_id').in('contributor_id', contributorIds)
+      : Promise.resolve({ data: [] as { family_photo_id: string }[] }),
+    memberIds.length > 0
+      ? db.from('family_photo_people').select('family_photo_id').in('family_member_id', memberIds)
+      : Promise.resolve({ data: [] as { family_photo_id: string }[] }),
+  ]);
+  const photoIds = [...new Set([
+    ...(byContrib.data ?? []).map((j) => j.family_photo_id),
+    ...(byMember.data ?? []).map((j) => j.family_photo_id),
+  ])];
+  if (photoIds.length === 0) return [];
+
+  const { data } = await db
+    .from('family_photos')
+    .select(COMMON_SELECT)
+    .in('id', photoIds)
+    .eq('reviewed', true)
+    .eq('not_for_archive', false)
+    .order('year', { ascending: false, nullsFirst: false })
+    .order('uploaded_at', { ascending: false })
+    .limit(limit);
+  return hydratePhotos((data ?? []) as unknown as Joined[]);
+}
+
 export async function fetchPhotosForContributor(contributorId: string, limit = 6): Promise<FamilyPhotoFull[]> {
   const db = supabaseAdmin();
   const { data: joinRows } = await db
