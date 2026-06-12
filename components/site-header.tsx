@@ -55,10 +55,7 @@ export async function SiteHeader() {
             <Link href="/add" className="rounded-full bg-primary px-3 py-1.5 text-paper transition-colors hover:bg-ink">+ Add</Link>
           )}
           {role === 'admin' && (
-            <>
-              <Link href="/admin/queue"        className="hover:text-primary transition-colors">Queue</Link>
-              <Link href="/admin/contributors" className="hover:text-primary transition-colors">People</Link>
-            </>
+            <Link href="/admin" className="hover:text-primary transition-colors">Admin</Link>
           )}
           {signedIn ? (
             <Link href="/sign-out" className="hover:text-primary transition-colors">Sign out</Link>
@@ -73,10 +70,7 @@ export async function SiteHeader() {
             <Link href="/add" className="block rounded-lg px-3 py-3 text-primary hover:bg-cream/40">+ Add</Link>
           )}
           {role === 'admin' && (
-            <>
-              <Link href="/admin/queue"        className="block rounded-lg px-3 py-3 hover:bg-cream/40">Queue</Link>
-              <Link href="/admin/contributors" className="block rounded-lg px-3 py-3 hover:bg-cream/40">People</Link>
-            </>
+            <Link href="/admin" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Admin</Link>
           )}
           <div className="my-1 border-t border-rule" />
           {signedIn ? (
