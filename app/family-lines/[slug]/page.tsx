@@ -75,11 +75,6 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
         {line.name} family recipes
       </h1>
       <div aria-hidden="true" className={cn('mt-5 h-1.5 w-24 rounded-full', FAMILY_BG[line.color])} />
-      {/* The line's blurb — the personality copy that used to live only on
-          cards belongs on the page itself. */}
-      <p className="mt-6 max-w-prose font-serif text-lg italic text-ink-soft">
-        {line.blurb}
-      </p>
 
       <section className="mt-8 max-w-prose">
         <p className="label mb-2 text-ink-soft">Who&rsquo;s here</p>

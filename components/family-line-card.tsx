@@ -2,63 +2,20 @@ import Link from 'next/link';
 import { type FamilyLine, FAMILY_BG } from '@/lib/family-lines';
 import { cn } from '@/lib/utils';
 
-export function FamilyLineCard({
-  line,
-  members,
-  size = 'large',
-}: {
-  line: FamilyLine;
-  members?: string[];
-  size?: 'large' | 'small';
-}) {
-  const swatchClass = FAMILY_BG[line.color];
-
+/** A family line on the /family-lines index: just the name, in ink, with
+ *  the line's color as a swatch dot. No blurbs, no member lists — the
+ *  line's own page carries the people. (A per-family photo slot is coming;
+ *  the card will take it above the name.) */
+export function FamilyLineCard({ line }: { line: FamilyLine }) {
   return (
     <Link
       href={`/family-lines/${line.slug}`}
-      className={cn(
-        'group block rounded-2xl border border-rule bg-paper card-hover hover:border-ink hover:shadow-[0_12px_40px_-20px_rgba(42,37,34,0.35)]',
-        size === 'large' ? 'p-8' : 'p-5',
-      )}
+      className="group flex items-center gap-3 rounded-2xl border border-rule bg-paper p-6 card-hover hover:border-ink hover:shadow-[0_12px_40px_-20px_rgba(42,37,34,0.35)]"
     >
-      {/* No "Family line" eyebrow: the card lives on pages whose context
-          already says so (no-redundant-eyebrows rule, design.md).
-          Name and members render in ink — the line's color appears only as
-          the swatch dot. The light tokens (gold, sky, blush) fail contrast
-          as text on paper, and names must be legible everywhere. */}
-      <h3
-        className={cn(
-          'flex items-center gap-2.5 font-serif text-ink',
-          size === 'large' ? 'text-3xl md:text-4xl' : 'text-2xl',
-        )}
-      >
-        <span aria-hidden="true" className={cn('h-3 w-3 shrink-0 rounded-full', swatchClass)} />
+      <span aria-hidden="true" className={cn('h-3 w-3 shrink-0 rounded-full', FAMILY_BG[line.color])} />
+      <span className="font-serif text-2xl text-ink group-hover:text-primary md:text-3xl">
         {line.name}
-      </h3>
-
-      {members && members.length > 0 ? (
-        <p
-          className={cn(
-            'mt-3 text-ink',
-            size === 'large' ? 'text-base' : 'text-sm',
-          )}
-        >
-          {members.join(', ')}
-        </p>
-      ) : (
-        <p
-          className={cn(
-            'mt-3 text-ink-soft italic',
-            size === 'large' ? 'text-base' : 'text-sm',
-          )}
-        >
-          No members yet
-        </p>
-      )}
-
-      <p className="mt-6 label text-primary transition-transform duration-300 group-hover:translate-x-1">
-        Browse →
-      </p>
+      </span>
     </Link>
   );
 }
