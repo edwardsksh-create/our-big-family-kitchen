@@ -1,36 +1,22 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { supabaseAdmin } from '@/lib/supabase/server';
+import { buildBackup } from '@/lib/backup/build';
+import { SCHEMA_VERSION } from '@/lib/backup/tables';
 
 // 60s is enough for a family-sized cookbook. If row counts grow into
 // hundreds of thousands, swap this for a streaming export.
 export const maxDuration = 60;
 export const dynamic     = 'force-dynamic';
 
-// Order doesn't matter for export — only for restore. Keep alphabetical here
-// so the JSON is stable.
-const TABLES = [
-  'comments',
-  'contributor_family_lines',
-  'contributors',
-  'family_lines',
-  'federated_recipes',
-  'ingredients',
-  'instructions',
-  'invitations',
-  'photos',
-  'recipe_tags',
-  'recipes',
-  'sections',
-  'submissions',
-  'tags',
-] as const;
+// Backups land in this PRIVATE bucket (migration 0025: public=false, no
+// read policy — only the service-role key can touch it). The email is a
+// notification with a pointer, never the data itself: the dump contains
+// every contributor email, invitation, and family memory, and PII should
+// not transit a third-party mail provider or sit in an inbox.
+const BACKUP_BUCKET = 'backups';
 
-// Bumped whenever a new migration lands. Used by the restore script to
-// refuse importing into an older schema.
-const SCHEMA_VERSION = '0010';
-
-const SOFT_SIZE_LIMIT_BYTES = 10 * 1024 * 1024;
+const SOFT_SIZE_LIMIT_BYTES = 50 * 1024 * 1024;
 
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET;
@@ -46,68 +32,65 @@ export async function GET(req: Request) {
 
   const db = supabaseAdmin();
 
-  // Fetch every table in parallel — small dataset, no risk of overload.
-  const results = await Promise.all(
-    TABLES.map(async (table) => {
-      const { data, error } = await db.from(table).select('*');
-      return { table, data: data ?? [], error };
-    }),
-  );
-
-  for (const r of results) {
-    if (r.error) {
-      console.error('backup: query failed', r.table, r.error);
-      return NextResponse.json(
-        { error: 'export_failed', table: r.table, message: r.error.message },
-        { status: 500 },
-      );
-    }
+  let backup;
+  try {
+    backup = await buildBackup(db);
+  } catch (err) {
+    console.error('backup: export failed', err);
+    return NextResponse.json(
+      { error: 'export_failed', message: (err as Error).message },
+      { status: 500 },
+    );
   }
 
-  const rowCounts: Record<string, number> = {};
-  const data:      Record<string, unknown[]> = {};
-  for (const r of results) {
-    rowCounts[r.table] = r.data.length;
-    data[r.table]      = r.data;
-  }
-
-  const backup = {
-    exported_at:    new Date().toISOString(),
-    schema_version: SCHEMA_VERSION,
-    row_counts:     rowCounts,
-    data,
-  };
   const json      = JSON.stringify(backup, null, 2);
   const sizeBytes = Buffer.byteLength(json, 'utf8');
   const sizeMb    = (sizeBytes / 1024 / 1024).toFixed(2);
 
   if (sizeBytes > SOFT_SIZE_LIMIT_BYTES) {
-    console.warn(`backup: file is ${sizeMb} MB (over the ${SOFT_SIZE_LIMIT_BYTES / 1024 / 1024} MB soft limit) — sending anyway.`);
+    console.warn(`backup: file is ${sizeMb} MB (over the ${SOFT_SIZE_LIMIT_BYTES / 1024 / 1024} MB soft limit) — storing anyway.`);
+  }
+
+  // One file per day; a same-day re-run overwrites (upsert) so manual
+  // triggers don't litter the bucket.
+  const dateStr     = backup.exported_at.slice(0, 10);
+  const storagePath = `backup-${dateStr}.json`;
+  const upload = await db.storage.from(BACKUP_BUCKET).upload(storagePath, Buffer.from(json, 'utf8'), {
+    contentType: 'application/json',
+    upsert:      true,
+  });
+  if (upload.error) {
+    console.error('backup: storage upload failed', upload.error);
+    return NextResponse.json(
+      { error: 'storage_upload_failed', message: upload.error.message },
+      { status: 500 },
+    );
   }
 
   const apiKey      = process.env.RESEND_API_KEY;
   const adminEmail  = process.env.ADMIN_EMAIL;
   const fromAddress = process.env.EMAIL_FROM || 'onboarding@resend.dev';
   if (!apiKey || !adminEmail) {
+    // The backup itself is already safely stored; flag the missing alert
+    // channel loudly so the cron run shows as failed.
     return NextResponse.json(
-      { error: 'email_not_configured', message: 'RESEND_API_KEY and ADMIN_EMAIL must be set.' },
+      { error: 'email_not_configured', backup_stored: true, path: storagePath },
       { status: 500 },
     );
   }
 
-  const dateStr = new Date().toISOString().slice(0, 10);
-  const countsList = Object.entries(rowCounts)
+  const countsList = Object.entries(backup.row_counts)
     .filter(([, n]) => n > 0)
     .map(([table, n]) => `  - ${n} ${table}`)
     .join('\n');
   const body =
-    `Daily backup attached.\n\n` +
+    `Last night's backup is safely stored.\n\n` +
+    `Where: Supabase Storage → ${BACKUP_BUCKET} → ${storagePath}\n` +
+    `(private bucket — open the Supabase dashboard, Storage, "${BACKUP_BUCKET}", and download the file)\n\n` +
     `Row counts:\n${countsList || '  (all tables empty)'}\n\n` +
     `File size: ${sizeMb} MB\n` +
     `Schema version: ${SCHEMA_VERSION}\n\n` +
-    `This email contains a complete export of the database. Save the\n` +
-    `attachment somewhere safe — if anything goes wrong, this file is\n` +
-    `how we restore.\n\n— Our Big Family Kitchen`;
+    `To restore, see docs/backups.md in the repo.\n\n— Our Big Family Kitchen`;
 
   const resend = new Resend(apiKey);
   try {
@@ -116,25 +99,22 @@ export async function GET(req: Request) {
       to:      adminEmail,
       subject: `Our Big Family Kitchen — daily backup ${dateStr}`,
       text:    body,
-      attachments: [
-        {
-          filename: `backup-${dateStr}.json`,
-          content:  Buffer.from(json, 'utf8'),
-        },
-      ],
     });
   } catch (err) {
-    console.error('backup: email send failed', err);
+    // Backup stored, notification failed — return 500 so the failed run is
+    // visible in the Vercel cron dashboard rather than silently green.
+    console.error('backup: notification email failed', err);
     return NextResponse.json(
-      { error: 'email_send_failed', message: (err as Error).message },
+      { error: 'email_send_failed', backup_stored: true, path: storagePath, message: (err as Error).message },
       { status: 500 },
     );
   }
 
   return NextResponse.json({
-    ok:         true,
+    ok:          true,
     exported_at: backup.exported_at,
-    size_bytes: sizeBytes,
-    row_counts: rowCounts,
+    path:        storagePath,
+    size_bytes:  sizeBytes,
+    row_counts:  backup.row_counts,
   });
 }
