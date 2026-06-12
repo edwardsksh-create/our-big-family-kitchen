@@ -1,19 +1,25 @@
 import Link from 'next/link';
 import { type FamilyLine, FAMILY_BG } from '@/lib/family-lines';
+import { SECTION_TEXT } from '@/lib/sections';
 import { cn } from '@/lib/utils';
 
-/** A family line on the /family-lines index: just the name, in ink, with
- *  the line's color as a swatch dot. No blurbs, no member lists — the
- *  line's own page carries the people. (A per-family photo slot is coming;
- *  the card will take it above the name.) */
+/** A family line on the /family-lines index: the line's color as a full
+ *  box (the site's colored-tile language), name set in the per-token
+ *  ink/paper text color the section tiles already use — text ON color is
+ *  contrast-safe; it was color-as-text-on-paper that failed. When Kate's
+ *  per-family photos arrive, the photo takes the box and the color becomes
+ *  a band or frame. */
 export function FamilyLineCard({ line }: { line: FamilyLine }) {
   return (
     <Link
       href={`/family-lines/${line.slug}`}
-      className="group flex items-center gap-3 rounded-2xl border border-rule bg-paper p-6 card-hover hover:border-ink hover:shadow-[0_12px_40px_-20px_rgba(42,37,34,0.35)]"
+      className={cn(
+        'group flex min-h-[140px] flex-col justify-end rounded-2xl p-6 card-hover',
+        FAMILY_BG[line.color],
+        SECTION_TEXT[line.color],
+      )}
     >
-      <span aria-hidden="true" className={cn('h-3 w-3 shrink-0 rounded-full', FAMILY_BG[line.color])} />
-      <span className="font-serif text-2xl text-ink group-hover:text-primary md:text-3xl">
+      <span className="font-serif text-2xl leading-tight md:text-3xl">
         {line.name}
       </span>
     </Link>

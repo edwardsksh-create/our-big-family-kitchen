@@ -53,7 +53,7 @@ export default function LetterPage() {
           <p>Dear Kate,</p>
           <p>
             I have spent this past winter and spring trying to compile these
-            books for you. It is a true labor love, believe me! As you enter
+            books for you. It is a true labor of love, believe me! As you enter
             the big world, I am sending with you “The Leusch Family Recipes.”
             They have been gathered from three generations before yours. They
             also come from friends of ours, both old and new, some gone
