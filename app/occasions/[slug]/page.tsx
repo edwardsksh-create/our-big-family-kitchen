@@ -43,10 +43,6 @@ export default async function OccasionPage({ params }: { params: { slug: string 
     <div className="mx-auto max-w-page px-6 py-16">
       <p className="label mb-3">Around our table</p>
       <h1 className="font-serif text-5xl leading-tight text-ink md:text-6xl">{occasion.name}</h1>
-      <p className="mt-6 max-w-prose font-serif text-lg italic text-ink-soft">
-        The dishes we bring, the photographs we kept, and the things we remember.
-      </p>
-
       {recipes.length > 0 && (
         <section className="mt-16">
           <h2 className="font-serif text-3xl text-ink md:text-4xl">On the table</h2>
@@ -61,7 +57,7 @@ export default async function OccasionPage({ params }: { params: { slug: string 
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-serif text-3xl text-ink md:text-4xl">From the album</h2>
             <Link href="/album" className="font-serif text-sm italic text-ink-soft hover:text-primary">
-              The kitchen across decades →
+              Open the album →
             </Link>
           </div>
           <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">

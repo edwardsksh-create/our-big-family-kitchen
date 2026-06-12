@@ -432,8 +432,8 @@ function HeroToggle({ photo }: { photo: FamilyPhotoFull }) {
     <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-rule pt-3" data-no-print>
       <span className="font-serif text-xs italic text-ink-soft">
         {photo.hero_eligible
-          ? 'Showing in the home-page rotation.'
-          : 'Not in the home-page rotation.'}
+          ? 'This photo appears on the home page.'
+          : 'Not on the home page.'}
       </span>
       <button
         type="button"
@@ -441,7 +441,7 @@ function HeroToggle({ photo }: { photo: FamilyPhotoFull }) {
         disabled={pending}
         className="rounded-full border border-rule bg-paper px-3 py-1 text-xs text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
       >
-        {pending ? 'Saving\u2026' : photo.hero_eligible ? 'Remove from home page' : 'Show on home page'}
+        {pending ? 'Saving\u2026' : photo.hero_eligible ? 'Take it off' : 'Show on the home page'}
       </button>
       {error && <span className="text-xs italic text-accent">{error}</span>}
     </div>

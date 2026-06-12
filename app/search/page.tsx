@@ -32,7 +32,8 @@ export default async function SearchPage({
 
       {!query ? (
         <p className="mt-6 max-w-prose text-ink-soft">
-          Results across the kitchen.
+          Type in the search box above — this collection and Aunt Laura&rsquo;s
+          cookbook are searched together.
         </p>
       ) : (
         <Suspense fallback={<p className="mt-10 text-ink-soft">Searching…</p>}>

@@ -16,9 +16,8 @@ export default async function ContributorsPage() {
       <p className="label mb-3">Contributors</p>
       <h1 className="font-serif text-4xl text-ink md:text-5xl">The cooks, keepers, and rememberers.</h1>
       <p className="mt-3 max-w-prose text-ink-soft">
-        Some people cooked the recipes. Some wrote them down. Some scanned,
-        photographed, adapted, or simply remembered where they came from. They
-        all belong here.
+        Some cooked. Some wrote things down. Some just remembered where a
+        recipe came from.
       </p>
 
       <ul className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">

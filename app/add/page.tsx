@@ -16,7 +16,7 @@ const TILES: Tile[] = [
   {
     href:  '/add/photo',
     title: 'Upload a photo',
-    body:  'Snap a handwritten card or cookbook page. AI does the rest.',
+    body:  'Snap a handwritten card or a cookbook page — it\u2019ll be typed up for you to check.',
     icon:  <Camera size={24} />,
   },
   {

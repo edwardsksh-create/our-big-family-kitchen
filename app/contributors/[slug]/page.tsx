@@ -147,7 +147,7 @@ export default async function ContributorPage({ params }: { params: { slug: stri
           </ul>
           <p className="mt-4 text-sm italic text-ink-soft">
             <Link href="/album" className="hover:text-primary">
-              See all photos in the family archive →
+              See all photos in the album →
             </Link>
           </p>
         </section>

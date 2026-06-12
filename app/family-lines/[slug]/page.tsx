@@ -82,7 +82,7 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
       </p>
 
       <section className="mt-8 max-w-prose">
-        <p className="label mb-2 text-ink-soft">People included here</p>
+        <p className="label mb-2 text-ink-soft">Who&rsquo;s here</p>
         {members.length > 0 ? (
           <p className="text-base leading-relaxed text-ink">
             {members.map((m, i) => (
@@ -93,7 +93,7 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
             ))}
           </p>
         ) : (
-          <p className="text-base italic text-ink-soft">Members coming soon.</p>
+          <p className="text-base italic text-ink-soft">No one listed yet.</p>
         )}
       </section>
 
@@ -109,9 +109,6 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
         ) : (
           <div className="mt-6 rounded-2xl border border-dashed border-rule p-12 text-center">
             <p className="font-serif italic text-2xl text-ink-soft">No recipes yet.</p>
-            <p className="mt-2 text-sm text-ink-soft">
-              The first {line.name} recipes will appear here as they’re added.
-            </p>
           </div>
         )}
       </section>
@@ -124,7 +121,7 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-serif text-3xl text-ink md:text-4xl">From the album</h2>
             <Link href="/album" className="font-serif text-sm italic text-ink-soft hover:text-primary">
-              The kitchen across decades →
+              Open the album →
             </Link>
           </div>
           <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">

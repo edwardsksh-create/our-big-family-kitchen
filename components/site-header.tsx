@@ -16,7 +16,7 @@ export async function SiteHeader() {
   const primaryLinks = (
     <>
       <Link href="/recipes"      className="hover:text-primary transition-colors">Recipes</Link>
-      <Link href="/sections"     className="hover:text-primary transition-colors">By type</Link>
+      <Link href="/sections"     className="hover:text-primary transition-colors">Sections</Link>
       <Link href="/contributors" className="hover:text-primary transition-colors">Contributors</Link>
       <Link href="/family-lines" className="hover:text-primary transition-colors">Families</Link>
       <Link href="/about"        className="hover:text-primary transition-colors">About</Link>
@@ -27,7 +27,7 @@ export async function SiteHeader() {
   const mobilePrimaryLinks = (
     <>
       <Link href="/recipes"      className="block rounded-lg px-3 py-3 hover:bg-cream/40">Recipes</Link>
-      <Link href="/sections"     className="block rounded-lg px-3 py-3 hover:bg-cream/40">By type</Link>
+      <Link href="/sections"     className="block rounded-lg px-3 py-3 hover:bg-cream/40">Sections</Link>
       <Link href="/contributors" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Contributors</Link>
       <Link href="/family-lines" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Families</Link>
       <Link href="/about"        className="block rounded-lg px-3 py-3 hover:bg-cream/40">About</Link>

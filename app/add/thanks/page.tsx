@@ -10,7 +10,7 @@ export default function ThanksPage() {
         Thanks — Kate will review your recipe.
       </h1>
       <p className="mt-4 text-ink-soft">
-        You’ll see it on the site once it’s approved.
+        It’ll show up once she’s had a look.
       </p>
       <div className="mt-8 flex justify-center gap-3">
         <Link href="/" className="btn-ghost">Back home</Link>

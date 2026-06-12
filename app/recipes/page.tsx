@@ -45,10 +45,9 @@ export default async function RecipesIndexPage() {
           Everything in the kitchen so far.
         </h1>
         <p className="mt-4 max-w-prose text-lg text-ink-soft">
-          Search, browse, or wander through the family recipe collection. Some
-          recipes are polished and ready to cook; others are old cards, scanned
-          pages, remembered favorites, or notes still waiting for someone in
-          the family to fill in the details.
+          Some recipes are polished and ready to cook; others are old cards,
+          scanned pages, remembered favorites, or notes still waiting for
+          someone in the family to fill in the details.
         </p>
       </section>
 
@@ -109,9 +108,6 @@ export default async function RecipesIndexPage() {
       {/* All recipes */}
       <section className="mt-16">
         <h2 className="font-serif text-2xl text-ink md:text-3xl">All recipes</h2>
-        <p className="mt-2 max-w-prose text-ink-soft">
-          Browse the full collection, or use search and filters to narrow it down.
-        </p>
         <div className="mt-6">
           <RecipeIndex recipes={recipes} viewer={viewer} now={now} />
         </div>

@@ -432,8 +432,7 @@ export function RecipeForm({
       <div>
         <p className="label">Occasions</p>
         <p className="mt-1 text-sm text-ink-soft">
-          When does this recipe come out? Holidays and gatherings connect it to the
-          photos and memories from those days.
+          When does this recipe come out?
         </p>
         <ul className="mt-3 flex flex-wrap gap-2">
           {options.occasions.map((o) => {

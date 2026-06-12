@@ -141,7 +141,7 @@ export default async function HomePage() {
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-serif text-2xl text-ink md:text-3xl">From the album</h2>
             <Link href="/album" className="font-serif text-sm italic text-ink-soft hover:text-primary">
-              The kitchen across decades →
+              Open the album →
             </Link>
           </div>
           <ul className="mt-8 grid grid-cols-3 gap-3 md:grid-cols-6">
@@ -169,9 +169,6 @@ export default async function HomePage() {
       {holidayDoorways.length > 0 && (
         <section className="py-14 md:py-16">
           <h2 className="font-serif text-2xl text-ink md:text-3xl">The holiday tables</h2>
-          <p className="mt-3 max-w-prose text-ink-soft">
-            The food, photographs, and memories of the days we gather.
-          </p>
           <ul className="mt-6 flex flex-wrap gap-3">
             {holidayDoorways.map((o) => (
               <li key={o.slug}>

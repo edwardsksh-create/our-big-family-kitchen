@@ -40,8 +40,7 @@ export default function SignInPage({ searchParams }: { searchParams: SearchParam
         Welcome to Our Big Family Kitchen.
       </h1>
       <p className="mt-3 text-ink-soft">
-        The family&rsquo;s recipes, photos, and memories are inside. Sign in
-        with the email Kate invited.
+        Sign in with the email Kate invited.
       </p>
 
       <form action={send} className="mt-8 space-y-4">

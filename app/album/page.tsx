@@ -36,7 +36,7 @@ export default async function AlbumPage({
     <div className="mx-auto max-w-page px-6 py-16">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
         <div>
-          <p className="label mb-3">Family archive</p>
+          <p className="label mb-3">Family album</p>
           <h1 className="font-serif text-4xl leading-tight text-ink md:text-5xl">
             The kitchen across decades.
           </h1>
@@ -56,8 +56,7 @@ export default async function AlbumPage({
               The first photos are on their way.
             </p>
             <p className="mt-2 text-sm text-ink-soft">
-              The family albums are open and the earliest pictures are being
-              gathered in. Check back soon.
+              Check back soon.
             </p>
           </div>
         ) : (
