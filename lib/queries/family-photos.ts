@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { familyPhotoUrl } from '@/lib/storage/photos';
+import { familyPhotoSignedUrls } from '@/lib/storage/photos';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import type { FamilyPhotoHints } from '@/lib/photos/family-photo-hints';
 
@@ -70,6 +70,11 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
   if (rows.length === 0) return [];
   const db = supabaseAdmin();
 
+  // One batched signing call for every photo in the set (private bucket —
+  // see lib/storage/photos.ts). Kicked off first so it overlaps the
+  // people-lookup queries below.
+  const signedUrlsPromise = familyPhotoSignedUrls(rows.map((r) => r.storage_path));
+
   // Pull all referenced contributors + family_members in one shot. The
   // uploaded_by_id (submitter for family-submitted photos) is also a
   // contributor reference, so we resolve it through the same lookup.
@@ -96,6 +101,8 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
   const contribById = new Map((contribRows ?? []).map((c) => [c.id, c]));
   const memberById  = new Map((memberRows  ?? []).map((m) => [m.id, m]));
 
+  const signedByPath = await signedUrlsPromise;
+
   function slugify(s: string): string {
     return s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   }
@@ -103,7 +110,10 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
   return rows.map((r) => ({
     id:                r.id,
     storage_path:      r.storage_path,
-    public_url:        familyPhotoUrl(r.storage_path),
+    // Short-lived signed URL (the bucket is private). The field name is
+    // kept from the public-bucket era to avoid churning every consumer;
+    // treat it as "renderable URL", not a permanent link.
+    public_url:        signedByPath.get(r.storage_path) ?? '',
     caption:           r.caption,
     year:              r.year,
     place:             r.place,

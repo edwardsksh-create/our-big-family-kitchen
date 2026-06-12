@@ -2,6 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import sharp from 'sharp';
+import crypto from 'node:crypto';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { dedupeOccasion } from '@/lib/photos/occasions';
@@ -19,11 +21,62 @@ type SubmitPayload = {
   recipeIds:        string[];
   needsEditing:     boolean;
   editingNote:      string;
+  /** Clockwise rotation in degrees to apply on Save. Only honored when
+   *  intent === 'save_and_next'; other intents discard the rotation. */
+  rotation?:        0 | 90 | 180 | 270;
   intent:           'save_and_next' | 'skip' | 'not_for_archive' | 'reject' | 'done';
   /** When set, the post-action redirect carries the queue filter forward
    *  so admin batch-processing family submissions stays on that filter. */
   filterSource?:    'family' | null;
 };
+
+const FAMILY_PHOTO_BUCKET = 'family-photos';
+
+/**
+ * Apply a clockwise rotation to a family photo non-destructively: download
+ * the current bytes, rotate via sharp, write the result to a fresh path
+ * under rotated/, then swap the row's storage_path. The first time a row
+ * is rotated, the prior path is recorded in original_storage_path so the
+ * truly-untouched original can be recovered. On subsequent rotations the
+ * truly-original pointer is preserved (we rotate against the most-recent
+ * rotated version so the admin's preview matches what they're saving).
+ */
+async function applyRotation(photoId: string, rotation: 90 | 180 | 270): Promise<void> {
+  const db = supabaseAdmin();
+  const { data: row, error: rowErr } = await db
+    .from('family_photos')
+    .select('storage_path, original_storage_path')
+    .eq('id', photoId)
+    .maybeSingle();
+  if (rowErr || !row) throw new Error(`load photo for rotation: ${rowErr?.message ?? 'not found'}`);
+
+  const dl = await db.storage.from(FAMILY_PHOTO_BUCKET).download(row.storage_path);
+  if (dl.error || !dl.data) throw new Error(`download for rotation: ${dl.error?.message ?? 'no data'}`);
+  const inputBytes = Buffer.from(await dl.data.arrayBuffer());
+
+  const outputBytes = await sharp(inputBytes)
+    .rotate(rotation)
+    .jpeg({ quality: 92 })
+    .toBuffer();
+
+  const newPath = `rotated/${crypto.randomUUID()}.jpg`;
+  const up = await db.storage.from(FAMILY_PHOTO_BUCKET).upload(newPath, outputBytes, {
+    contentType: 'image/jpeg',
+    upsert:      false,
+  });
+  if (up.error) throw new Error(`upload rotated: ${up.error.message}`);
+
+  // Only set original_storage_path on the FIRST rotation, so it always
+  // points at the truly untouched file. Subsequent rotations leave it.
+  const update: { storage_path: string; original_storage_path?: string } = {
+    storage_path: newPath,
+  };
+  if (!row.original_storage_path) {
+    update.original_storage_path = row.storage_path;
+  }
+  const upd = await db.from('family_photos').update(update).eq('id', photoId);
+  if (upd.error) throw new Error(`update storage_path: ${upd.error.message}`);
+}
 
 export async function submitPhotoReview(payload: SubmitPayload): Promise<void> {
   const session = await auth();
@@ -53,18 +106,24 @@ export async function submitPhotoReview(payload: SubmitPayload): Promise<void> {
   }
 
   if (payload.intent === 'reject') {
-    // Rejection on a family submission: drop the stored file so it can't
-    // leak via the public bucket URL, then mark not_for_archive so the
-    // row is excluded from both the queue and /album. We keep the row
-    // (audit trail) rather than hard-deleting it. The uploader is never
-    // notified — quiet decline by design.
+    // Rejection on a family submission: delete the stored file(s), then mark
+    // not_for_archive so the row is excluded from both the queue and /album.
+    // BOTH paths must go — if the photo was rotated before rejection,
+    // storage_path points at the rotated copy and original_storage_path
+    // still holds the pre-rotation original. The bucket is private now
+    // (migration 0026), but a rejected photo's bytes shouldn't linger at
+    // all. We keep the row (audit trail) rather than hard-deleting it.
+    // The uploader is never notified — quiet decline by design.
     const { data: existing } = await db
       .from('family_photos')
-      .select('storage_path')
+      .select('storage_path, original_storage_path')
       .eq('id', payload.photoId)
       .maybeSingle();
-    if (existing?.storage_path) {
-      await db.storage.from('family-photos').remove([existing.storage_path]);
+    const doomedPaths = [existing?.storage_path, existing?.original_storage_path]
+      .filter((p): p is string => !!p);
+    if (doomedPaths.length > 0) {
+      const { error: rmErr } = await db.storage.from(FAMILY_PHOTO_BUCKET).remove(doomedPaths);
+      if (rmErr) throw new Error(`reject: deleting photo files failed: ${rmErr.message}`);
     }
     await db
       .from('family_photos')

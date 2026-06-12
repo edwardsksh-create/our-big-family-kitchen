@@ -110,8 +110,57 @@ export function contributorPhotoUrl(storagePath: string): string {
   return client().storage.from(CONTRIBUTOR_PHOTO_BUCKET).getPublicUrl(storagePath).data.publicUrl;
 }
 
-export function familyPhotoUrl(storagePath: string): string {
-  return client().storage.from(FAMILY_PHOTO_BUCKET).getPublicUrl(storagePath).data.publicUrl;
+// The family-photos bucket is PRIVATE (migration 0026) — the gallery it
+// backs is sign-in-only, so the storage layer must not hand out permanent
+// public URLs. Serving uses short-lived signed URLs instead of an
+// auth-checked proxy because next/image's optimizer fetches sources
+// server-side without the viewer's cookies: a cookie-gated proxy would 401
+// those fetches, while a signed URL carries its own auth.
+const SIGNED_URL_TTL_SECONDS = 4 * 60 * 60;
+// Reuse a token for most of its life, refreshing well before expiry so a
+// page cached moments before refresh still has a long-valid URL.
+const SIGNED_URL_REUSE_MS = 3 * 60 * 60 * 1000;
+
+const signedUrlCache = new Map<string, { url: string; createdAt: number }>();
+
+/**
+ * Batch-sign family-photo paths: ONE storage API call for all cache misses,
+ * regardless of how many photos a page renders (the /album grid passes every
+ * photo at once). The module-level cache keeps tokens stable across renders
+ * within a warm server instance, so next/image's optimizer cache isn't
+ * churned by a fresh token on every request.
+ *
+ * Paths whose object is missing (e.g. a rejected photo's deleted file) are
+ * simply absent from the returned map.
+ */
+export async function familyPhotoSignedUrls(paths: string[]): Promise<Map<string, string>> {
+  const now = Date.now();
+  const out = new Map<string, string>();
+  const missing: string[] = [];
+
+  for (const p of new Set(paths)) {
+    const hit = signedUrlCache.get(p);
+    if (hit && now - hit.createdAt < SIGNED_URL_REUSE_MS) {
+      out.set(p, hit.url);
+    } else {
+      missing.push(p);
+    }
+  }
+
+  if (missing.length > 0) {
+    const { data, error } = await client()
+      .storage
+      .from(FAMILY_PHOTO_BUCKET)
+      .createSignedUrls(missing, SIGNED_URL_TTL_SECONDS);
+    if (error) throw new Error(`Signing family photo URLs failed: ${error.message}`);
+    for (const item of data ?? []) {
+      if (item.error || !item.path || !item.signedUrl) continue;
+      signedUrlCache.set(item.path, { url: item.signedUrl, createdAt: now });
+      out.set(item.path, item.signedUrl);
+    }
+  }
+
+  return out;
 }
 
 // List every object under sources/_inbox/. Storage's list API is shallow per

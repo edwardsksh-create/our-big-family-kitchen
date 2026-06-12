@@ -362,6 +362,7 @@ export type Database = {
           id: string
           needs_editing: boolean
           not_for_archive: boolean
+          original_storage_path: string | null
           pets: string | null
           place: string | null
           reviewed: boolean
@@ -381,6 +382,7 @@ export type Database = {
           id?: string
           needs_editing?: boolean
           not_for_archive?: boolean
+          original_storage_path?: string | null
           pets?: string | null
           place?: string | null
           reviewed?: boolean
@@ -400,6 +402,7 @@ export type Database = {
           id?: string
           needs_editing?: boolean
           not_for_archive?: boolean
+          original_storage_path?: string | null
           pets?: string | null
           place?: string | null
           reviewed?: boolean
