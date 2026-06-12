@@ -9,15 +9,15 @@
 
 export type TreePartner = {
   name: string;
-  /** Used sparingly — e.g. 'late husband'. Relationship labels like
-   *  'partner' or 'stepson' are deliberately NOT noted (Kate's call). */
+  /** Renders the partner as a parenthetical after the others —
+   *  "Brian Edwards (late husband, Ryan Hong)". Used only for Ryan;
+   *  relationship labels like 'partner'/'stepson' are deliberately
+   *  not noted (Kate's call). */
   label?: string;
 };
 
 export type TreeNode = {
   name: string;
-  /** e.g. 'kept Leusch' */
-  note?: string;
   partners?: TreePartner[];
   children?: TreeNode[];
   /** Free-text line rendered under the person instead of child nodes
@@ -37,7 +37,7 @@ export type FamilyTree = {
 
 export const FAMILY_TREES: Record<string, FamilyTree> = {
   leusch: {
-    root: 'Dick Leusch & Dorothy MacNamara',
+    root: 'Dick & Dorothy (MacNamara) Leusch',
     children: [
       { name: 'Michael' },
       { name: 'Susan', partners: [{ name: 'Scott Schenone' }] },
@@ -46,7 +46,7 @@ export const FAMILY_TREES: Record<string, FamilyTree> = {
       { name: 'Rich', partners: [{ name: 'Mary Ann Hogan' }], continuesOn: 'richs-family' },
       { name: 'Martha', partners: [{ name: 'Bob Branion' }], continuesOn: 'branion' },
       { name: 'Annie', partners: [{ name: 'Gary Sundy' }], continuesOn: 'sundy' },
-      { name: 'Lucy', note: 'kept Leusch', partners: [{ name: 'Jay Williams' }] },
+      { name: 'Lucy', partners: [{ name: 'Jay Williams' }] },
     ],
   },
 
@@ -135,8 +135,8 @@ export const FAMILY_TREES: Record<string, FamilyTree> = {
       {
         name: 'Kate',
         partners: [
-          { name: 'Ryan Hong', label: 'late husband' },
           { name: 'Brian Edwards' },
+          { name: 'Ryan Hong', label: 'late husband' },
         ],
         children: [{ name: 'Charlotte' }, { name: 'Nora' }],
       },

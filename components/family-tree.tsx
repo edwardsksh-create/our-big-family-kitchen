@@ -8,9 +8,11 @@ import type { FamilyTree, TreeNode } from '@/lib/family-trees';
 // line's page say so.
 
 function partnerLine(node: TreeNode): string {
+  // Labeled partners render as a trailing parenthetical containing the
+  // label and the name — "Brian Edwards (late husband, Ryan Hong)".
   const partners = (node.partners ?? [])
-    .map((p) => (p.label ? `${p.name} (${p.label})` : p.name))
-    .join(' · ');
+    .map((p) => (p.label ? `(${p.label}, ${p.name})` : p.name))
+    .join(' ');
   return partners ? ` — ${partners}` : '';
 }
 
@@ -20,7 +22,6 @@ function TreeBranch({ node }: { node: TreeNode }) {
     <li className="mt-3">
       <p className="font-serif text-base leading-snug text-ink md:text-lg">
         {node.name}
-        {node.note && <span className="font-sans text-xs italic text-ink-soft"> ({node.note})</span>}
         <span className="text-ink-soft">{partnerLine(node)}</span>
       </p>
       {continues && (
