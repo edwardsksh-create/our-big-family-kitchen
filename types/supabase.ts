@@ -673,6 +673,36 @@ export type Database = {
           },
         ]
       }
+      recipe_occasions: {
+        Row: {
+          occasion_slug: string
+          recipe_id: string
+        }
+        Insert: {
+          occasion_slug: string
+          recipe_id: string
+        }
+        Update: {
+          occasion_slug?: string
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_occasions_occasion_slug_fkey"
+            columns: ["occasion_slug"]
+            isOneToOne: false
+            referencedRelation: "family_photo_occasion_types"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "recipe_occasions_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipe_tags: {
         Row: {
           recipe_id: string

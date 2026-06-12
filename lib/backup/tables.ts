@@ -34,6 +34,7 @@ export const BACKUP_TABLES = [
   'ingredients',
   'instructions',
   'recipe_tags',
+  'recipe_occasions',
   'photos',
   'submissions',
   'recipe_comments',
@@ -72,6 +73,7 @@ export const TABLE_KEYS: Record<BackupTableName, readonly string[]> = {
   ingredients:                 ['id'],
   instructions:                ['id'],
   recipe_tags:                 ['recipe_id', 'tag_id'],
+  recipe_occasions:            ['recipe_id', 'occasion_slug'],
   photos:                      ['id'],
   submissions:                 ['id'],
   recipe_comments:             ['id'],
@@ -85,4 +87,4 @@ export const TABLE_KEYS: Record<BackupTableName, readonly string[]> = {
 // backup whose schema_version doesn't match what it expects (--force to
 // override), so a stale backup can't be silently restored into a schema
 // it no longer describes.
-export const SCHEMA_VERSION = '0027';
+export const SCHEMA_VERSION = '0028';

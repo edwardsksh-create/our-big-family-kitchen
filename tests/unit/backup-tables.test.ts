@@ -127,6 +127,8 @@ describe('restore dependency order', () => {
     ['recipes', 'recipe_comments'],
     ['recipes', 'family_photo_recipes'],
     ['tags', 'recipe_tags'],
+    ['recipes', 'recipe_occasions'],
+    ['family_photo_occasion_types', 'recipe_occasions'],
     ['family_photos', 'family_photo_people'],
     ['family_photos', 'family_photo_occasions'],
     ['family_photos', 'family_photo_recipes'],
