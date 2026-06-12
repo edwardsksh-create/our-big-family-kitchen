@@ -12,16 +12,21 @@ type PersonOption = { ref: string; label: string };
 export function AlbumClient({
   photos,
   occasions,
+  initialPhotoId = null,
 }: {
   photos:    FamilyPhotoFull[];
   occasions: OccasionType[];
+  /** From /album?photo=<id> — recipe and contributor pages deep-link a
+   *  specific photo. An id that isn't in the (reviewed) set simply doesn't
+   *  open a lightbox: the find() below comes up empty and the grid shows. */
+  initialPhotoId?: string | null;
 }) {
   const [personRef, setPersonRef] = useState('');
   const [occasion,  setOccasion]  = useState('');
   const [decade,    setDecade]    = useState('');
   const [place,     setPlace]     = useState('');
   const [search,    setSearch]    = useState('');
-  const [openPhotoId, setOpenPhotoId] = useState<string | null>(null);
+  const [openPhotoId, setOpenPhotoId] = useState<string | null>(initialPhotoId);
 
   const personOptions: PersonOption[] = useMemo(() => {
     const m = new Map<string, string>();

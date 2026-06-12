@@ -10,9 +10,18 @@ export const metadata = { title: 'Family archive' };
 // can_sign_in flag, which doesn't fit the static ISR model.
 export const dynamic = 'force-dynamic';
 
-export default async function AlbumPage() {
+export default async function AlbumPage({
+  searchParams,
+}: {
+  searchParams: { photo?: string };
+}) {
   const session = await auth();
   if (!session?.user?.email) redirect('/sign-in?next=/album');
+
+  // Deep link from recipe / contributor photo strips: /album?photo=<id>
+  // opens the lightbox on that photo. Bad or stale ids fall through to the
+  // plain grid (AlbumClient ignores ids that aren't in the reviewed set).
+  const initialPhotoId = searchParams.photo?.trim() || null;
 
   const db = supabaseAdmin();
   const [{ data: viewer }, photos, occasions] = await Promise.all([
@@ -51,7 +60,7 @@ export default async function AlbumPage() {
             </p>
           </div>
         ) : (
-          <AlbumClient photos={photos} occasions={occasions} />
+          <AlbumClient photos={photos} occasions={occasions} initialPhotoId={initialPhotoId} />
         )}
       </div>
     </div>
