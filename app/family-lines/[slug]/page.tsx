@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import { FAMILY_LINES, familyLineBySlug, FAMILY_BG } from '@/lib/family-lines';
+import { FAMILY_TREES } from '@/lib/family-trees';
+import { FamilyTreeView } from '@/components/family-tree';
 import { fetchFederatedCount } from '@/lib/queries/federated';
 import { fetchPublishedRecipesForFamilyLine } from '@/lib/queries/recipes';
 import { fetchPhotosForFamilyLine } from '@/lib/queries/family-photos';
@@ -76,21 +78,30 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
       </h1>
       <div aria-hidden="true" className={cn('mt-5 h-1.5 w-24 rounded-full', FAMILY_BG[line.color])} />
 
-      <section className="mt-8 max-w-prose">
-        <p className="label mb-2 text-ink-soft">Who&rsquo;s here</p>
-        {members.length > 0 ? (
-          <p className="text-base leading-relaxed text-ink">
-            {members.map((m, i) => (
-              <span key={m.id}>
-                <MemberName member={m} />
-                {i < members.length - 1 && <span className="text-ink-soft">, </span>}
-              </span>
-            ))}
-          </p>
-        ) : (
-          <p className="text-base italic text-ink-soft">No one listed yet.</p>
-        )}
-      </section>
+      {/* The family tree where one exists (the structured version of
+          "who's here"); the flat member list only on lines without a tree. */}
+      {FAMILY_TREES[line.slug] ? (
+        <section className="mt-10 max-w-prose">
+          <p className="label mb-4 text-ink-soft">The family tree</p>
+          <FamilyTreeView tree={FAMILY_TREES[line.slug]} />
+        </section>
+      ) : (
+        <section className="mt-8 max-w-prose">
+          <p className="label mb-2 text-ink-soft">Who&rsquo;s here</p>
+          {members.length > 0 ? (
+            <p className="text-base leading-relaxed text-ink">
+              {members.map((m, i) => (
+                <span key={m.id}>
+                  <MemberName member={m} />
+                  {i < members.length - 1 && <span className="text-ink-soft">, </span>}
+                </span>
+              ))}
+            </p>
+          ) : (
+            <p className="text-base italic text-ink-soft">No one listed yet.</p>
+          )}
+        </section>
+      )}
 
       {/* Recipes from this line */}
       <section className="mt-16">
