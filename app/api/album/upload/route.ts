@@ -112,20 +112,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2) Run AI vision hints (same model as the bulk import). Skip silently
-    //    on failure / HEIC — review queue still works, hints are just empty.
-    let aiHints: FamilyPhotoHints | null = null;
-    if (file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/webp') {
-      try {
-        const result = await generateFamilyPhotoHints({
-          imageBytes: buf,
-          mimeType:   file.type,
-        });
-        aiHints = result.hints;
-      } catch (err) {
-        console.error('family upload — ai hints failed:', err);
-      }
-    }
+    // AI vision hints are OFF — Kate reviews without them, and they were
+    // the largest unmetered AI spend (one Sonnet vision call per uploaded
+    // photo). Re-enable here if they ever earn their keep.
+    const aiHints: FamilyPhotoHints | null = null;
 
     // 3) Insert family_photos row. reviewed=false keeps it out of /album
     //    until Kate approves; source='family' distinguishes from imports.
