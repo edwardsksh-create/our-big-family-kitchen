@@ -32,6 +32,8 @@ export type FamilyPhotoFull = {
   not_for_archive: boolean;
   needs_editing:   boolean;        // admin-only — never rendered on public pages
   editing_note:    string | null;  // admin-only
+  /** Admin opt-in: photo may appear in the PUBLIC home-page hero rotation. */
+  hero_eligible:   boolean;
   /** 'import' for the original bulk archive; 'family' for community submissions. */
   source:          'import' | 'family';
   /** Free-text context the uploader left during family submission. */
@@ -57,6 +59,7 @@ type Joined = {
   not_for_archive: boolean;
   needs_editing: boolean;
   editing_note:  string | null;
+  hero_eligible: boolean;
   source:        'import' | 'family';
   submitter_note: string | null;
   uploaded_by_id: string | null;
@@ -124,6 +127,7 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
     not_for_archive:   r.not_for_archive,
     needs_editing:     r.needs_editing,
     editing_note:      r.editing_note,
+    hero_eligible:     r.hero_eligible,
     source:            r.source,
     submitter_note:    r.submitter_note,
     uploaded_by:       (() => {
@@ -172,7 +176,7 @@ async function hydratePhotos(rows: Joined[]): Promise<FamilyPhotoFull[]> {
 
 const COMMON_SELECT = `
   id, storage_path, caption, year, place, additional_people, pets,
-  ai_hints, reviewed, not_for_archive, needs_editing, editing_note,
+  ai_hints, reviewed, not_for_archive, needs_editing, editing_note, hero_eligible,
   source, submitter_note, uploaded_by_id, uploaded_at,
   people:family_photo_people ( person_type, contributor_id, family_member_id ),
   occasions:family_photo_occasions ( occasion_slug ),
@@ -253,6 +257,27 @@ export async function countPhotosNeedingEditing(): Promise<number> {
     .eq('needs_editing', true)
     .eq('not_for_archive', false);
   return count ?? 0;
+}
+
+/** The home page's "photo of the day": a deterministic daily pick from the
+ *  admin-curated hero pool (hero_eligible, reviewed, archived-in). Returns
+ *  null when the pool is empty — the page falls back to its static hero.
+ *  Ordered by id so the day-index mapping is stable as the pool grows. */
+export async function fetchDailyHeroPhoto(dateISO: string): Promise<FamilyPhotoFull | null> {
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from('family_photos')
+    .select(COMMON_SELECT)
+    .eq('hero_eligible', true)
+    .eq('reviewed', true)
+    .eq('not_for_archive', false)
+    .order('id');
+  const pool = (data ?? []) as unknown as Joined[];
+  if (pool.length === 0) return null;
+  const { dailyHeroIndex } = await import('@/lib/photos/hero');
+  const pick = pool[dailyHeroIndex(dateISO, pool.length)];
+  const hydrated = await hydratePhotos([pick]);
+  return hydrated[0] ?? null;
 }
 
 /** Most recently added reviewed photos — the home page's album strip.

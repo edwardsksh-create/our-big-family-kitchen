@@ -384,6 +384,7 @@ export type Database = {
           caption: string | null
           created_at: string
           editing_note: string | null
+          hero_eligible: boolean
           id: string
           needs_editing: boolean
           not_for_archive: boolean
@@ -404,6 +405,7 @@ export type Database = {
           caption?: string | null
           created_at?: string
           editing_note?: string | null
+          hero_eligible?: boolean
           id?: string
           needs_editing?: boolean
           not_for_archive?: boolean
@@ -424,6 +426,7 @@ export type Database = {
           caption?: string | null
           created_at?: string
           editing_note?: string | null
+          hero_eligible?: boolean
           id?: string
           needs_editing?: boolean
           not_for_archive?: boolean

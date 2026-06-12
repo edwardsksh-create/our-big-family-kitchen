@@ -61,7 +61,12 @@ export default async function AlbumPage({
             </p>
           </div>
         ) : (
-          <AlbumClient photos={photos} occasions={occasions} initialPhotoId={initialPhotoId} />
+          <AlbumClient
+            photos={photos}
+            occasions={occasions}
+            initialPhotoId={initialPhotoId}
+            isAdmin={session.user.role === 'admin'}
+          />
         )}
       </div>
     </div>

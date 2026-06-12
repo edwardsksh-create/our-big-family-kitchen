@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 import { fetchFederatedCount } from '@/lib/queries/federated';
 import { fetchRecentMemories } from '@/lib/queries/recipe-comments';
 import { fetchRecipeIndex } from '@/lib/queries/recipes';
-import { fetchRecentReviewedPhotos, type FamilyPhotoFull } from '@/lib/queries/family-photos';
+import { fetchDailyHeroPhoto, fetchRecentReviewedPhotos, type FamilyPhotoFull } from '@/lib/queries/family-photos';
+import { captionLead } from '@/lib/photos/photo-caption';
 import { fetchOccasionSlugsWithContent } from '@/lib/queries/occasions';
 import { RecipeIndexGrid } from '@/components/recipe-index-card';
 import { ANONYMOUS_VIEWER } from '@/lib/recipes/badges';
@@ -28,15 +29,25 @@ export default async function HomePage() {
   const session = await auth();
   const signedIn = !!session?.user;
 
-  const [federatedCount, memories, recipes, albumPhotos, occasionsWithContent] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+  const [federatedCount, memories, recipes, albumPhotos, occasionsWithContent, heroPhoto] = await Promise.all([
     fetchFederatedCount(),
     fetchRecentMemories(3),
     fetchRecipeIndex(),
     signedIn ? fetchRecentReviewedPhotos(6) : Promise.resolve([] as FamilyPhotoFull[]),
     fetchOccasionSlugsWithContent(),
+    fetchDailyHeroPhoto(today),
   ]);
   const recent = recipes.slice(0, 3);
   const holidayDoorways = MAJOR_OCCASIONS.filter((o) => occasionsWithContent.has(o.slug));
+
+  // Photo of the day from the admin-curated pool; the original archival
+  // photo stands in whenever the pool is empty (the hero never breaks).
+  const heroSrc = heroPhoto?.public_url || '/hero/leusch-sisters-thanksgiving.jpg';
+  const heroCaption = heroPhoto
+    ? (heroPhoto.caption ?? captionLead({ occasionNames: [], year: heroPhoto.year, place: heroPhoto.place }))
+    : 'Nancy, Laura, and Annie in the Quinn kitchen on Thanksgiving, 1980s.';
+  const heroAlt = heroCaption ?? 'A photo from the family archive.';
 
   return (
     <div className="mx-auto max-w-page px-6">
@@ -58,23 +69,27 @@ export default async function HomePage() {
           </div>
         </div>
 
+        {/* Photo of the day: one priority-loaded image (no carousel — kind
+            to LCP and to readers), picked deterministically per day from
+            the admin-curated hero pool. The caption is the archive
+            speaking — names, place, era — in the quiet italic-serif
+            provenance treatment. */}
         <figure className="order-1 md:order-2">
           <div className="relative aspect-[7/5] overflow-hidden rounded-3xl border border-rule">
             <Image
-              src="/hero/leusch-sisters-thanksgiving.jpg"
-              alt="Nancy, Laura, and Annie in the Quinn kitchen on Thanksgiving, 1980s."
+              src={heroSrc}
+              alt={heroAlt}
               fill
               priority
               sizes="(min-width: 768px) 40vw, 100vw"
               className="object-cover"
             />
           </div>
-          {/* The caption is the archive speaking — names, place, era — so it
-              gets the site's quiet italic-serif provenance treatment rather
-              than living only in the alt text. */}
-          <figcaption className="mt-3 font-serif text-sm italic text-ink-soft">
-            Nancy, Laura, and Annie in the Quinn kitchen on Thanksgiving, 1980s.
-          </figcaption>
+          {heroCaption && (
+            <figcaption className="mt-3 font-serif text-sm italic text-ink-soft">
+              {heroCaption}
+            </figcaption>
+          )}
         </figure>
       </section>
 

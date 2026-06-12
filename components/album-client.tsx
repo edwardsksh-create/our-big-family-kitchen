@@ -2,10 +2,12 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { captionLead, joinNames } from '@/lib/photos/photo-caption';
+import { setHeroEligible } from '@/app/album/actions';
 import type { FamilyPhotoFull, OccasionType } from '@/lib/queries/family-photos';
 
 type PersonOption = { ref: string; label: string };
@@ -14,9 +16,13 @@ export function AlbumClient({
   photos,
   occasions,
   initialPhotoId = null,
+  isAdmin = false,
 }: {
   photos:    FamilyPhotoFull[];
   occasions: OccasionType[];
+  /** Shows the admin-only hero toggle in the lightbox. The server action
+   *  re-checks the role; this prop is display-only. */
+  isAdmin?:  boolean;
   /** From /album?photo=<id> — recipe and contributor pages deep-link a
    *  specific photo. An id that isn't in the (reviewed) set simply doesn't
    *  open a lightbox: the find() below comes up empty and the grid shows. */
@@ -199,6 +205,7 @@ export function AlbumClient({
         <Lightbox
           photo={openPhoto}
           occasions={occasions}
+          isAdmin={isAdmin}
           onClose={() => setOpenPhotoId(null)}
           hasPrev={hasPrev}
           hasNext={hasNext}
@@ -231,6 +238,7 @@ function groupByDecade(photos: FamilyPhotoFull[]): { label: string; photos: Fami
 function Lightbox({
   photo,
   occasions,
+  isAdmin,
   onClose,
   hasPrev,
   hasNext,
@@ -239,6 +247,7 @@ function Lightbox({
 }: {
   photo: FamilyPhotoFull;
   occasions: OccasionType[];
+  isAdmin: boolean;
   onClose: () => void;
   hasPrev: boolean;
   hasNext: boolean;
@@ -393,8 +402,48 @@ function Lightbox({
               ))}
             </p>
           )}
+          {isAdmin && <HeroToggle photo={photo} />}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Admin-only: opt this photo in/out of the public home-page hero rotation.
+ *  Quiet hairline row at the bottom of the lightbox metadata. */
+function HeroToggle({ photo }: { photo: FamilyPhotoFull }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function toggle() {
+    setError(null);
+    startTransition(async () => {
+      const res = await setHeroEligible(photo.id, !photo.hero_eligible);
+      if (!res.ok) {
+        setError('Couldn\u2019t save — try again.');
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-rule pt-3" data-no-print>
+      <span className="font-serif text-xs italic text-ink-soft">
+        {photo.hero_eligible
+          ? 'Showing in the home-page rotation.'
+          : 'Not in the home-page rotation.'}
+      </span>
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={pending}
+        className="rounded-full border border-rule bg-paper px-3 py-1 text-xs text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
+      >
+        {pending ? 'Saving\u2026' : photo.hero_eligible ? 'Remove from home page' : 'Show on home page'}
+      </button>
+      {error && <span className="text-xs italic text-accent">{error}</span>}
     </div>
   );
 }
