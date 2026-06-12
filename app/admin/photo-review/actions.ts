@@ -2,7 +2,6 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import sharp from 'sharp';
 import crypto from 'node:crypto';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
@@ -54,6 +53,9 @@ async function applyRotation(photoId: string, rotation: 90 | 180 | 270): Promise
   if (dl.error || !dl.data) throw new Error(`download for rotation: ${dl.error?.message ?? 'no data'}`);
   const inputBytes = Buffer.from(await dl.data.arrayBuffer());
 
+  // Lazy import — sharp's native binary loads only when a rotation is
+  // actually applied, never as part of rendering the review page.
+  const { default: sharp } = await import('sharp');
   const outputBytes = await sharp(inputBytes)
     .rotate(rotation)
     .jpeg({ quality: 92 })

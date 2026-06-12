@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'node:crypto';
-import sharp from 'sharp';
 
 export const PHOTO_BUCKET             = 'recipe-photos';
 export const CONTRIBUTOR_PHOTO_BUCKET = 'contributor-photos';
@@ -61,6 +60,12 @@ export async function generateThumb(
   storagePath: string,
 ): Promise<string | null> {
   try {
+    // Lazy import: sharp's native binary only loads on the upload path.
+    // A top-level import put sharp in EVERY page's module graph (this file
+    // is imported by the query layer for URL helpers), and when the binary
+    // failed to load on Vercel it took the whole site down with it. Pages
+    // must never depend on an image codec.
+    const { default: sharp } = await import('sharp');
     const bytes = await sharp(original)
       .rotate() // honor EXIF orientation before stripping metadata
       .resize({ width: THUMB_WIDTH, withoutEnlargement: true })
