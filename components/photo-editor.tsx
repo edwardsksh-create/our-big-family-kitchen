@@ -1,48 +1,85 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState, useTransition } from 'react';
-import Cropper, { type Area } from 'react-easy-crop';
+import { useRef, useState, useTransition } from 'react';
+import { Cropper, type ReactCropperElement } from 'react-cropper';
+import 'cropperjs/dist/cropper.css';
 import { applyPhotoEdits } from '@/app/album/actions';
 
-type AspectMode = 'original' | 'square' | '4:3' | '3:2';
+type AspectMode = 'free' | 'original' | 'square' | '4:3' | '3:2';
 
-/** Admin crop & rotate — shared by the album lightbox and the review queue. The cropper reports the crop
- *  rectangle in rotated-image pixels; the server (applyPhotoEdits) rotates
- *  then extracts, so what you frame is what you get. Non-destructive: the
- *  untouched original is always kept. */
+/** Admin crop & rotate — shared by the album lightbox and the review queue.
+ *  Cropper.js under the hood: free-form crop by default (drag any edge or
+ *  corner), aspect locks on demand, rotation in the same preview. Its
+ *  getData contract — rotate first, then crop by x/y/width/height in the
+ *  rotated image's natural pixels — is exactly what applyPhotoEdits does
+ *  server-side. Non-destructive: the untouched original is always kept. */
 export function PhotoEditor({ photoId, imageUrl, onDone }: { photoId: string; imageUrl: string; onDone: () => void }) {
   const router = useRouter();
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState<0 | 90 | 180 | 270>(0);
-  const [aspectMode, setAspectMode] = useState<AspectMode>('original');
-  const [mediaAspect, setMediaAspect] = useState(4 / 3);
-  const [areaPixels, setAreaPixels] = useState<Area | null>(null);
+  const cropperRef = useRef<ReactCropperElement>(null);
+  const [aspectMode, setAspectMode] = useState<AspectMode>('free');
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const sideways = rotation === 90 || rotation === 270;
-  const aspect =
-    aspectMode === 'square' ? 1
-    : aspectMode === '4:3'  ? 4 / 3
-    : aspectMode === '3:2'  ? 3 / 2
-    : (sideways ? 1 / mediaAspect : mediaAspect);
+  function cropper() {
+    return cropperRef.current?.cropper ?? null;
+  }
+
+  function rotate(deg: 90 | -90) {
+    const c = cropper();
+    if (!c) return;
+    c.rotate(deg);
+    c.setAspectRatio(NaN);
+    // Cropper keeps the zoom scale through a rotation, so a sideways canvas
+    // overflows the container and the crop box can't reach the whole image
+    // (a save would silently crop it). Refit the rotated canvas into the
+    // container, centered, then snap the crop box to the full frame.
+    const cont = c.getContainerData();
+    const nat  = c.getCanvasData(); // naturalWidth/Height are the ROTATED frame
+    const scale = Math.min(cont.width / nat.naturalWidth, cont.height / nat.naturalHeight);
+    const width  = nat.naturalWidth * scale;
+    const height = nat.naturalHeight * scale;
+    const left   = (cont.width - width) / 2;
+    const top    = (cont.height - height) / 2;
+    c.setCanvasData({ left, top, width, height });
+    c.setCropBoxData({ left, top, width, height });
+    setAspectMode('free');
+  }
+
+  function setAspect(mode: AspectMode) {
+    setAspectMode(mode);
+    const c = cropper();
+    if (!c) return;
+    const img = c.getImageData();
+    const sideways = (((c.getData().rotate % 360) + 360) % 360) % 180 === 90;
+    const natural = sideways
+      ? img.naturalHeight / img.naturalWidth
+      : img.naturalWidth / img.naturalHeight;
+    const aspect =
+      mode === 'square' ? 1
+      : mode === '4:3'  ? 4 / 3
+      : mode === '3:2'  ? 3 / 2
+      : mode === 'original' ? natural
+      : NaN; // free
+    c.setAspectRatio(aspect);
+  }
 
   function save() {
+    const c = cropper();
+    if (!c) return;
     setError(null);
+    const d = c.getData(true);
+    const rotation = (((d.rotate % 360) + 360) % 360) as 0 | 90 | 180 | 270;
     startTransition(async () => {
       const res = await applyPhotoEdits(photoId, {
         rotation,
-        cropPixels: areaPixels
-          ? { x: areaPixels.x, y: areaPixels.y, width: areaPixels.width, height: areaPixels.height }
-          : null,
+        cropPixels: { x: d.x, y: d.y, width: d.width, height: d.height },
       });
       if (!res.ok) {
         setError(
           res.error === 'processing_failed'
-            ? 'This photo can\u2019t be edited here (HEIC originals can\u2019t be processed).'
-            : 'Couldn\u2019t save the edit \u2014 try again.',
+            ? 'This photo can’t be edited here (HEIC originals can’t be processed).'
+            : 'Couldn’t save the edit — try again.',
         );
         return;
       }
@@ -53,43 +90,38 @@ export function PhotoEditor({ photoId, imageUrl, onDone }: { photoId: string; im
 
   return (
     <div>
-      <div className="relative w-full overflow-hidden rounded-xl bg-ink" style={{ height: 'min(60vh, 480px)' }}>
+      <div className="overflow-hidden rounded-xl bg-ink">
         <Cropper
-          image={imageUrl}
-          crop={crop}
-          zoom={zoom}
-          rotation={rotation}
-          aspect={aspect}
-          onCropChange={setCrop}
-          onZoomChange={setZoom}
-          onCropComplete={(_area, pixels) => setAreaPixels(pixels)}
-          onMediaLoaded={(size) => setMediaAspect(size.naturalWidth / size.naturalHeight)}
+          ref={cropperRef}
+          src={imageUrl}
+          style={{ height: 'min(60vh, 480px)', width: '100%' }}
+          viewMode={0}
+          autoCropArea={1}
+          background={false}
+          checkCrossOrigin={false}
+          responsive
+          guides
         />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-ink-soft" data-no-print>
-        <button type="button" disabled={pending} onClick={() => setRotation((r) => (((r + 270) % 360) as 0 | 90 | 180 | 270))}
+        <button type="button" disabled={pending} onClick={() => rotate(-90)}
           className="rounded-full border border-rule bg-paper px-3 py-1.5 hover:border-ink hover:text-ink disabled:opacity-50">
           ⟲ Left
         </button>
-        <button type="button" disabled={pending} onClick={() => setRotation((r) => (((r + 90) % 360) as 0 | 90 | 180 | 270))}
+        <button type="button" disabled={pending} onClick={() => rotate(90)}
           className="rounded-full border border-rule bg-paper px-3 py-1.5 hover:border-ink hover:text-ink disabled:opacity-50">
           ⟳ Right
         </button>
-        <label className="flex items-center gap-2">
-          Zoom
-          <input type="range" min={1} max={3} step={0.05} value={zoom}
-            onChange={(e) => setZoom(Number(e.target.value))} className="accent-[#8D2842]" />
-        </label>
         <div className="flex items-center gap-1.5">
-          {(['original', 'square', '4:3', '3:2'] as AspectMode[]).map((m) => (
-            <button key={m} type="button" disabled={pending} onClick={() => setAspectMode(m)}
+          {(['free', 'original', 'square', '4:3', '3:2'] as AspectMode[]).map((m) => (
+            <button key={m} type="button" disabled={pending} onClick={() => setAspect(m)}
               className={
                 aspectMode === m
                   ? 'rounded-full border border-ink bg-ink px-2.5 py-1 text-xs text-paper'
                   : 'rounded-full border border-rule bg-paper px-2.5 py-1 text-xs text-ink-soft hover:border-ink'
               }>
-              {m === 'original' ? 'Original' : m === 'square' ? 'Square' : m}
+              {m === 'free' ? 'Free' : m === 'original' ? 'Original' : m === 'square' ? 'Square' : m}
             </button>
           ))}
         </div>
@@ -100,13 +132,13 @@ export function PhotoEditor({ photoId, imageUrl, onDone }: { photoId: string; im
           </button>
           <button type="button" onClick={save} disabled={pending}
             className="rounded-full bg-primary px-4 py-1.5 text-paper hover:bg-ink disabled:opacity-50">
-            {pending ? 'Saving\u2026' : 'Save'}
+            {pending ? 'Saving…' : 'Save'}
           </button>
         </div>
       </div>
       {error && <p className="mt-2 text-sm italic text-accent">{error}</p>}
       <p className="mt-2 font-serif text-xs italic text-ink-soft">
-        The untouched original is always kept \u2014 an edit can be undone later.
+        Drag any edge or corner to crop freely. The untouched original is always kept — an edit can be undone later.
       </p>
     </div>
   );
