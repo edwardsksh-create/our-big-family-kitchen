@@ -1,8 +1,13 @@
 import Link from 'next/link';
 import { fetchListedContributors } from '@/lib/queries/contributors';
-import { familyLineBySlug, FAMILY_BG } from '@/lib/family-lines';
-import { SECTION_TEXT } from '@/lib/sections';
+import { SECTION_BG, SECTION_TEXT, type SectionColorToken } from '@/lib/sections';
 import { cn } from '@/lib/utils';
+
+// The brand palette in a deliberate rotation. Nine colors over a 2/3/4
+// column grid means no two neighbors repeat, horizontally or vertically.
+const TILE_COLORS: SectionColorToken[] = [
+  'burgundy', 'gold', 'sky', 'olive', 'mauve', 'slate', 'rose', 'navy', 'blush',
+];
 
 export const metadata = { title: 'Contributors' };
 export const revalidate = 60;
@@ -23,20 +28,20 @@ export default async function ContributorsPage() {
         recipe came from.
       </p>
 
-      {/* Brand-style colored boxes, name only — the color is the person's
-          primary family line. Families and bio live on their page. People
-          without a line get the cream tile. */}
+      {/* Brand-style colored boxes, name only — colors rotate through the
+          full palette in display order (the deliberate mix), like the
+          section tiles. Families and bio live on the person's page. */}
       <ul className="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {all.map((c) => {
-          const line = c.primary_family_line ? familyLineBySlug(c.primary_family_line.slug) : undefined;
+        {all.map((c, i) => {
+          const color = TILE_COLORS[i % TILE_COLORS.length];
           return (
             <li key={c.id}>
               <Link
                 href={`/contributors/${c.slug}`}
                 className={cn(
                   'flex min-h-[120px] flex-col justify-end rounded-2xl p-5 card-hover',
-                  line ? FAMILY_BG[line.color] : 'bg-cream',
-                  line ? SECTION_TEXT[line.color] : 'text-ink',
+                  SECTION_BG[color],
+                  SECTION_TEXT[color],
                 )}
               >
                 <span className="font-serif text-xl leading-tight md:text-2xl">{c.name}</span>

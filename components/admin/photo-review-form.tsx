@@ -324,6 +324,12 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
         </details>
       )}
 
+      <Field
+        label="Year"
+        value={year}
+        onChange={setYear}
+        placeholder='e.g. 1987-12-25, 1987, "around 1995", "early 90s"'
+      />
       {/* People */}
       <section>
         <label className="label mb-2 block text-ink">People in photo</label>
@@ -388,6 +394,98 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
             </ul>
           )}
         </div>
+      </section>
+
+      <Field
+        label="Place"
+        value={place}
+        onChange={setPlace}
+        placeholder="e.g. Quinn kitchen"
+      />
+      <Field
+        label="Caption"
+        value={caption}
+        onChange={setCaption}
+        placeholder="Brief description of the moment"
+      />
+
+      {/* Linked recipes */}
+      <section>
+        <label className="label mb-2 block text-ink">Linked recipes</label>
+        {selectedRecipes.length > 0 && (
+          <ul className="mb-3 flex flex-wrap gap-2">
+            {selectedRecipes.map((id) => {
+              const r = recipesById.get(id);
+              if (!r) return null;
+              return (
+                <li
+                  key={id}
+                  className="inline-flex items-center gap-2 rounded-full border border-rule bg-paper px-3 py-1 text-sm text-ink"
+                >
+                  <span>{r.title}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${r.title}`}
+                    className="text-ink-soft hover:text-primary"
+                    onClick={() => setSelectedRecipes(selectedRecipes.filter((x) => x !== id))}
+                  >
+                    ×
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <div className="relative">
+          <input
+            type="text"
+            value={recipeQuery}
+            onChange={(e) => setRecipeQuery(e.target.value)}
+            placeholder="Type a recipe title…"
+            className="w-full rounded-xl border border-rule bg-paper px-4 py-2 text-sm"
+          />
+          {recipeMatches.length > 0 && (
+            <ul className="absolute left-0 right-0 z-10 mt-1 max-h-72 overflow-auto rounded-xl border border-rule bg-paper shadow-lg">
+              {recipeMatches.map((r) => (
+                <li key={r.id}>
+                  <button
+                    type="button"
+                    className="block w-full px-4 py-2 text-left text-sm hover:bg-cream/40"
+                    onClick={() => {
+                      setSelectedRecipes([...selectedRecipes, r.id]);
+                      setRecipeQuery('');
+                    }}
+                  >
+                    {r.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      {/* Needs editing — independent of reviewed; admin-only flag for photos
+          that need cropping/rotation/etc. outside this tool. */}
+      <section className="rounded-2xl border border-dashed border-rule bg-cream/20 p-4">
+        <label className="flex items-center gap-2 text-sm text-ink">
+          <input
+            type="checkbox"
+            checked={needsEditing}
+            onChange={(e) => setNeedsEditing(e.target.checked)}
+            className="h-4 w-4 rounded border-rule"
+          />
+          Needs editing (crop, rotate, color-fix outside this tool)
+        </label>
+        {needsEditing && (
+          <input
+            type="text"
+            value={editingNote}
+            onChange={(e) => setEditingNote(e.target.value)}
+            placeholder='Short note — e.g. "crop tighter, too much background" or "rotate"'
+            className="mt-3 w-full rounded-xl border border-rule bg-paper px-4 py-2 text-sm"
+          />
+        )}
       </section>
 
       <Field
@@ -489,104 +587,6 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
             <p className="mt-1 text-xs italic text-ink-soft">{newOccasionFeedback}</p>
           )}
         </div>
-      </section>
-
-      <Field
-        label="Year"
-        value={year}
-        onChange={setYear}
-        placeholder='e.g. 1987-12-25, 1987, "around 1995", "early 90s"'
-      />
-      <Field
-        label="Place"
-        value={place}
-        onChange={setPlace}
-        placeholder="e.g. Quinn kitchen"
-      />
-      <Field
-        label="Caption"
-        value={caption}
-        onChange={setCaption}
-        placeholder="Brief description of the moment"
-      />
-
-      {/* Linked recipes */}
-      <section>
-        <label className="label mb-2 block text-ink">Linked recipes</label>
-        {selectedRecipes.length > 0 && (
-          <ul className="mb-3 flex flex-wrap gap-2">
-            {selectedRecipes.map((id) => {
-              const r = recipesById.get(id);
-              if (!r) return null;
-              return (
-                <li
-                  key={id}
-                  className="inline-flex items-center gap-2 rounded-full border border-rule bg-paper px-3 py-1 text-sm text-ink"
-                >
-                  <span>{r.title}</span>
-                  <button
-                    type="button"
-                    aria-label={`Remove ${r.title}`}
-                    className="text-ink-soft hover:text-primary"
-                    onClick={() => setSelectedRecipes(selectedRecipes.filter((x) => x !== id))}
-                  >
-                    ×
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        <div className="relative">
-          <input
-            type="text"
-            value={recipeQuery}
-            onChange={(e) => setRecipeQuery(e.target.value)}
-            placeholder="Type a recipe title…"
-            className="w-full rounded-xl border border-rule bg-paper px-4 py-2 text-sm"
-          />
-          {recipeMatches.length > 0 && (
-            <ul className="absolute left-0 right-0 z-10 mt-1 max-h-72 overflow-auto rounded-xl border border-rule bg-paper shadow-lg">
-              {recipeMatches.map((r) => (
-                <li key={r.id}>
-                  <button
-                    type="button"
-                    className="block w-full px-4 py-2 text-left text-sm hover:bg-cream/40"
-                    onClick={() => {
-                      setSelectedRecipes([...selectedRecipes, r.id]);
-                      setRecipeQuery('');
-                    }}
-                  >
-                    {r.title}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </section>
-
-      {/* Needs editing — independent of reviewed; admin-only flag for photos
-          that need cropping/rotation/etc. outside this tool. */}
-      <section className="rounded-2xl border border-dashed border-rule bg-cream/20 p-4">
-        <label className="flex items-center gap-2 text-sm text-ink">
-          <input
-            type="checkbox"
-            checked={needsEditing}
-            onChange={(e) => setNeedsEditing(e.target.checked)}
-            className="h-4 w-4 rounded border-rule"
-          />
-          Needs editing (crop, rotate, color-fix outside this tool)
-        </label>
-        {needsEditing && (
-          <input
-            type="text"
-            value={editingNote}
-            onChange={(e) => setEditingNote(e.target.value)}
-            placeholder='Short note — e.g. "crop tighter, too much background" or "rotate"'
-            className="mt-3 w-full rounded-xl border border-rule bg-paper px-4 py-2 text-sm"
-          />
-        )}
       </section>
 
       {/* Buttons */}
