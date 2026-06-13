@@ -82,11 +82,25 @@ export type FamilyConfig = {
   /** Archival photo + caption used on home/about/sign-in whenever the
    *  curated hero pool is empty. */
   heroFallback: { src: string; caption: string };
+  /** Per-area visibility. Each area is independently 'public' (anyone with
+   *  the link can read it) or 'private' (sign-in required). Enforced
+   *  site-wide via lib/access.ts. 'recipes' also covers /sections and
+   *  /search; the home page shows whichever areas are public and hides the
+   *  rest, so an all-private site is effectively a sign-in door. Editing,
+   *  contributing, and admin are always sign-in-gated regardless. */
+  visibility: {
+    recipes:      AreaVisibility;
+    family:       AreaVisibility;
+    contributors: AreaVisibility;
+    album:        AreaVisibility;
+  };
   /** The older sibling archive this site federates with, or null. */
   federation: FamilyFederation | null;
   /** The founding letter on /about, or null. */
   foundingLetter: FoundingLetter | null;
 };
+
+export type AreaVisibility = 'public' | 'private';
 
 export const FAMILY: FamilyConfig = {
   siteName: 'Our Big Family Kitchen',
@@ -99,6 +113,17 @@ export const FAMILY: FamilyConfig = {
   heroFallback: {
     src:     '/hero/leusch-sisters-thanksgiving.jpg',
     caption: 'Nancy, Laura, and Annie in the Quinn kitchen on Thanksgiving, 1980s.',
+  },
+
+  // Matches the site's behavior to date: recipes, family pages, and
+  // contributors are publicly readable; the photo album is sign-in-only.
+  // Flip any of these to 'private' (or 'public') to change what logged-out
+  // visitors can see.
+  visibility: {
+    recipes:      'public',
+    family:       'public',
+    contributors: 'public',
+    album:        'private',
   },
 
   federation: {

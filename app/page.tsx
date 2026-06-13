@@ -11,22 +11,28 @@ import { captionLead } from '@/lib/photos/photo-caption';
 import { RecipeIndexGrid } from '@/components/recipe-index-card';
 import { ANONYMOUS_VIEWER } from '@/lib/recipes/badges';
 import { FAMILY } from '@/config/family';
+import { isAreaPublic } from '@/lib/access';
 
-// Per-request: the album strip is shown only to signed-in family (the album
-// itself is sign-in-only), so the page reads the session. The data sections
-// are small and the queries are the same ones the index pages already run.
+// Per-request: the home page shows only the areas a logged-out visitor is
+// allowed to see (per FAMILY.visibility), plus everything once signed in.
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   const session = await auth();
   const signedIn = !!session?.user;
+  // What this visitor may see on the home page. Signed-in family see it all;
+  // logged-out visitors see only the public areas.
+  const showRecipes = isAreaPublic('recipes') || signedIn;
+  const showAlbum   = isAreaPublic('album')   || signedIn;
 
   const [federatedCount, memories, recipes, albumPhotos, heroPhoto] = await Promise.all([
     fetchFederatedCount(),
     fetchRecentMemories(3),
     fetchRecipeIndex(),
-    signedIn ? fetchRecentReviewedPhotos(6) : Promise.resolve([] as FamilyPhotoFull[]),
-    fetchRandomHeroPhoto(),
+    // Never fetch/show album photos (incl. the hero) to someone who can't
+    // see the album — that's the most sensitive area.
+    showAlbum ? fetchRecentReviewedPhotos(6) : Promise.resolve([] as FamilyPhotoFull[]),
+    showAlbum ? fetchRandomHeroPhoto() : Promise.resolve(null),
   ]);
   const recent = recipes.slice(0, 3);
 
@@ -53,8 +59,11 @@ export default async function HomePage() {
             “wait, who has that recipe?” favorites can live side by side.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/recipes"  className="btn-primary">Browse recipes</Link>
-            <Link href="/album"    className="btn-ghost">Open the album</Link>
+            {showRecipes && <Link href="/recipes" className="btn-primary">Browse recipes</Link>}
+            {showAlbum   && <Link href="/album"   className="btn-ghost">Open the album</Link>}
+            {!showRecipes && !showAlbum && (
+              <Link href="/sign-in" className="btn-primary">Sign in</Link>
+            )}
           </div>
         </div>
 
@@ -86,7 +95,7 @@ export default async function HomePage() {
           ------------------------------------------------------------------ */}
 
       {/* Recently added recipes */}
-      {recent.length > 0 && (
+      {showRecipes && recent.length > 0 && (
         <section className="py-5 md:py-6">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-serif text-2xl text-ink md:text-3xl">New in the kitchen</h2>
@@ -100,8 +109,8 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Album strip — family only, like the album itself. */}
-      {signedIn && albumPhotos.length > 0 && (
+      {/* Album strip — shown to whoever can see the album. */}
+      {showAlbum && albumPhotos.length > 0 && (
         <section className="py-5 md:py-6">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="font-serif text-2xl text-ink md:text-3xl">From the album</h2>
@@ -130,8 +139,8 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Recent family memories */}
-      {memories.length > 0 && (
+      {/* Recent family memories (memories live on recipes) */}
+      {showRecipes && memories.length > 0 && (
         <section className="py-5 md:py-6">
           <h2 className="font-serif text-2xl text-ink md:text-3xl">Family memories</h2>
           <ul className="mt-6 max-w-prose space-y-7">
@@ -155,17 +164,19 @@ export default async function HomePage() {
       {/* Browse by recipe type — demoted from the 16-tile grid to the same
           quiet pill row /recipes uses; browsing stays one click away without
           dominating the page. */}
-      <section className="py-5 md:py-6">
-        <h2 className="font-serif text-2xl text-ink md:text-3xl">Browse by recipe type</h2>
-        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-          {SECTIONS.map((section) => (
-            <SectionCard key={section.slug} section={section} />
-          ))}
-        </div>
-      </section>
+      {showRecipes && (
+        <section className="py-5 md:py-6">
+          <h2 className="font-serif text-2xl text-ink md:text-3xl">Browse by recipe type</h2>
+          <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {SECTIONS.map((section) => (
+              <SectionCard key={section.slug} section={section} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* The federated archive box (Kate's instance: Aunt Laura's archive) */}
-      {FAMILY.federation && federatedCount > 0 && (
+      {showRecipes && FAMILY.federation && federatedCount > 0 && (
         <section className="pb-16 pt-2 md:pb-20">
           <div className="rounded-2xl border border-rule bg-paper p-6 md:p-8">
             <h2 className="font-serif text-2xl text-ink md:text-3xl">From {FAMILY.federation.archiveShortName}</h2>
