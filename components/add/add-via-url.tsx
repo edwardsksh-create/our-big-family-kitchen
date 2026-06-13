@@ -14,18 +14,24 @@ type FailureReason =
   | 'http_other'
   | 'timeout'
   | 'network_error'
+  | 'blocked_address'
+  | 'blocked_redirect'
+  | 'too_many_redirects'
   | 'parse_failed';
 
 type Failure = { reason: FailureReason; url: string; status?: number };
 
 const FAILURE_HEADLINES: Record<FailureReason, string> = {
-  http_forbidden:    'This site doesn’t allow automatic fetching.',
-  http_not_found:    'We couldn’t find that page.',
-  http_server_error: 'That site seems to be having issues right now.',
-  http_other:        'We couldn’t reach that page.',
-  timeout:           'We couldn’t reach that page in time.',
-  network_error:     'We couldn’t reach that page.',
-  parse_failed:      'We fetched the page but couldn’t find a recipe in it.',
+  http_forbidden:     'This site doesn’t allow automatic fetching.',
+  http_not_found:     'We couldn’t find that page.',
+  http_server_error:  'That site seems to be having issues right now.',
+  http_other:         'We couldn’t reach that page.',
+  timeout:            'We couldn’t reach that page in time.',
+  network_error:      'We couldn’t reach that page.',
+  blocked_address:    'That address can’t be fetched from here.',
+  blocked_redirect:   'That page redirected somewhere we don’t fetch from.',
+  too_many_redirects: 'That page redirected too many times.',
+  parse_failed:       'We fetched the page but couldn’t find a recipe in it.',
 };
 
 export function AddViaUrl({ options, isAdmin, canPublish = false }: { options: FormOptions; isAdmin: boolean; canPublish?: boolean }) {

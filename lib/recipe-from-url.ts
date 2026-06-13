@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import { parseRecipeFromText, type ParsedRecipe } from '@/lib/recipe-parser';
 import { extractJsonLdRecipe } from '@/lib/jsonld-recipe';
+import { checkFetchTarget } from '@/lib/url-safety';
 
 export type FromUrlFailureReason =
   | 'http_forbidden'      // 403 — common when a site blocks automated requests
@@ -9,6 +10,8 @@ export type FromUrlFailureReason =
   | 'http_other'          // 4xx/3xx we didn't classify above (rare)
   | 'timeout'             // AbortController fired
   | 'network_error'       // DNS/TLS/etc.
+  | 'blocked_redirect'    // a redirect hop pointed at a private/internal address
+  | 'too_many_redirects'  // exceeded MAX_REDIRECTS hops
   | 'parse_failed';       // fetched OK but no recipe schema and AI fallback failed too
 
 export type FromUrlResult =
@@ -32,6 +35,10 @@ const BROWSER_HEADERS = {
 // 10 s is long enough for slow blogs, short enough to give up on stalled sites.
 const FETCH_TIMEOUT_MS = 10_000;
 
+// Browsers cap around 20; recipe blogs rarely need more than a couple
+// (http→https, www-canonicalization, the odd URL restructure).
+const MAX_REDIRECTS = 5;
+
 // Exported for unit testing.
 export function classifyHttpStatus(status: number): FromUrlFailureReason {
   if (status === 403) return 'http_forbidden';
@@ -47,12 +54,43 @@ export async function fetchRecipeFromUrl(url: string): Promise<FromUrlResult> {
   let html: string;
   let status: number | undefined;
   try {
-    const res = await fetch(url, {
-      headers:  BROWSER_HEADERS,
-      redirect: 'follow',
-      cache:    'no-store',
-      signal:   controller.signal,
-    });
+    // Redirects are followed by hand so every hop gets the same SSRF check
+    // as the user-supplied URL — `redirect: 'follow'` would happily chase a
+    // public page's redirect onto a private or metadata address.
+    let currentUrl = url;
+    let res: Response;
+    for (let hop = 0; ; hop++) {
+      const safety = await checkFetchTarget(currentUrl);
+      if (!safety.ok) {
+        console.error(JSON.stringify({
+          event: 'url_fetch_blocked_hop',
+          url:   currentUrl,
+          hop,
+        }));
+        return { ok: false, reason: 'blocked_redirect' };
+      }
+
+      res = await fetch(currentUrl, {
+        headers:  BROWSER_HEADERS,
+        redirect: 'manual',
+        cache:    'no-store',
+        signal:   controller.signal,
+      });
+
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get('location');
+        if (!location) {
+          return { ok: false, reason: classifyHttpStatus(res.status), status: res.status };
+        }
+        if (hop >= MAX_REDIRECTS) {
+          return { ok: false, reason: 'too_many_redirects' };
+        }
+        currentUrl = new URL(location, currentUrl).toString();
+        continue;
+      }
+      break;
+    }
+
     status = res.status;
     if (!res.ok) {
       return { ok: false, reason: classifyHttpStatus(res.status), status: res.status };
