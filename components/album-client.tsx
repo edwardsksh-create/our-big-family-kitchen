@@ -620,13 +620,25 @@ function DetailsEditor({ photo, occasions, people }: { photo: FamilyPhotoFull; o
     setOpen(true);
   }
 
+  function addTopMatch() {
+    if (personMatches.length === 0) return;
+    setPersonRefs((refs) => refs.includes(personMatches[0].ref) ? refs : [...refs, personMatches[0].ref]);
+    setPersonQuery('');
+  }
+
   function save() {
     setError(null);
+    // Fold in a name that was typed but not clicked, so pressing Save with
+    // text still in the box doesn't silently drop the person.
+    const pending = personMatches[0];
+    const finalRefs = pending && !personRefs.includes(pending.ref)
+      ? [...personRefs, pending.ref]
+      : personRefs;
     startTransition(async () => {
       const res = await updatePhotoDetails(photo.id, {
         caption, year, place,
         additionalPeople,
-        personRefs,
+        personRefs: finalRefs,
         occasionSlugs: selectedOccasions,
       });
       if (!res.ok) { setError('Couldn’t save — try again.'); return; }
@@ -676,6 +688,7 @@ function DetailsEditor({ photo, occasions, people }: { photo: FamilyPhotoFull; o
           <input
             value={personQuery}
             onChange={(e) => setPersonQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTopMatch(); } }}
             placeholder="Add a person…"
             className="min-w-[9rem] rounded-full border border-rule bg-paper px-3 py-1 text-xs"
           />
@@ -690,6 +703,11 @@ function DetailsEditor({ photo, occasions, people }: { photo: FamilyPhotoFull; o
               </button>
             ))}
           </div>
+        )}
+        {personQuery.trim().length >= 2 && personMatches.length === 0 && (
+          <p className="mt-1.5 text-xs italic text-ink-soft">
+            No one in the archive matches “{personQuery.trim()}.” Add them under “Others” below.
+          </p>
         )}
         {/* Free-text note for anyone not in the tag list — clear it to remove. */}
         <input value={additionalPeople} onChange={(e) => setAdditionalPeople(e.target.value)}
