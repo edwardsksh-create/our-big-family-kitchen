@@ -52,12 +52,26 @@ async function ensureUniqueSlug(base: string, existingId?: string): Promise<stri
   }
 }
 
+// The child-table syncs are delete-then-insert without a wrapping
+// transaction (no RPC yet — see the security-gate list). The one disaster
+// that design allows is a delete that lands and an insert that doesn't,
+// silently: the recipe loses its ingredients while the user sees "Saved".
+// Every step is therefore checked and failures THROW; saveRecipe surfaces
+// 'sync_failed' so the user retries, and a retry converges because each
+// sync rebuilds its table from the draft.
+class SyncError extends Error {
+  constructor(step: string, cause: { message: string }) {
+    super(`${step}: ${cause.message}`);
+  }
+}
+
 async function syncIngredients(recipeId: string, rows: RecipeDraft['ingredients']) {
   const db = supabaseAdmin();
-  await db.from('ingredients').delete().eq('recipe_id', recipeId);
+  const { error: delErr } = await db.from('ingredients').delete().eq('recipe_id', recipeId);
+  if (delErr) throw new SyncError('ingredients delete', delErr);
   const clean = rows.filter((r) => r.item_text.trim().length > 0);
   if (clean.length === 0) return;
-  await db.from('ingredients').insert(
+  const { error: insErr } = await db.from('ingredients').insert(
     clean.map((r, idx) => ({
       recipe_id:  recipeId,
       sub_header: r.sub_header.trim() || null,
@@ -65,14 +79,16 @@ async function syncIngredients(recipeId: string, rows: RecipeDraft['ingredients'
       sort_order: idx,
     })),
   );
+  if (insErr) throw new SyncError('ingredients insert', insErr);
 }
 
 async function syncInstructions(recipeId: string, rows: RecipeDraft['instructions']) {
   const db = supabaseAdmin();
-  await db.from('instructions').delete().eq('recipe_id', recipeId);
+  const { error: delErr } = await db.from('instructions').delete().eq('recipe_id', recipeId);
+  if (delErr) throw new SyncError('instructions delete', delErr);
   const clean = rows.filter((r) => r.body.trim().length > 0);
   if (clean.length === 0) return;
-  await db.from('instructions').insert(
+  const { error: insErr } = await db.from('instructions').insert(
     clean.map((r, idx) => ({
       recipe_id:  recipeId,
       sub_header: r.sub_header.trim() || null,
@@ -80,6 +96,7 @@ async function syncInstructions(recipeId: string, rows: RecipeDraft['instruction
       sort_order: idx,
     })),
   );
+  if (insErr) throw new SyncError('instructions insert', insErr);
 }
 
 async function syncPhotos(
@@ -96,15 +113,17 @@ async function syncPhotos(
     ...source.map((p) => p.storage_path),
     ...dish.map((p) => p.storage_path),
   ]);
-  const { data: existing } = await db
+  const { data: existing, error: listErr } = await db
     .from('photos')
     .select('id, storage_path')
     .eq('recipe_id', recipeId);
+  if (listErr) throw new SyncError('photos list', listErr);
   const removeIds = (existing ?? [])
     .filter((p) => p.storage_path && !keepPaths.has(p.storage_path))
     .map((p) => p.id);
   if (removeIds.length > 0) {
-    await db.from('photos').delete().in('id', removeIds);
+    const { error: delErr } = await db.from('photos').delete().in('id', removeIds);
+    if (delErr) throw new SyncError('photos delete', delErr);
   }
 
   // Upsert by storage_path. The DB doesn't have a unique constraint on
@@ -113,19 +132,21 @@ async function syncPhotos(
   for (const list of [source, dish] as const) {
     const photoType = list === source ? 'source' : 'dish';
     for (const photo of list) {
-      const { data: hit } = await db
+      const { data: hit, error: hitErr } = await db
         .from('photos')
         .select('id')
         .eq('recipe_id', recipeId)
         .eq('storage_path', photo.storage_path)
         .maybeSingle();
+      if (hitErr) throw new SyncError('photos lookup', hitErr);
       if (hit) {
-        await db
+        const { error: updErr } = await db
           .from('photos')
           .update({ caption: photo.caption ?? null, sort_order: order, photo_type: photoType })
           .eq('id', hit.id);
+        if (updErr) throw new SyncError('photos update', updErr);
       } else {
-        await db.from('photos').insert({
+        const { error: insErr } = await db.from('photos').insert({
           recipe_id:      recipeId,
           contributor_id: contributorId,
           url:            photo.public_url,
@@ -135,6 +156,7 @@ async function syncPhotos(
           photo_type:     photoType,
           sort_order:     order,
         });
+        if (insErr) throw new SyncError('photos insert', insErr);
       }
       order += 1;
     }
@@ -146,32 +168,38 @@ async function syncTags(recipeId: string, names: string[]) {
   const cleaned = Array.from(
     new Set(names.map((t) => t.trim()).filter(Boolean).map((t) => t.toLowerCase())),
   );
-  await db.from('recipe_tags').delete().eq('recipe_id', recipeId);
+  const { error: delErr } = await db.from('recipe_tags').delete().eq('recipe_id', recipeId);
+  if (delErr) throw new SyncError('tags delete', delErr);
   if (cleaned.length === 0) return;
 
   const tagIds: string[] = [];
   for (const name of cleaned) {
     const slug = slugify(name);
-    const { data: existing } = await db
+    const { data: existing, error: selErr } = await db
       .from('tags')
       .select('id')
       .eq('slug', slug)
       .maybeSingle();
+    if (selErr) throw new SyncError('tags lookup', selErr);
     if (existing) {
       tagIds.push(existing.id);
     } else {
-      const { data: created } = await db
+      const { data: created, error: insErr } = await db
         .from('tags')
         .insert({ slug, name })
         .select('id')
         .single();
-      if (created) tagIds.push(created.id);
+      // A concurrent save can create the same tag between our lookup and
+      // insert; the retry that 'sync_failed' prompts will find it.
+      if (insErr || !created) throw new SyncError('tags create', insErr ?? { message: 'no row returned' });
+      tagIds.push(created.id);
     }
   }
   if (tagIds.length === 0) return;
-  await db.from('recipe_tags').insert(
+  const { error: linkErr } = await db.from('recipe_tags').insert(
     tagIds.map((tag_id) => ({ recipe_id: recipeId, tag_id })),
   );
+  if (linkErr) throw new SyncError('tags link', linkErr);
 }
 
 async function syncOccasions(recipeId: string, slugs: string[]) {
@@ -183,15 +211,12 @@ async function syncOccasions(recipeId: string, slugs: string[]) {
   const clean = normalizeOccasionSlugs(slugs, valid);
 
   const { error: delErr } = await db.from('recipe_occasions').delete().eq('recipe_id', recipeId);
-  if (delErr) {
-    console.error('sync occasions: delete failed', delErr);
-    return;
-  }
+  if (delErr) throw new SyncError('occasions delete', delErr);
   if (clean.length === 0) return;
   const { error: insErr } = await db.from('recipe_occasions').insert(
     clean.map((occasion_slug) => ({ recipe_id: recipeId, occasion_slug })),
   );
-  if (insErr) console.error('sync occasions: insert failed', insErr);
+  if (insErr) throw new SyncError('occasions insert', insErr);
 }
 
 async function notifyAdminOfSubmission(args: {
@@ -363,13 +388,25 @@ export async function saveRecipe(
 
   // Skip child-table churn on pure reject / unpublish — no content changes.
   if (action !== 'admin_reject' && action !== 'unpublish') {
-    await Promise.all([
+    // allSettled so one table's failure doesn't abort its siblings mid-write;
+    // any failure still fails the save loudly (retrying converges — each
+    // sync rebuilds its table from the draft).
+    const results = await Promise.allSettled([
       syncIngredients(recipeId!, draft.ingredients),
       syncInstructions(recipeId!, draft.instructions),
       syncTags(recipeId!, draft.tags),
       syncOccasions(recipeId!, draft.occasion_slugs ?? []),
       syncPhotos(recipeId!, contributor.id, draft.source_photos ?? [], draft.dish_photos ?? []),
     ]);
+    const failed = results.filter(
+      (r): r is PromiseRejectedResult => r.status === 'rejected',
+    );
+    if (failed.length > 0) {
+      for (const f of failed) {
+        console.error('recipe sync failed:', recipeId, (f.reason as Error)?.message ?? f.reason);
+      }
+      return { ok: false, error: 'sync_failed' };
+    }
   }
 
   if (action === 'admin_reject' || action === 'publish') {

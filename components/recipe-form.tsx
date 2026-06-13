@@ -678,6 +678,7 @@ function humanError(code: string): string {
     case 'admin_only':         return 'Only Kate can do that — try “Submit for review”.';
     case 'not_recipe_owner':   return 'Only the recipe’s contributor or Kate can edit this recipe.';
     case 'missing_recipe_id':  return 'No recipe to update — try refreshing.';
+    case 'sync_failed':        return 'Some parts of the recipe didn’t save — save again to finish.';
     case 'missing_title':       return 'Add a title before saving.';
     case 'missing_family_line': return 'Pick a primary family line.';
     case 'missing_section':     return 'Pick a section.';
