@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { fetchPhotoReviewProgress, countPhotosNeedingEditing } from '@/lib/queries/family-photos';
+import { getVisibility } from '@/lib/access';
 
 export const metadata = { title: 'Admin' };
 export const dynamic = 'force-dynamic';
@@ -15,11 +16,21 @@ export default async function AdminHomePage() {
   if (session.user.role !== 'admin') redirect('/');
 
   const db = supabaseAdmin();
-  const [{ count: pendingRecipes }, photoProgress, flagged] = await Promise.all([
+  const [{ count: pendingRecipes }, photoProgress, flagged, visibility] = await Promise.all([
     db.from('recipes').select('*', { count: 'exact', head: true }).eq('status', 'pending_review'),
     fetchPhotoReviewProgress(),
     countPhotosNeedingEditing(),
+    getVisibility(),
   ]);
+
+  const areas = Object.values(visibility);
+  const publicCount = areas.filter((v) => v === 'public').length;
+  const visibilityNote =
+    publicCount === 0
+      ? 'Private — sign-in required'
+      : publicCount === areas.length
+        ? 'Public — open to everyone'
+        : `${publicCount} of ${areas.length} areas public`;
 
   const tools = [
     {
@@ -40,6 +51,11 @@ export default async function AdminHomePage() {
       href: '/admin/contributors',
       title: 'People',
       note: 'Contributors, invitations, publish rights',
+    },
+    {
+      href: '/admin/visibility',
+      title: 'Visibility',
+      note: visibilityNote,
     },
   ];
 

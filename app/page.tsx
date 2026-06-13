@@ -22,8 +22,12 @@ export default async function HomePage() {
   const signedIn = !!session?.user;
   // What this visitor may see on the home page. Signed-in family see it all;
   // logged-out visitors see only the public areas.
-  const showRecipes = isAreaPublic('recipes') || signedIn;
-  const showAlbum   = isAreaPublic('album')   || signedIn;
+  const [recipesPublic, albumPublic] = await Promise.all([
+    isAreaPublic('recipes'),
+    isAreaPublic('album'),
+  ]);
+  const showRecipes = recipesPublic || signedIn;
+  const showAlbum   = albumPublic   || signedIn;
 
   const [federatedCount, memories, recipes, albumPhotos, heroPhoto] = await Promise.all([
     fetchFederatedCount(),
