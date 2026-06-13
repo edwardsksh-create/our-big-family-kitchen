@@ -4,11 +4,22 @@ import { FAMILY } from '@/config/family';
 
 export const metadata = { title: 'Sign in' };
 
-type SearchParams = { error?: string };
+type SearchParams = { error?: string; callbackUrl?: string };
+
+// Where the magic link returns to after verification. Default home. We allow
+// ONLY the native sign-in bridge as an override — never an arbitrary URL — so
+// this can't become an open redirect.
+function safeRedirectTo(callbackUrl?: string): string {
+  if (callbackUrl && callbackUrl.startsWith('/api/v1/auth/mobile-callback')) {
+    return callbackUrl;
+  }
+  return '/';
+}
 
 export default function SignInPage({ searchParams }: { searchParams: SearchParams }) {
   const isNotInvited = searchParams.error === 'not_invited';
   const isOtherError = !!searchParams.error && !isNotInvited;
+  const redirectTo = safeRedirectTo(searchParams.callbackUrl);
 
   async function send(formData: FormData) {
     'use server';
@@ -16,7 +27,7 @@ export default function SignInPage({ searchParams }: { searchParams: SearchParam
     if (!email) return;
     await signIn('resend', {
       email,
-      redirectTo: '/',
+      redirectTo: safeRedirectTo(String(formData.get('callbackUrl') ?? '') || undefined),
     });
   }
 
@@ -45,6 +56,7 @@ export default function SignInPage({ searchParams }: { searchParams: SearchParam
       </p>
 
       <form action={send} className="mt-8 space-y-4">
+        <input type="hidden" name="callbackUrl" value={redirectTo} />
         <label className="block">
           <span className="label">Email</span>
           <input
