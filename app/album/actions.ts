@@ -148,7 +148,14 @@ export type PhotoDetailsResult = { ok: true } | { ok: false; error: string };
 /** Admin-only: fix a photo's caption / year / place after review. */
 export async function updatePhotoDetails(
   photoId: string,
-  details: { caption: string; year: string; place: string },
+  details: {
+    caption: string;
+    year: string;
+    place: string;
+    /** 'contributor:<id>' | 'family_member:<id>' — replaces the photo's people tags. */
+    personRefs: string[];
+    occasionSlugs: string[];
+  },
 ): Promise<PhotoDetailsResult> {
   // Admin, or a contributor with the photo-editor capability (re-read from
   // the DB — never trusted from the client).
@@ -164,8 +171,9 @@ export async function updatePhotoDetails(
       .maybeSingle();
     if (!row?.can_edit_photos) return { ok: false, error: 'not_authorized' };
   }
+  const db = supabaseAdmin();
   const trimmed = (v: string) => v.trim() || null;
-  const { error } = await supabaseAdmin()
+  const { error } = await db
     .from('family_photos')
     .update({ caption: trimmed(details.caption), year: trimmed(details.year), place: trimmed(details.place) })
     .eq('id', photoId);
@@ -173,6 +181,30 @@ export async function updatePhotoDetails(
     console.error('updatePhotoDetails failed:', error);
     return { ok: false, error: 'update_failed' };
   }
+
+  // Replace people tags (same shape the review queue writes).
+  await db.from('family_photo_people').delete().eq('family_photo_id', photoId);
+  const peopleRows = details.personRefs
+    .map((ref) => {
+      const [type, id] = ref.split(':');
+      if (type === 'contributor')   return { family_photo_id: photoId, person_type: 'contributor', contributor_id: id, family_member_id: null };
+      if (type === 'family_member') return { family_photo_id: photoId, person_type: 'family_member', contributor_id: null, family_member_id: id };
+      return null;
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+  if (peopleRows.length > 0) {
+    const { error: pErr } = await db.from('family_photo_people').insert(peopleRows);
+    if (pErr) { console.error('updatePhotoDetails people failed:', pErr); return { ok: false, error: 'people_failed' }; }
+  }
+
+  // Replace occasions (FK to the canonical types guards unknown slugs).
+  await db.from('family_photo_occasions').delete().eq('family_photo_id', photoId);
+  if (details.occasionSlugs.length > 0) {
+    const rows = [...new Set(details.occasionSlugs)].map((occasion_slug) => ({ family_photo_id: photoId, occasion_slug }));
+    const { error: oErr } = await db.from('family_photo_occasions').insert(rows);
+    if (oErr) { console.error('updatePhotoDetails occasions failed:', oErr); return { ok: false, error: 'occasions_failed' }; }
+  }
+
   revalidatePath('/album');
   revalidatePath('/');
   return { ok: true };

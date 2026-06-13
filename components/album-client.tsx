@@ -10,7 +10,7 @@ import { captionLead, joinNames } from '@/lib/photos/photo-caption';
 import { addPhotoComment, deletePhotoComment, setHeroEligible, updatePhotoDetails } from '@/app/album/actions';
 import { canDeleteComment, canPostComment, type CommentViewer } from '@/lib/recipes/comment-permissions';
 import { PhotoEditor } from '@/components/photo-editor';
-import type { FamilyPhotoFull, OccasionType } from '@/lib/queries/family-photos';
+import type { FamilyPhotoFull, OccasionType, PickerPerson } from '@/lib/queries/family-photos';
 
 type PersonOption = { ref: string; label: string };
 
@@ -20,6 +20,7 @@ export function AlbumClient({
   initialPhotoId = null,
   isAdmin = false,
   canEditPhotos = false,
+  people = [],
   viewer,
 }: {
   photos:    FamilyPhotoFull[];
@@ -30,6 +31,8 @@ export function AlbumClient({
   /** Admin or a contributor with the photo-editor capability (server
    *  re-checks on save). Shows the Edit-details affordance. */
   canEditPhotos?: boolean;
+  /** Person options for the details editor's tag picker (photo editors only). */
+  people?: PickerPerson[];
   /** Comment permissions for the lightbox composer (server re-checks). */
   viewer:    CommentViewer | null;
   /** From /album?photo=<id> — recipe and contributor pages deep-link a
@@ -226,6 +229,7 @@ export function AlbumClient({
           occasions={occasions}
           isAdmin={isAdmin}
           canEditPhotos={canEditPhotos}
+          people={people}
           viewer={viewer}
           onClose={() => setOpenPhotoId(null)}
           hasPrev={hasPrev}
@@ -261,6 +265,7 @@ function Lightbox({
   occasions,
   isAdmin,
   canEditPhotos,
+  people,
   viewer,
   onClose,
   hasPrev,
@@ -272,6 +277,7 @@ function Lightbox({
   occasions: OccasionType[];
   isAdmin: boolean;
   canEditPhotos: boolean;
+  people: PickerPerson[];
   viewer: CommentViewer | null;
   onClose: () => void;
   hasPrev: boolean;
@@ -437,7 +443,7 @@ function Lightbox({
           <PhotoComments photo={photo} viewer={viewer} />
           {(isAdmin || canEditPhotos) && (
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-              <DetailsEditor photo={photo} />
+              <DetailsEditor photo={photo} occasions={occasions} people={people} />
               {isAdmin && <HeroToggle photo={photo} />}
               {isAdmin && (
                 <button
@@ -574,20 +580,52 @@ function PhotoComments({ photo, viewer }: { photo: FamilyPhotoFull; viewer: Comm
   );
 }
 
-/** Admin-only: fix caption / year / place in place. */
-function DetailsEditor({ photo }: { photo: FamilyPhotoFull }) {
+/** Photo editors (admin or can_edit_photos): fix caption, year, place,
+ *  people tags, and occasions in place. The server re-checks the
+ *  capability on save. */
+function DetailsEditor({ photo, occasions, people }: { photo: FamilyPhotoFull; occasions: OccasionType[]; people: PickerPerson[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [caption, setCaption] = useState(photo.caption ?? '');
   const [year, setYear] = useState(photo.year ?? '');
   const [place, setPlace] = useState(photo.place ?? '');
+  const [personRefs, setPersonRefs] = useState<string[]>([]);
+  const [selectedOccasions, setSelectedOccasions] = useState<string[]>([]);
+  const [personQuery, setPersonQuery] = useState('');
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  const peopleByRef = new Map(people.map((p) => [p.ref, p]));
+  const personMatches = (() => {
+    const q = personQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    // Match names AND nicknames — the family searches by 'Kak', not
+    // 'Kathleen DeSautels'.
+    return people
+      .filter((p) => !personRefs.includes(p.ref) &&
+        (p.name.toLowerCase().includes(q) || (p.nickname ?? '').toLowerCase().includes(q)))
+      .slice(0, 6);
+  })();
+
+  function openEditor() {
+    setCaption(photo.caption ?? '');
+    setYear(photo.year ?? '');
+    setPlace(photo.place ?? '');
+    setPersonRefs(photo.people.map((p) => `${p.person_type}:${p.id}`));
+    setSelectedOccasions(photo.occasions);
+    setPersonQuery('');
+    setError(null);
+    setOpen(true);
+  }
 
   function save() {
     setError(null);
     startTransition(async () => {
-      const res = await updatePhotoDetails(photo.id, { caption, year, place });
+      const res = await updatePhotoDetails(photo.id, {
+        caption, year, place,
+        personRefs,
+        occasionSlugs: selectedOccasions,
+      });
       if (!res.ok) { setError('Couldn’t save — try again.'); return; }
       router.refresh();
       setOpen(false);
@@ -598,7 +636,7 @@ function DetailsEditor({ photo }: { photo: FamilyPhotoFull }) {
     return (
       <button
         type="button"
-        onClick={() => { setCaption(photo.caption ?? ''); setYear(photo.year ?? ''); setPlace(photo.place ?? ''); setOpen(true); }}
+        onClick={openEditor}
         className="mt-3 rounded-full border border-rule bg-paper px-3 py-1 text-xs text-ink-soft hover:border-ink hover:text-ink"
       >
         Edit details
@@ -606,7 +644,7 @@ function DetailsEditor({ photo }: { photo: FamilyPhotoFull }) {
     );
   }
   return (
-    <div className="mt-3 w-full space-y-2 rounded-xl border border-rule bg-cream/30 p-3">
+    <div className="mt-3 w-full space-y-3 rounded-xl border border-rule bg-cream/30 p-3">
       <input value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Caption"
         className="w-full rounded-lg border border-rule bg-paper px-3 py-1.5 text-sm" />
       <div className="flex flex-wrap gap-2">
@@ -615,6 +653,62 @@ function DetailsEditor({ photo }: { photo: FamilyPhotoFull }) {
         <input value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Place"
           className="min-w-[10rem] flex-1 rounded-lg border border-rule bg-paper px-3 py-1.5 text-sm" />
       </div>
+
+      {/* People tags */}
+      <div>
+        <p className="label mb-1.5 text-ink-soft">People</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {personRefs.map((ref) => {
+            const person = peopleByRef.get(ref) ?? photo.people
+              .map((pp) => ({ ref: `${pp.person_type}:${pp.id}`, name: pp.name }))
+              .find((pp) => pp.ref === ref);
+            return (
+              <span key={ref} className="inline-flex items-center gap-1 rounded-full border border-rule bg-paper px-2.5 py-0.5 text-xs text-ink">
+                {person?.name ?? 'Unknown'}
+                <button type="button" onClick={() => setPersonRefs(personRefs.filter((r) => r !== ref))}
+                  className="text-ink-soft hover:text-accent" aria-label={`Remove ${person?.name ?? 'person'}`}>×</button>
+              </span>
+            );
+          })}
+          <input
+            value={personQuery}
+            onChange={(e) => setPersonQuery(e.target.value)}
+            placeholder="Add a person…"
+            className="min-w-[9rem] rounded-full border border-rule bg-paper px-3 py-1 text-xs"
+          />
+        </div>
+        {personMatches.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {personMatches.map((p) => (
+              <button key={p.ref} type="button"
+                onClick={() => { setPersonRefs([...personRefs, p.ref]); setPersonQuery(''); }}
+                className="rounded-full border border-rule bg-paper px-2.5 py-0.5 text-xs text-ink-soft hover:border-ink hover:text-ink">
+                + {p.name}{p.family_line_names.length > 0 ? ` · ${p.family_line_names[0]}` : ''}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Occasions */}
+      <div>
+        <p className="label mb-1.5 text-ink-soft">Occasions</p>
+        <div className="flex flex-wrap gap-1.5">
+          {occasions.map((o) => {
+            const on = selectedOccasions.includes(o.slug);
+            return (
+              <button key={o.slug} type="button"
+                onClick={() => setSelectedOccasions(on ? selectedOccasions.filter((x) => x !== o.slug) : [...selectedOccasions, o.slug])}
+                className={on
+                  ? 'rounded-full border border-primary bg-primary px-2.5 py-0.5 text-xs text-paper'
+                  : 'rounded-full border border-rule bg-paper px-2.5 py-0.5 text-xs text-ink-soft hover:border-ink'}>
+                {o.name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="flex items-center gap-2">
         <button type="button" onClick={save} disabled={pending}
           className="rounded-full bg-primary px-4 py-1.5 text-sm text-paper hover:bg-ink disabled:opacity-50">

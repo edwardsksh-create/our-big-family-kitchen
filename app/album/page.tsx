@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { AlbumClient } from '@/components/album-client';
 import { AlbumUploadButton } from '@/components/album-upload-button';
-import { fetchAllReviewedPhotos, fetchOccasionTypes } from '@/lib/queries/family-photos';
+import { fetchAllPeopleForPicker, fetchAllReviewedPhotos, fetchOccasionTypes, type PickerPerson } from '@/lib/queries/family-photos';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const metadata = { title: 'Family archive' };
@@ -33,6 +33,9 @@ export default async function AlbumPage({
   const canUpload = !!viewer?.can_sign_in;
   const isAdmin = session.user.role === 'admin';
   const canEditPhotos = isAdmin || !!viewer?.can_edit_photos;
+  // The people picker is only needed by photo editors; spare everyone
+  // else the payload.
+  const people: PickerPerson[] = canEditPhotos ? await fetchAllPeopleForPicker() : [];
   const commentViewer = viewer
     ? { isAdmin, contributorId: viewer.id, canSignIn: !!viewer.can_sign_in }
     : null;
@@ -71,6 +74,7 @@ export default async function AlbumPage({
             initialPhotoId={initialPhotoId}
             isAdmin={isAdmin}
             canEditPhotos={canEditPhotos}
+            people={people}
             viewer={commentViewer}
           />
         )}
