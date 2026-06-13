@@ -173,6 +173,62 @@ Three buckets (note: the bucket is `recipe-photos`, not `photos` — `photos` is
 
 ---
 
+## 3b. Ingestion — recipe-card scan (the headline feature)
+
+Capture happens natively (VisionKit); the **authoritative parse stays server-side** so
+mobile results match web and the Anthropic key / prompts / per-contributor AI caps never
+leave the server.
+
+1. **Upload the scan** directly to Supabase Storage (supabase-swift) into the public
+   `recipe-photos` bucket, under your own folder: `mobile/<contributorId>/<uuid>.<ext>`.
+   An authenticated INSERT policy (migration `0038`) allows exactly that prefix.
+   `<contributorId>` is the `sub` claim of your token. Then read back the public URL.
+   *(Path note: this won't need a family prefix under multi-tenancy — family scoping
+   lives on the `photos`/`recipes` rows, not the object path.)*
+2. **Parse** — `POST /api/v1/photos/parse` (Bearer JWT):
+   ```
+   { "photo_urls": ["https://<ref>.supabase.co/storage/v1/object/public/recipe-photos/mobile/<cid>/<uuid>.jpg"] }
+   ```
+   Max 5 URLs, must be `recipe-photos` public URLs. Returns the same parsed-draft shape
+   as web's `/api/photos/parse`. Per-contributor AI cap enforced → `429 ai_daily_limit`
+   (handle gracefully). Same parser, same limits as web.
+3. **Save the draft** — *coming:* `POST /api/v1/recipes` (Bearer) that reuses the web's
+   save logic (it resolves the "smart parts" — slugify tags, validate occasions, order
+   photos — then calls the `replace_recipe_children` RPC via the service role with an
+   ownership check). **Don't call `replace_recipe_children` directly:** it expects
+   pre-resolved inputs and is service-role-only by design (client EXECUTE was revoked in
+   `0038`), so a direct call would duplicate that logic and drift from web. A
+   mobile-created recipe at `status = 'draft' | 'pending_review'` flows through the exact
+   same review/publish path as web (`recipes_contributor_insert` RLS).
+
+---
+
+## 3c. Multi-tenant roadmap (forward-compat — build the seam, not the feature)
+
+The product is heading to multi-tenant SaaS (`family_id` on every table, per-family RLS,
+a `memberships` table with per-family roles). Decisions so the client survives that
+migration without a rewrite:
+
+- **Tenancy = family-scoped token.** When multi-tenancy lands, the bridge token will
+  carry the **active `family_id`** + the user's **role in that family**, and RLS will
+  scope by that claim. **Switching families = re-mint** (the token exchange takes a
+  `family_id`; the server verifies membership first). Put the family-switcher seam in the
+  **auth/session layer**, not the data layer — your queries stay family-agnostic (the
+  token scopes them). This keeps RLS simple and gives true per-tenant isolation.
+- **Per-family identity/theming** (name, accent color, cover photo, "about") **will** be
+  a `families` / `family_settings` row the client reads — abstract app chrome behind a
+  "family profile" now instead of hardcoding.
+- **Roles** are UI hints only (RLS is the gate), so the expanded enum (owner / admin /
+  trusted-contributor / contributor / viewer) won't break you — re-derive models from
+  `gen:types` when it lands.
+- **In-app onboarding / family creation is on the roadmap** (not web-only) — a mature
+  flow creates a family in-app and mints a token scoped to it. Design the auth layer so
+  "create/join a family" can slot in (it's the same re-mint seam).
+- **Push** (later): `POST /api/v1/devices` to register an APNs token; design device
+  registration into the auth layer now.
+
+---
+
 ## 4. The typed schema (keep this in sync)
 
 `types/supabase.ts` (in the web repo root) is generated from the live schema:
@@ -201,8 +257,10 @@ between the two repos before it ships.
 
 | Thing | Value |
 |---|---|
-| Web host (prod) | `https://ourbigfamilykitchen.com` *(confirm)* |
-| Token endpoint | `GET /api/v1/auth/token` |
+| Web host (prod) | `https://our-big-family-kitchen.vercel.app` |
+| Token endpoint | `GET /api/v1/auth/token` (web/session) · `POST` `{code,code_verifier}` (native) |
+| Recipe-card parse | `POST /api/v1/photos/parse` (Bearer JWT) |
+| Scan upload path | `recipe-photos` bucket → `mobile/<contributorId>/<uuid>.<ext>` |
 | Supabase URL | `NEXT_PUBLIC_SUPABASE_URL` (returned by the token endpoint) |
 | Supabase anon key | `NEXT_PUBLIC_SUPABASE_ANON_KEY` (returned by the token endpoint) |
 | Token TTL | 1 hour (re-fetch to refresh) |

@@ -1,4 +1,4 @@
-import { SignJWT } from 'jose';
+import { SignJWT, jwtVerify } from 'jose';
 
 // --- The NextAuth → Supabase JWT bridge -----------------------------------
 //
@@ -82,4 +82,43 @@ export async function mintSupabaseToken({
     expiresIn: SUPABASE_TOKEN_TTL_SECONDS,
     expiresAt: new Date(expiresAt * 1000).toISOString(),
   };
+}
+
+export interface BearerActor {
+  email: string;
+  contributorId?: string;
+  role?: string;
+}
+
+/**
+ * Verify a Supabase bearer token (the one our bridge mints) for `/api/v1/*`
+ * endpoints that aren't reached through Supabase directly. Same HS256 secret and
+ * `authenticated` audience Supabase itself checks, so a token good for the DB is
+ * good here too. Throws on any failure.
+ */
+export async function verifySupabaseToken(token: string): Promise<BearerActor> {
+  const rawSecret = process.env.SUPABASE_JWT_SECRET;
+  if (!rawSecret) throw new Error('Missing SUPABASE_JWT_SECRET.');
+  const { payload } = await jwtVerify(token, new TextEncoder().encode(rawSecret), {
+    audience: 'authenticated',
+  });
+  const email = payload.email as string | undefined;
+  if (!email) throw new Error('token missing email claim');
+  return {
+    email,
+    contributorId: typeof payload.sub === 'string' ? payload.sub : undefined,
+    role: payload.app_role as string | undefined,
+  };
+}
+
+/** Pull and verify the bearer token from a request's Authorization header. */
+export async function actorFromRequest(req: Request): Promise<BearerActor | null> {
+  const header = req.headers.get('authorization') ?? req.headers.get('Authorization');
+  const match = header?.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+  try {
+    return await verifySupabaseToken(match[1]);
+  } catch {
+    return null;
+  }
 }

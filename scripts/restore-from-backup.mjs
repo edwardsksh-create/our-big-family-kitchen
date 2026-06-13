@@ -93,7 +93,7 @@ export const TABLE_KEYS = {
 
 // Must match SCHEMA_VERSION in lib/backup/tables.ts (CI-enforced). A backup
 // produced under a different schema version is refused without --force.
-export const EXPECTED_SCHEMA_VERSION = '0037';
+export const EXPECTED_SCHEMA_VERSION = '0038';
 
 // Tables that carry a created_at column — used for the "newer rows exist"
 // staleness check.
