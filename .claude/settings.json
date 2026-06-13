@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx vitest run)",
+      "Bash(npx vitest run *)",
+      "Bash(npm run test:unit)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run lint)",
+      "Bash(curl -s http://localhost*)",
+      "Bash(curl -sI http://localhost*)",
+      "Bash(curl -sf -o /dev/null http://localhost*)",
+      "Bash(curl -s https://bigfamilykitchen.com*)",
+      "Bash(curl -sI https://bigfamilykitchen.com*)",
+      "Bash(curl -s https://our-big-family-kitchen.vercel.app*)",
+      "Bash(curl -sI https://our-big-family-kitchen.vercel.app*)",
+      "Bash(supabase migration list)",
+      "Bash(supabase migration list *)",
+      "Bash(supabase projects list)",
+      "Bash(supabase gen types *)",
+      "Bash(npx vercel ls)",
+      "Bash(npx vercel env ls)",
+      "Bash(sips -g *)",
+      "Bash(rm -rf .next)"
+    ]
+  }
+}

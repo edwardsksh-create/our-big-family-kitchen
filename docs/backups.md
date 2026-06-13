@@ -110,3 +110,20 @@ When a new migration lands, bump **both**:
 
 The unit test fails until both match each other and the newest migration
 file, so CI will remind you.
+
+## Photo files (the bytes, not the rows)
+
+The nightly export above covers the **database** — captions, people,
+comments, recipes. The photo files themselves live only in Supabase
+Storage, so [`scripts/backup-photo-buckets.mjs`](../scripts/backup-photo-buckets.mjs)
+mirrors every bucket (`family-photos`, `recipe-photos`, `backups`) to
+`~/BigFamilyKitchen-Backups` on Kate's Mac:
+
+```bash
+node --env-file=.env.local scripts/backup-photo-buckets.mjs
+```
+
+Re-runs only fetch new or changed files, so it's cheap to run after a big
+photo import or once a month. Deletions are never propagated — if a photo
+is removed from the bucket by accident, the mirror still has it. First full
+mirror: 2026-06-12, 680 files, ~825 MB.
