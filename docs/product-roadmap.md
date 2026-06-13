@@ -9,6 +9,12 @@ never destabilizes it.
 
 Test demand before building multi-tenancy. Three phases, each gated:
 
+> **Status (2026-06-13):** Phase 0 ✅ done (config/family.ts, deployed). The
+> full security gate ✅ done & deployed (PRs #1–#9; the 3 migrations applied
+> to prod; image archive backed up; Sentry live). **Phase 1 in progress** —
+> from-scratch clone provisioning validated on a scratch project; see
+> docs/clone-runbook.md and §"Phase 1 findings" below.
+
 1. **Phase 0 — per-family config extraction.** Make "which family is this?"
    a configuration concern instead of facts scattered through the code.
    Kate's family becomes the first config instance; the live site must be
@@ -25,13 +31,18 @@ Test demand before building multi-tenancy. Three phases, each gated:
 
 ## Working agreement (non-negotiable)
 
-- **Never push to main.** All product work on `product/*` branches,
-  reviewed via PR + Vercel preview deployment, merged only on Kate's
-  approval.
-- **Never run `supabase db push` against the linked project** (that's
-  Kate's production DB). Schema experiments go to a scratch project
-  (`supabase projects create`, the org token is in .env.local — see the
-  restore-drill pattern in scripts/ history).
+- **Work on `product/*` branches via PR + Vercel preview.** Kate does NOT
+  gatekeep merges/deploys/migrations — the agent merges, deploys, and
+  applies reviewed migrations itself (Kate 2026-06-13; the earlier
+  "merged only on Kate's approval" was prior-model overcaution). PRs stay
+  for reviewability, not for an approval gate. (See memory:
+  autonomy-main-and-technical.)
+- **Schema changes: validate before production.** Reviewed migrations are
+  applied to prod by the agent (`supabase db push --linked`); experiments
+  and from-scratch validation go to a scratch project first
+  (`supabase projects create`, org token in .env.local). The IPv4 session
+  pooler (`aws-1-...pooler`) is required for `db push`, not the IPv6 direct
+  connection — see docs/clone-runbook.md.
 - **Never touch production data.** Verification uses synthetic rows with
   cleanup, the forged-session pattern in `scripts/_*-verify.mjs` examples,
   or scratch projects.
@@ -89,7 +100,12 @@ only instance, checked into the repo.
 
 ## Security gate — REQUIRED before any non-Kate family's data
 
-All known, all small, none done yet (they bite when the data isn't ours):
+> ✅ **All 8 done and deployed to production (2026-06-13)**, PRs #1–#9.
+> RLS, AI caps, and the photo-backups bucket migrations are applied to prod.
+> Item 8 was met by the "check errors" path (PR #4); the transactional-RPC
+> upgrade is an optional follow-up.
+
+All known, all small (they bite when the data isn't ours):
 
 1. **RLS on post-0004 tables**: family_members, family_photos,
    family_photo_people/occasions/occasion_types/recipes, recipe_comments,
@@ -138,3 +154,25 @@ All known, all small, none done yet (they bite when the data isn't ours):
   scripts/restore-from-backup.mjs).
 - Monitoring: deploy-failure webhook → email; backup watchdog cron 12:00
   UTC; no runtime error tracking yet.
+
+## Phase 1 findings (2026-06-13)
+
+From standing a fresh clone DB up on a scratch project (all 34 migrations
+from empty → seeds, buckets, RLS — validated):
+
+- **The migration chain composes from scratch.** A clone DB can be built in
+  one `supabase db push`. This was the big unknown (prod was built
+  incrementally over months).
+- **The seed migrations bake in Kate's data.** `0003_seeds.sql` seeds Kate's
+  six family lines and `0005_seed_admin.sql` hard-codes her admin email — a
+  clone inherits the wrong family + admin. Worked around by
+  `scripts/provision-clone-db.mjs` (reseeds family_lines from
+  `lib/family-lines.ts`, swaps the admin to `ADMIN_EMAIL`). See
+  docs/clone-runbook.md §3.
+- **Next code task — single-source family lines.** `family_lines` lives in
+  both `lib/family-lines.ts` (code) and a hard-coded DB seed. Make the lib
+  the single source and seed the table from it (drop the line seed in 0003),
+  so a clone edits one file. This is the cleanest pre-Phase-2 cleanup.
+- **Provisioning that's still manual** (runbook §4–6): Vercel project + env,
+  the `next_auth` exposed-schema dashboard step, Resend. Candidates for a
+  one-command provisioner once Phase 1 proves demand.
