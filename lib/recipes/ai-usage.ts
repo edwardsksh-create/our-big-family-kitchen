@@ -5,43 +5,56 @@
 
 import { supabaseAdmin } from '@/lib/supabase/server';
 
-// The per-contributor, per-day ceiling. This bounds a runaway loop or a
-// compromised account, not normal use (a few parses a day). Change this one
-// number to adjust the cap.
-export const AI_PARSES_PER_DAY = 25;
+// Per-day parse ceilings. These bound a runaway loop or a compromised
+// account, not normal use. Two tiers, because the legitimate high-volume
+// case — a curator setting up a site from a whole-collection file — is an
+// admin activity:
+//   * ADMIN gets a high backstop that's effectively never hit during real
+//     setup but still stops an infinite client loop.
+//   * Everyone else gets a tight bound (a big evening of adding is fine;
+//     abuse is capped at ~$2.50/day).
+// (Bulk imports via the service-role scripts bypass these routes entirely
+// and were never capped.) Change either number to adjust.
+export const AI_PARSES_PER_DAY       = 25;
+export const AI_PARSES_PER_DAY_ADMIN = 500;
 
 export type ParseReservation = { ok: boolean; used: number; limit: number };
 
-/** Resolve the signed-in user's contributor id from their email. */
-export async function contributorIdForEmail(email: string): Promise<string | null> {
+export type ParseActor = { contributorId: string; isAdmin: boolean };
+
+/** Resolve the signed-in user's contributor id + admin flag from their
+ *  email. Null when they aren't a contributor. */
+export async function resolveParseActor(email: string): Promise<ParseActor | null> {
   const db = supabaseAdmin();
   const { data } = await db
     .from('contributors')
-    .select('id')
+    .select('id, role')
     .ilike('email', email)
     .maybeSingle();
-  return data?.id ?? null;
+  if (!data) return null;
+  return { contributorId: data.id, isAdmin: data.role === 'admin' };
 }
 
-/** Atomically claim one of today's parse slots. ok:false means the
- *  contributor is at their daily limit. Fails OPEN on a counter error — the
- *  cap is a guardrail, not a paywall, so a limiter hiccup must never block a
- *  legitimate parse. */
-export async function reserveAiParse(contributorId: string): Promise<ParseReservation> {
+/** Atomically claim one of today's parse slots, at the actor's tier.
+ *  ok:false means they're at their daily limit. Fails OPEN on a counter
+ *  error — the cap is a guardrail, not a paywall, so a limiter hiccup must
+ *  never block a legitimate parse. */
+export async function reserveAiParse(actor: ParseActor): Promise<ParseReservation> {
+  const limit = actor.isAdmin ? AI_PARSES_PER_DAY_ADMIN : AI_PARSES_PER_DAY;
   const db = supabaseAdmin();
   const { data, error } = await db.rpc('reserve_ai_parse', {
-    p_contributor_id: contributorId,
-    p_limit:          AI_PARSES_PER_DAY,
+    p_contributor_id: actor.contributorId,
+    p_limit:          limit,
   });
   if (error) {
     console.error('reserveAiParse: counter error, allowing parse:', error.message);
-    return { ok: true, used: 0, limit: AI_PARSES_PER_DAY };
+    return { ok: true, used: 0, limit };
   }
   // The RPC returns the new count, or null when already at/over the limit.
   if (data == null) {
-    return { ok: false, used: AI_PARSES_PER_DAY, limit: AI_PARSES_PER_DAY };
+    return { ok: false, used: limit, limit };
   }
-  return { ok: true, used: Number(data), limit: AI_PARSES_PER_DAY };
+  return { ok: true, used: Number(data), limit };
 }
 
 /** Refund a previously-reserved slot (parse failed or used no AI). */

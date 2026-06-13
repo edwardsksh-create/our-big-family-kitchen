@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { parseRecipeFromPhotoUrls } from '@/lib/photos/intake';
-import { contributorIdForEmail, reserveAiParse, releaseAiParse } from '@/lib/recipes/ai-usage';
+import { resolveParseActor, reserveAiParse, releaseAiParse } from '@/lib/recipes/ai-usage';
 
 export const maxDuration = 90;
 export const dynamic     = 'force-dynamic';
@@ -11,8 +11,8 @@ export async function POST(req: Request) {
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-  const contributorId = await contributorIdForEmail(session.user.email);
-  if (!contributorId) {
+  const actor = await resolveParseActor(session.user.email);
+  if (!actor) {
     return NextResponse.json({ error: 'not_a_contributor' }, { status: 403 });
   }
   let body: { photo_urls?: string[] };
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
   }
 
   // Vision parsing always spends AI — reserve a slot first.
-  const reservation = await reserveAiParse(contributorId);
+  const reservation = await reserveAiParse(actor);
   if (!reservation.ok) {
     return NextResponse.json(
       { error: 'ai_daily_limit', limit: reservation.limit },
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     const result = await parseRecipeFromPhotoUrls({ photoUrls: urls });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    await releaseAiParse(contributorId); // model error — refund the slot
+    await releaseAiParse(actor.contributorId); // model error — refund the slot
     console.error('photo parse failed', err);
     return NextResponse.json(
       { error: 'parse_failed', message: (err as Error).message },

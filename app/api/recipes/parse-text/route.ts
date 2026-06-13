@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { parseRecipeFromText } from '@/lib/recipe-parser';
-import { contributorIdForEmail, reserveAiParse, releaseAiParse } from '@/lib/recipes/ai-usage';
+import { resolveParseActor, reserveAiParse, releaseAiParse } from '@/lib/recipes/ai-usage';
 
 export const maxDuration = 60;
 
@@ -10,8 +10,8 @@ export async function POST(req: Request) {
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
-  const contributorId = await contributorIdForEmail(session.user.email);
-  if (!contributorId) {
+  const actor = await resolveParseActor(session.user.email);
+  if (!actor) {
     return NextResponse.json({ error: 'not_a_contributor' }, { status: 403 });
   }
 
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
   }
 
   // Reserve an AI slot before calling the model (text parse always uses AI).
-  const reservation = await reserveAiParse(contributorId);
+  const reservation = await reserveAiParse(actor);
   if (!reservation.ok) {
     return NextResponse.json(
       { error: 'ai_daily_limit', limit: reservation.limit },
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     const recipe = await parseRecipeFromText(text);
     return NextResponse.json({ recipe });
   } catch (err) {
-    await releaseAiParse(contributorId); // model error — refund the slot
+    await releaseAiParse(actor.contributorId); // model error — refund the slot
     console.error('parse-text failed', err);
     return NextResponse.json({ error: 'parse_failed' }, { status: 502 });
   }
