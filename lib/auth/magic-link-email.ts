@@ -29,7 +29,7 @@ export function magicLinkHtml({ url, host }: MagicLinkParams): string {
                   Welcome &mdash; your sign-in link.
                 </h1>
                 <p style="margin:18px 0 0 0;font-size:16px;line-height:1.55;color:${INK_SOFT};">
-                  Tap the button below to sign in to the kitchen. The link is good for the next 24 hours.
+                  Tap the button below to sign in to the kitchen. The link works <strong>one time</strong> and is good for the next 24 hours &mdash; if you need to sign in again later, just ask for a fresh link.
                 </p>
               </td>
             </tr>
@@ -74,7 +74,7 @@ export function magicLinkText({ url, host }: MagicLinkParams): string {
   return [
     `Welcome to Our Big Family Kitchen.`,
     ``,
-    `Tap this link to sign in (good for 24 hours):`,
+    `Tap this link to sign in (works one time, good for 24 hours):`,
     url,
     ``,
     `Didn't ask to sign in? You can ignore this email — nothing`,

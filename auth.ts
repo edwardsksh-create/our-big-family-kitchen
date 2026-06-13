@@ -51,6 +51,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     signIn: '/sign-in',
     verifyRequest: '/sign-in/check-email',
+    // Send auth errors (e.g. a used or expired magic link) back to our own
+    // sign-in page instead of NextAuth's default error screen, so family
+    // members get a friendly explanation and the form to request a new link.
+    error: '/sign-in',
   },
   callbacks: {
     async signIn({ user }) {

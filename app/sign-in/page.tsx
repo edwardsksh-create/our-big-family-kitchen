@@ -7,7 +7,10 @@ type SearchParams = { error?: string };
 
 export default function SignInPage({ searchParams }: { searchParams: SearchParams }) {
   const isNotInvited = searchParams.error === 'not_invited';
-  const isOtherError = !!searchParams.error && !isNotInvited;
+  // NextAuth sends `error=Verification` when a magic link's token is gone —
+  // i.e. the link was already clicked once, or it's older than 24 hours.
+  const isUsedLink = searchParams.error === 'Verification';
+  const isOtherError = !!searchParams.error && !isNotInvited && !isUsedLink;
 
   async function send(formData: FormData) {
     'use server';
@@ -42,6 +45,15 @@ export default function SignInPage({ searchParams }: { searchParams: SearchParam
       <p className="mt-3 text-ink-soft">
         Sign in with the email Kate invited.
       </p>
+
+      {isUsedLink && (
+        <p className="mt-6 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
+          <span className="font-serif italic">That sign-in link has already
+          been used (or expired).</span> Each emailed link works one time —
+          don&rsquo;t worry, nothing is locked. Enter your email below and
+          we&rsquo;ll send you a fresh one.
+        </p>
+      )}
 
       <form action={send} className="mt-8 space-y-4">
         <label className="block">
