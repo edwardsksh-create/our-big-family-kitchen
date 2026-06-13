@@ -74,17 +74,14 @@ same access model the web app has.
 mobile clients, it goes in `/api/v2/*` — the v1 contract is never edited out from
 under a shipped app.
 
-> ⚠️ **Current status (read before you debug a 403).** The auth bridge is verified
-> end-to-end — Supabase accepts the minted token's signature and authenticates you as
-> the `authenticated` role. But the database still needs **Phase 2 client grants** before
-> data calls succeed: until they're applied, every read/write returns **403 / Postgres
-> `42501` "permission denied"** — this is expected, not a bug in your client. The fix is
-> parked in `contract/PENDING-phase2-client-grants.sql` (blocked on a repo↔DB migration
-> drift Kate is reconciling). **Until grants land:** build the full auth/token flow and
-> UI against mocked data; confirm `GET /api/v1/auth/token` returns a token; flip to live
-> Supabase reads once Kate says grants are applied. The first tables to come online will
-> be recipes + ingredients/instructions/tags/photos; the **album/family-photo tables come
-> later** (they need RLS policies first — see the same pending file).
+> ✅ **Status: live.** The bridge is verified end-to-end — Supabase accepts the minted
+> token and authenticates you as the `authenticated` role — and the **Phase 2 client
+> grants are applied** (`0037_phase2_client_grants.sql`), so signed-in clients can read
+> and write every table, gated by RLS. All tables (including the album/family-photo set,
+> which got RLS in `0032_rls_family_tables.sql`) are reachable. If you ever see a `403 /
+> Postgres 42501`, it means a *new* table shipped without a client grant — by design,
+> new tables are locked to `authenticated` until a migration enables RLS and grants
+> access (see the note at the top of `0037`).
 
 ---
 
