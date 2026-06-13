@@ -1,5 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'node:crypto';
+import { sniffImage } from '@/lib/photos/sniff-image';
+
+/** Thrown when upload bytes aren't a decodable image of an accepted type —
+ *  routes map this to 415 instead of a generic 500. */
+export class UnsupportedImageError extends Error {}
 
 export const PHOTO_BUCKET             = 'recipe-photos';
 export const CONTRIBUTOR_PHOTO_BUCKET = 'contributor-photos';
@@ -115,15 +120,23 @@ export async function uploadPhoto(
   target: UploadTarget,
 ): Promise<StoredPhoto> {
   if (!ALLOWED_MIME_TYPES.has(mimeType)) {
-    throw new Error(`Unsupported image type: ${mimeType}`);
+    throw new UnsupportedImageError(`Unsupported image type: ${mimeType}`);
   }
   const bytes = file instanceof Buffer ? file : Buffer.from(file);
   if (bytes.byteLength > MAX_PHOTO_BYTES) {
     throw new Error(`Photo too large (${bytes.byteLength} bytes; max ${MAX_PHOTO_BYTES}).`);
   }
 
+  // The caller's MIME type is a claim; the bytes decide. The sniffed type
+  // drives the extension and stored contentType from here on.
+  const sniff = await sniffImage(bytes);
+  if (!sniff.ok || !ALLOWED_MIME_TYPES.has(sniff.mime)) {
+    throw new UnsupportedImageError('Bytes are not a readable image of an accepted type.');
+  }
+  const sniffedMime = sniff.mime;
+
   const uuid = crypto.randomUUID();
-  const ext  = extensionFor(mimeType);
+  const ext  = extensionFor(sniffedMime);
   const storagePath =
     target.kind === 'source'
       ? `sources/_inbox/${target.sessionId}/${uuid}.${ext}`
@@ -135,7 +148,7 @@ export async function uploadPhoto(
     .storage
     .from(PHOTO_BUCKET)
     .upload(storagePath, bytes, {
-      contentType: mimeType,
+      contentType: sniffedMime,
       upsert:      false,
     });
   if (error) throw new Error(`Storage upload failed: ${error.message}`);
@@ -146,7 +159,7 @@ export async function uploadPhoto(
     storage_path: storagePath,
     public_url:   publicUrlFor(storagePath),
     size_bytes:   bytes.byteLength,
-    mime_type:    mimeType,
+    mime_type:    sniffedMime,
     thumb_path:   thumbPath,
   };
 }

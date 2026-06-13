@@ -2,7 +2,14 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { AlbumClient } from '@/components/album-client';
 import { AlbumUploadButton } from '@/components/album-upload-button';
-import { fetchAllPeopleForPicker, fetchAllReviewedPhotos, fetchOccasionTypes, type PickerPerson } from '@/lib/queries/family-photos';
+import {
+  fetchAllPeopleForPicker,
+  fetchOccasionTypes,
+  fetchReviewedPhotoById,
+  fetchReviewedPhotoCount,
+  fetchReviewedPhotosPage,
+  type PickerPerson,
+} from '@/lib/queries/family-photos';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export const metadata = { title: 'Family archive' };
@@ -24,11 +31,22 @@ export default async function AlbumPage({
   const initialPhotoId = searchParams.photo?.trim() || null;
 
   const db = supabaseAdmin();
-  const [{ data: viewer }, photos, occasions] = await Promise.all([
+  // First page only — the client streams the rest in the background, so the
+  // archive can grow past four digits without the page paying for all of it
+  // up front.
+  const [{ data: viewer }, photos, totalCount, occasions] = await Promise.all([
     db.from('contributors').select('id, can_sign_in, can_edit_photos').ilike('email', session.user.email).maybeSingle(),
-    fetchAllReviewedPhotos(),
+    fetchReviewedPhotosPage(0),
+    fetchReviewedPhotoCount(),
     fetchOccasionTypes(),
   ]);
+
+  // A deep-linked photo may live past the first page; fetch it directly so
+  // the lightbox opens immediately instead of waiting for its page to stream.
+  const extraPhoto =
+    initialPhotoId && !photos.some((p) => p.id === initialPhotoId)
+      ? await fetchReviewedPhotoById(initialPhotoId)
+      : null;
 
   const canUpload = !!viewer?.can_sign_in;
   const isAdmin = session.user.role === 'admin';
@@ -70,6 +88,8 @@ export default async function AlbumPage({
         ) : (
           <AlbumClient
             photos={photos}
+            totalCount={totalCount}
+            extraPhoto={extraPhoto}
             occasions={occasions}
             initialPhotoId={initialPhotoId}
             isAdmin={isAdmin}

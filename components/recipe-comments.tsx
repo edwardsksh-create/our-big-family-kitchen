@@ -7,6 +7,7 @@ import { Trash2 } from 'lucide-react';
 import { addComment, deleteComment } from '@/app/recipes/[slug]/comments/actions';
 import { canDeleteComment, canPostComment, type CommentViewer } from '@/lib/recipes/comment-permissions';
 import type { RecipeComment } from '@/lib/queries/recipe-comments';
+import { FAMILY } from '@/config/family';
 
 type Props = {
   recipeId:   string;
@@ -140,7 +141,7 @@ function humanError(code: string): string {
     case 'cannot_post':      return 'Your account isn’t set up for posting yet.';
     case 'invalid_body':     return 'Add something to your memory before saving.';
     case 'recipe_not_found': return 'That recipe is gone.';
-    case 'forbidden':        return 'Only the author or Kate can delete this.';
+    case 'forbidden':        return `Only the author or ${FAMILY.adminName} can delete this.`;
     case 'comment_not_found':return 'That memory has already been removed.';
     default:                 return 'Couldn’t save — try again.';
   }

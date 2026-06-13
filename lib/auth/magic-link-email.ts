@@ -1,6 +1,8 @@
 // Branded HTML magic-link email used by the NextAuth Resend provider.
 // Falls back to a clean plain-text version for clients that don't render HTML.
 
+import { FAMILY } from '@/config/family';
+
 export type MagicLinkParams = {
   url:  string;
   host: string;  // bare host (e.g. "bigfamilykitchen.com"); used in plain text only
@@ -24,7 +26,7 @@ export function magicLinkHtml({ url, host }: MagicLinkParams): string {
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="520" style="max-width:520px;background:#fff;border:1px solid ${RULE};border-radius:16px;">
             <tr>
               <td style="padding:36px 36px 24px 36px;">
-                <p style="margin:0 0 8px 0;font-family:Inter,Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:${INK_SOFT};">Our Big Family Kitchen</p>
+                <p style="margin:0 0 8px 0;font-family:Inter,Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:${INK_SOFT};">${FAMILY.siteName}</p>
                 <h1 style="margin:0;font-size:26px;line-height:1.2;color:${INK};font-weight:600;font-style:italic;">
                   Welcome &mdash; your sign-in link.
                 </h1>
@@ -72,7 +74,7 @@ export function magicLinkHtml({ url, host }: MagicLinkParams): string {
 
 export function magicLinkText({ url, host }: MagicLinkParams): string {
   return [
-    `Welcome to Our Big Family Kitchen.`,
+    `Welcome to ${FAMILY.siteName}.`,
     ``,
     `Tap this link to sign in (good for 24 hours):`,
     url,
@@ -80,6 +82,6 @@ export function magicLinkText({ url, host }: MagicLinkParams): string {
     `Didn't ask to sign in? You can ignore this email — nothing`,
     `happens until the link is clicked.`,
     ``,
-    `— Our Big Family Kitchen · ${host}`,
+    `— ${FAMILY.siteName} · ${host}`,
   ].join('\n');
 }

@@ -10,6 +10,7 @@
 // the card without the needs framing — affirmative badges still show.
 
 import type { RecipeIndexItem } from '@/lib/queries/recipes';
+import { FAMILY } from '@/config/family';
 
 export type BadgeKey =
   | 'ready-to-cook'
@@ -45,9 +46,9 @@ export const RECENTLY_ADDED_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 // active tag yet but is included so a future seed picks it up automatically.
 export const NEEDS_HELP_TAGS = new Set(['low-confidence', 'needs-instructions', 'needs-story']);
 
-function isFromAuntLaura(originallyFrom: string | null): boolean {
-  if (!originallyFrom) return false;
-  return /aunt laura/i.test(originallyFrom);
+function isFromFederatedArchive(originallyFrom: string | null): boolean {
+  if (!originallyFrom || !FAMILY.federation) return false;
+  return FAMILY.federation.provenancePattern.test(originallyFrom);
 }
 
 export function isRecentlyAdded(publishedAt: string, now = Date.now()): boolean {
@@ -99,8 +100,10 @@ export function badgesFor(item: RecipeIndexItem, viewer: Viewer, now = Date.now(
     out.push({ key: 'original-page', label: 'has the original card', kind: 'affirmative' });
   }
 
-  if (isFromAuntLaura(item.originally_from)) {
-    out.push({ key: 'from-aunt-laura', label: "from Aunt Laura's archive", kind: 'affirmative' });
+  if (FAMILY.federation && isFromFederatedArchive(item.originally_from)) {
+    // The key stays 'from-aunt-laura' — it predates the config extraction
+    // and is matched by tests and styling.
+    out.push({ key: 'from-aunt-laura', label: FAMILY.federation.badgeLabel, kind: 'affirmative' });
   }
 
   if (isRecentlyAdded(item.published_at, now)) {

@@ -3,6 +3,7 @@ import { Resend } from 'resend';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { buildBackup } from '@/lib/backup/build';
 import { SCHEMA_VERSION } from '@/lib/backup/tables';
+import { FAMILY } from '@/config/family';
 
 // 60s is enough for a family-sized cookbook. If row counts grow into
 // hundreds of thousands, swap this for a streaming export.
@@ -90,14 +91,14 @@ export async function GET(req: Request) {
     `Row counts:\n${countsList || '  (all tables empty)'}\n\n` +
     `File size: ${sizeMb} MB\n` +
     `Schema version: ${SCHEMA_VERSION}\n\n` +
-    `To restore, see docs/backups.md in the repo.\n\n— Our Big Family Kitchen`;
+    `To restore, see docs/backups.md in the repo.\n\n— ${FAMILY.siteName}`;
 
   const resend = new Resend(apiKey);
   try {
     await resend.emails.send({
       from:    fromAddress,
       to:      adminEmail,
-      subject: `Our Big Family Kitchen — daily backup ${dateStr}`,
+      subject: `${FAMILY.siteName} — daily backup ${dateStr}`,
       text:    body,
     });
   } catch (err) {

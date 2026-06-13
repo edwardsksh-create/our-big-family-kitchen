@@ -6,11 +6,10 @@
 // Internal-only tags (multi-recipe, possible-duplicate, bulk-photos) still
 // never surface to the public.
 
+import { FAMILY } from '@/config/family';
+
 const LUCY_COLLECTION_NOTE =
   "From Lucy's recipe collection. Photographed from her binder of favorites curated over 30+ years.";
-
-const AUNT_LAURA_NOTE =
-  "From Aunt Laura's 2003 cookbook — the family recipe compilation she put together for everyone.";
 
 // Tags that are admin-internal: never appear in public copy.
 export const INTERNAL_TAG_SLUGS = new Set([
@@ -19,9 +18,9 @@ export const INTERNAL_TAG_SLUGS = new Set([
   'bulk-photos',
 ]);
 
-function isFromAuntLaura(originallyFrom: string | null | undefined): boolean {
-  if (!originallyFrom) return false;
-  return /aunt laura/i.test(originallyFrom);
+function isFromFederatedArchive(originallyFrom: string | null | undefined): boolean {
+  if (!originallyFrom || !FAMILY.federation) return false;
+  return FAMILY.federation.provenancePattern.test(originallyFrom);
 }
 
 /**
@@ -45,8 +44,8 @@ export function publicStatusNotes(
   if (tagSlugs.includes('lucys-recipe-collection')) {
     return [LUCY_COLLECTION_NOTE];
   }
-  if (isFromAuntLaura(originallyFrom)) {
-    return [AUNT_LAURA_NOTE];
+  if (FAMILY.federation && isFromFederatedArchive(originallyFrom)) {
+    return [FAMILY.federation.provenanceNote];
   }
   return [];
 }

@@ -15,6 +15,7 @@ import { RecipeComments } from '@/components/recipe-comments';
 import { RecipePhotoGallery } from '@/components/recipe-photo-gallery';
 import { SIGNED_OUT_COMMENT_VIEWER, type CommentViewer } from '@/lib/recipes/comment-permissions';
 import { slugify } from '@/lib/utils';
+import { FAMILY } from '@/config/family';
 
 // Comments need the signed-in viewer's contributor row to decide who can
 // post or delete; that has to be fresh per request rather than served from
@@ -215,12 +216,12 @@ export default async function RecipePage({
       {/* Status banners */}
       {recipe.status === 'draft' && (
         <div className="recipe-flash mb-8 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
-          <span className="font-serif italic">This recipe is a draft</span> — only you and Kate can see it.
+          <span className="font-serif italic">This recipe is a draft</span> — only you and {FAMILY.adminName} can see it.
         </div>
       )}
       {recipe.status === 'pending_review' && (
         <div className="recipe-flash mb-8 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
-          <span className="font-serif italic">Pending review</span> — Kate will take a look.
+          <span className="font-serif italic">Pending review</span> — {FAMILY.adminName} will take a look.
         </div>
       )}
 

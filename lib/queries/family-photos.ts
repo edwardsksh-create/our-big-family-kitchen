@@ -362,7 +362,29 @@ export async function fetchRecentReviewedPhotos(limit = 6): Promise<FamilyPhotoF
   return hydratePhotos((data ?? []) as unknown as Joined[]);
 }
 
-export async function fetchAllReviewedPhotos(): Promise<FamilyPhotoFull[]> {
+/** First-paint size of the /album grid; the client streams the rest in the
+ *  background. Generous enough that most visits never notice the seam.
+ *  Env-overridable so verification can exercise the streaming path without
+ *  needing a 120-photo fixture. */
+export const ALBUM_PAGE_SIZE =
+  Number(process.env.ALBUM_PAGE_SIZE) > 0 ? Number(process.env.ALBUM_PAGE_SIZE) : 120;
+
+export async function fetchReviewedPhotoCount(): Promise<number> {
+  const db = supabaseAdmin();
+  const { count } = await db
+    .from('family_photos')
+    .select('id', { count: 'exact', head: true })
+    .eq('reviewed', true)
+    .eq('not_for_archive', false);
+  return count ?? 0;
+}
+
+/** One window of the album, in the grid's order. The id tiebreaker keeps
+ *  range pagination stable when year + uploaded_at tie. */
+export async function fetchReviewedPhotosPage(
+  offset: number,
+  limit = ALBUM_PAGE_SIZE,
+): Promise<FamilyPhotoFull[]> {
   const db = supabaseAdmin();
   const { data } = await db
     .from('family_photos')
@@ -370,8 +392,26 @@ export async function fetchAllReviewedPhotos(): Promise<FamilyPhotoFull[]> {
     .eq('reviewed', true)
     .eq('not_for_archive', false)
     .order('year', { ascending: false, nullsFirst: false })
-    .order('uploaded_at', { ascending: false });
+    .order('uploaded_at', { ascending: false })
+    .order('id', { ascending: true })
+    .range(offset, offset + limit - 1);
   return hydratePhotos((data ?? []) as unknown as Joined[]);
+}
+
+/** A single reviewed photo — the /album?photo=<id> deep link, which may
+ *  point past the first page. */
+export async function fetchReviewedPhotoById(id: string): Promise<FamilyPhotoFull | null> {
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from('family_photos')
+    .select(COMMON_SELECT)
+    .eq('id', id)
+    .eq('reviewed', true)
+    .eq('not_for_archive', false)
+    .maybeSingle();
+  if (!data) return null;
+  const hydrated = await hydratePhotos([data] as unknown as Joined[]);
+  return hydrated[0] ?? null;
 }
 
 /** Reviewed photos tagged with an occasion — the photo half of an occasion

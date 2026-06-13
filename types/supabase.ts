@@ -39,6 +39,32 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_daily: {
+        Row: {
+          contributor_id: string
+          count: number
+          usage_date: string
+        }
+        Insert: {
+          contributor_id: string
+          count?: number
+          usage_date?: string
+        }
+        Update: {
+          contributor_id?: string
+          count?: number
+          usage_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_daily_contributor_id_fkey"
+            columns: ["contributor_id"]
+            isOneToOne: false
+            referencedRelation: "contributors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
           body: string
@@ -988,6 +1014,8 @@ export type Database = {
     Functions: {
       current_contributor_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
+      reserve_ai_parse: { Args: { p_contributor_id: string; p_limit: number }; Returns: number }
+      release_ai_parse: { Args: { p_contributor_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
