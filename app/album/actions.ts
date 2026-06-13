@@ -269,12 +269,11 @@ export type LoadAlbumPhotosResult =
   | { ok: true; photos: FamilyPhotoFull[] }
   | { ok: false; error: 'unauthorized' };
 
-/** Background pages for the album grid. The album is sign-in-only, so the
- *  action re-checks the session — the page-level redirect doesn't protect
- *  a directly invoked server action. */
+/** Background pages for the album grid. The album is publicly viewable, so
+ *  this reads the same reviewed set the page renders — no session gate. Only
+ *  reviewed photos are ever returned, so there's nothing here a public album
+ *  visitor can't already see in the first page. */
 export async function loadAlbumPhotos(offset: number): Promise<LoadAlbumPhotosResult> {
-  const session = await auth();
-  if (!session?.user?.email) return { ok: false, error: 'unauthorized' };
   const photos = await fetchReviewedPhotosPage(Math.max(0, Math.floor(offset)));
   return { ok: true, photos };
 }

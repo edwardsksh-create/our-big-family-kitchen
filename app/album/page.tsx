@@ -1,4 +1,3 @@
-import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { AlbumClient } from '@/components/album-client';
 import { AlbumUploadButton } from '@/components/album-upload-button';
@@ -22,8 +21,12 @@ export default async function AlbumPage({
 }: {
   searchParams: { photo?: string };
 }) {
+  // The album is publicly viewable — no sign-in wall. A session, when present,
+  // only unlocks the write affordances (upload, comment, edit); anonymous
+  // visitors get a read-only grid. It stays out of robots/sitemap so it's
+  // public-by-link rather than crawlable (see app/robots.ts).
   const session = await auth();
-  if (!session?.user?.email) redirect('/sign-in?next=/album');
+  const viewerEmail = session?.user?.email ?? null;
 
   // Deep link from recipe / contributor photo strips: /album?photo=<id>
   // opens the lightbox on that photo. Bad or stale ids fall through to the
@@ -34,8 +37,15 @@ export default async function AlbumPage({
   // First page only — the client streams the rest in the background, so the
   // archive can grow past four digits without the page paying for all of it
   // up front.
-  const [{ data: viewer }, photos, totalCount, occasions] = await Promise.all([
-    db.from('contributors').select('id, can_sign_in, can_edit_photos').ilike('email', session.user.email).maybeSingle(),
+  const [viewer, photos, totalCount, occasions] = await Promise.all([
+    viewerEmail
+      ? db
+          .from('contributors')
+          .select('id, can_sign_in, can_edit_photos')
+          .ilike('email', viewerEmail)
+          .maybeSingle()
+          .then(({ data }) => data)
+      : Promise.resolve(null),
     fetchReviewedPhotosPage(0),
     fetchReviewedPhotoCount(),
     fetchOccasionTypes(),
@@ -49,7 +59,7 @@ export default async function AlbumPage({
       : null;
 
   const canUpload = !!viewer?.can_sign_in;
-  const isAdmin = session.user.role === 'admin';
+  const isAdmin = session?.user?.role === 'admin';
   const canEditPhotos = isAdmin || !!viewer?.can_edit_photos;
   // The people picker is only needed by photo editors; spare everyone
   // else the payload.
