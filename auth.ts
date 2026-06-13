@@ -3,6 +3,7 @@ import Resend from 'next-auth/providers/resend';
 import { SupabaseAdapter } from '@auth/supabase-adapter';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { magicLinkHtml, magicLinkText } from '@/lib/auth/magic-link-email';
+import { FAMILY } from '@/config/family';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -91,18 +92,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // 3) Has an invitation → accept it, create contributor row.
       const { data: invite } = await db
         .from('invitations')
-        .select('id, family_line_ids, invited_by_id')
+        .select('id, family_line_ids, invited_by_id, role')
         .ilike('email', email)
         .is('accepted_at', null)
         .maybeSingle();
 
       if (invite) {
+        const inviteRole = invite.role === 'viewer' ? 'viewer' : 'contributor';
         const { data: newContributor, error: insertErr } = await db
           .from('contributors')
           .insert({
             email,
             name:          user.name ?? null,
-            role:          'contributor',
+            role:          inviteRole,
+            // Viewers are read-only: they sign in and browse, but the app
+            // blocks contributing and can_sign_in stays false so the
+            // upload/comment affordances never appear. An invited
+            // contributor gets can_sign_in=true so they can participate.
+            can_sign_in:   inviteRole !== 'viewer',
             invited_at:    new Date().toISOString(),
             invited_by_id: invite.invited_by_id,
             joined_at:     new Date().toISOString(),
@@ -125,6 +132,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .from('invitations')
           .update({ accepted_at: new Date().toISOString() })
           .eq('id', invite.id);
+
+        // Let the admin know who was let in (view-only guests are invited by
+        // any family member via a share link, so the admin isn't otherwise
+        // in the loop). Fire-and-forget — never block sign-in on the email.
+        if (inviteRole === 'viewer') {
+          void notifyAdminViewerJoined(db, { email, invitedById: invite.invited_by_id });
+        }
 
         return true;
       }
@@ -154,3 +168,43 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+// Notify the admin that a view-only guest just joined, and who invited them.
+// Fire-and-forget: any failure is logged, never surfaced to the sign-in flow.
+async function notifyAdminViewerJoined(
+  db: ReturnType<typeof supabaseAdmin>,
+  args: { email: string; invitedById: string | null },
+): Promise<void> {
+  try {
+    const apiKey      = process.env.RESEND_API_KEY;
+    const adminEmail  = process.env.ADMIN_EMAIL;
+    const fromAddress = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+    if (!apiKey || !adminEmail) return;
+
+    let invitedBy = 'a family member';
+    if (args.invitedById) {
+      const { data } = await db
+        .from('contributors')
+        .select('name, email')
+        .eq('id', args.invitedById)
+        .maybeSingle();
+      if (data) invitedBy = data.name || data.email;
+    }
+
+    await fetch('https://api.resend.com/emails', {
+      method:  'POST',
+      headers: { authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        from:    fromAddress,
+        to:      adminEmail,
+        subject: `New view-only guest: ${args.email}`,
+        text:
+          `${args.email} just signed in as a view-only guest on ${FAMILY.siteName}.\n\n` +
+          `Invited by: ${invitedBy}.\n\n` +
+          `They can browse the site but can't add, edit, or comment. Manage guests under Admin → Contributors.`,
+      }),
+    });
+  } catch (err) {
+    console.error('notifyAdminViewerJoined failed:', (err as Error).message);
+  }
+}

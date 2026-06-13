@@ -9,6 +9,8 @@ export async function SiteHeader() {
   const session = await auth();
   const role = session?.user?.role;
   const signedIn = !!session?.user;
+  // View-only guests sign in and browse but can't contribute or invite.
+  const canContribute = signedIn && role !== 'viewer';
 
   // Show an area's nav link only when this visitor can actually reach it —
   // public to all, or signed in. Avoids links that just bounce to sign-in on
@@ -46,7 +48,10 @@ export async function SiteHeader() {
           {navItems.map((i) => (
             <Link key={i.href} href={i.href} className="hover:text-primary transition-colors">{i.label}</Link>
           ))}
-          {signedIn && (
+          {canContribute && (
+            <Link href="/invite" className="hover:text-primary transition-colors">Invite</Link>
+          )}
+          {canContribute && (
             <Link href="/add" className="rounded-full bg-primary px-3 py-1.5 text-paper transition-colors hover:bg-ink">+ Add</Link>
           )}
           {role === 'admin' && (
@@ -63,7 +68,10 @@ export async function SiteHeader() {
           {navItems.map((i) => (
             <Link key={i.href} href={i.href} className="block rounded-lg px-3 py-3 hover:bg-cream/40">{i.label}</Link>
           ))}
-          {signedIn && (
+          {canContribute && (
+            <Link href="/invite" className="block rounded-lg px-3 py-3 hover:bg-cream/40">Invite a guest</Link>
+          )}
+          {canContribute && (
             <Link href="/add" className="block rounded-lg px-3 py-3 text-primary hover:bg-cream/40">+ Add</Link>
           )}
           {role === 'admin' && (
