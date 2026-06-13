@@ -17,6 +17,7 @@ type FailureReason =
   | 'blocked_address'
   | 'blocked_redirect'
   | 'too_many_redirects'
+  | 'ai_daily_limit'
   | 'parse_failed';
 
 type Failure = { reason: FailureReason; url: string; status?: number };
@@ -31,6 +32,7 @@ const FAILURE_HEADLINES: Record<FailureReason, string> = {
   blocked_address:    'That address can’t be fetched from here.',
   blocked_redirect:   'That page redirected somewhere we don’t fetch from.',
   too_many_redirects: 'That page redirected too many times.',
+  ai_daily_limit:     'You’ve hit today’s limit for the AI helper. You can still paste the recipe text by hand.',
   parse_failed:       'We fetched the page but couldn’t find a recipe in it.',
 };
 

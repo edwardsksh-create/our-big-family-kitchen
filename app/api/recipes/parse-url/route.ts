@@ -2,13 +2,18 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { fetchRecipeFromUrl } from '@/lib/recipe-from-url';
 import { checkFetchTarget } from '@/lib/url-safety';
+import { resolveParseActor, reserveAiParse, releaseAiParse } from '@/lib/recipes/ai-usage';
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const session = await auth();
-  if (!session?.user) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  }
+  const actor = await resolveParseActor(session.user.email);
+  if (!actor) {
+    return NextResponse.json({ error: 'not_a_contributor' }, { status: 403 });
   }
 
   let body: { url?: string };
@@ -36,8 +41,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: safety.reason }, { status: 400 });
   }
 
+  // Reserve a slot before fetching. A URL only spends AI when it falls back
+  // to the model (JSON-LD parsing is free), so the slot is refunded below
+  // whenever the AI fallback wasn't what produced the result.
+  const reservation = await reserveAiParse(actor);
+  if (!reservation.ok) {
+    return NextResponse.json(
+      { error: 'ai_daily_limit', limit: reservation.limit },
+      { status: 429 },
+    );
+  }
+
   const result = await fetchRecipeFromUrl(url.toString());
   if (!result.ok) {
+    await releaseAiParse(actor.contributorId); // no recipe produced — refund
     // Structured log so we can spot which sites are commonly failing.
     console.error(JSON.stringify({
       event:  'url_fetch_failed',
@@ -50,6 +67,12 @@ export async function POST(req: Request) {
       // Always 200 — client uses the JSON body to decide what to render.
       { status: 200 },
     );
+  }
+
+  // JSON-LD parsing used no AI — only the ai-fallback path actually spent a
+  // model call, so refund the slot otherwise.
+  if (result.via !== 'ai-fallback') {
+    await releaseAiParse(actor.contributorId);
   }
 
   return NextResponse.json({

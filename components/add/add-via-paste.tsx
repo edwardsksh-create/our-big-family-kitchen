@@ -38,6 +38,9 @@ export function AddViaPaste({
       });
       if (!res.ok) {
         // Soft-fail: drop into manual mode with raw text pre-filled in story.
+        // Typing a recipe by hand uses no AI, so this still works when the
+        // daily AI limit is what stopped us — just say so.
+        const limited = res.status === 429;
         const fallback = emptyDraft();
         fallback.story = text;
         if (originallyFromUrl) fallback.originally_from = originallyFromUrl;
@@ -46,7 +49,11 @@ export function AddViaPaste({
           fallback.primary_family_line_id = options.currentContributor.primary_family_line_id ?? undefined;
         }
         setDraft(fallback);
-        setError('We couldn’t parse this one — here’s a blank form pre-filled with what we got.');
+        setError(
+          limited
+            ? 'You’ve hit today’s limit for the AI helper — but your text is here, so you can finish the recipe by hand.'
+            : 'We couldn’t parse this one — here’s a blank form pre-filled with what we got.',
+        );
         return;
       }
       const { recipe } = (await res.json()) as { recipe: ParsedRecipe };

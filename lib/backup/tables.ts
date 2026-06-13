@@ -51,7 +51,9 @@ export type BackupTableName = (typeof BACKUP_TABLES)[number];
 // Tables that exist in the schema but are deliberately NOT backed up.
 // `comments` is the dormant 0001 table superseded by `recipe_comments`
 // (see 0021's header) — no app code writes to it and it holds no data.
-export const EXCLUDED_TABLES = ['comments'] as const satisfies readonly PublicTableName[];
+// `ai_usage_daily` is ephemeral rate-limit state (0033) that resets every
+// day — there's nothing worth restoring, and a stale counter would mislead.
+export const EXCLUDED_TABLES = ['comments', 'ai_usage_daily'] as const satisfies readonly PublicTableName[];
 
 // Key columns per table, parents-of-truth for two consumers:
 //   - the backup export orders by these columns so PostgREST range
@@ -89,4 +91,4 @@ export const TABLE_KEYS: Record<BackupTableName, readonly string[]> = {
 // backup whose schema_version doesn't match what it expects (--force to
 // override), so a stale backup can't be silently restored into a schema
 // it no longer describes.
-export const SCHEMA_VERSION = '0032';
+export const SCHEMA_VERSION = '0033';
