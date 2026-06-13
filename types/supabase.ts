@@ -1016,6 +1016,18 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       reserve_ai_parse: { Args: { p_contributor_id: string; p_limit: number }; Returns: number }
       release_ai_parse: { Args: { p_contributor_id: string }; Returns: undefined }
+      replace_recipe_children: {
+        Args: {
+          p_recipe_id: string
+          p_contributor_id: string
+          p_ingredients: Json
+          p_instructions: Json
+          p_tags: Json
+          p_occasions: Json
+          p_photos: Json
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

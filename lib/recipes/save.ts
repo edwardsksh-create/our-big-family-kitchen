@@ -220,6 +220,109 @@ async function syncOccasions(recipeId: string, slugs: string[]) {
   if (insErr) throw new SyncError('occasions insert', insErr);
 }
 
+// PostgREST returns PGRST202 when no matching function is in the schema
+// cache; Postgres' own undefined_function code is 42883. Either means the
+// 0035 migration isn't applied yet → use the per-statement fallback so
+// deploying this code before the migration can't break saving.
+function isMissingRpc(err: { code?: string; message?: string } | null): boolean {
+  if (!err) return false;
+  return err.code === 'PGRST202' || err.code === '42883'
+    || /replace_recipe_children/.test(err.message ?? '');
+}
+
+/**
+ * The transactional child-table sync (security gate item 8 — the RPC upgrade
+ * to PR #4's error-checking). The app resolves the "smart" parts here
+ * (trim/filter, slugify tags, validate occasion slugs, order photos) exactly
+ * as the per-statement syncs did, then one RPC replaces every child table in
+ * a single DB transaction — so a mid-sync failure rolls back instead of
+ * leaving a recipe momentarily missing its content. Falls back to the
+ * per-statement path when the RPC isn't deployed yet.
+ *
+ * Returns null on success, or a reason string (already logged) on failure.
+ */
+async function syncRecipeChildren(
+  recipeId: string,
+  contributorId: string,
+  draft: RecipeDraft,
+): Promise<string | null> {
+  const db = supabaseAdmin();
+
+  const ingredients = draft.ingredients
+    .filter((r) => r.item_text.trim().length > 0)
+    .map((r, idx) => ({ sub_header: r.sub_header.trim() || null, item_text: r.item_text.trim(), sort_order: idx }));
+
+  const instructions = draft.instructions
+    .filter((r) => r.body.trim().length > 0)
+    .map((r, idx) => ({ sub_header: r.sub_header.trim() || null, body: r.body.trim(), sort_order: idx }));
+
+  // Dedupe (trim + lowercase) and slugify in TS, exactly as syncTags does;
+  // the RPC find-or-creates each tag atomically.
+  const tagNames = Array.from(
+    new Set(draft.tags.map((t) => t.trim()).filter(Boolean).map((t) => t.toLowerCase())),
+  );
+  const tags = tagNames.map((name) => ({ slug: slugify(name), name }));
+
+  const { data: types } = await db.from('family_photo_occasion_types').select('slug');
+  const valid = new Set((types ?? []).map((t) => t.slug));
+  const occasions = normalizeOccasionSlugs(draft.occasion_slugs ?? [], valid);
+
+  // Source photos first, then dish; sort_order is the running index across
+  // both lists — matches the per-statement path.
+  type PhotoRow = { storage_path: string; url: string; thumb_path: string | null; caption: string | null; photo_type: 'source' | 'dish'; sort_order: number };
+  const photos: PhotoRow[] = [];
+  let order = 0;
+  for (const p of draft.source_photos ?? []) {
+    photos.push({ storage_path: p.storage_path, url: p.public_url, thumb_path: p.thumb_path ?? null, caption: p.caption ?? null, photo_type: 'source', sort_order: order++ });
+  }
+  for (const p of draft.dish_photos ?? []) {
+    photos.push({ storage_path: p.storage_path, url: p.public_url, thumb_path: p.thumb_path ?? null, caption: p.caption ?? null, photo_type: 'dish', sort_order: order++ });
+  }
+
+  const { error } = await db.rpc('replace_recipe_children', {
+    p_recipe_id:      recipeId,
+    p_contributor_id: contributorId,
+    p_ingredients:    ingredients,
+    p_instructions:   instructions,
+    p_tags:           tags,
+    p_occasions:      occasions,
+    p_photos:         photos,
+  });
+  if (!error) return null;
+
+  if (isMissingRpc(error)) {
+    console.warn('replace_recipe_children RPC unavailable; using per-statement sync fallback.');
+    return syncChildrenFallback(recipeId, contributorId, draft);
+  }
+  console.error('recipe sync (rpc) failed:', recipeId, error.message);
+  return 'sync_failed';
+}
+
+// Per-statement fallback (the pre-RPC behavior from PR #4): each sync
+// rebuilds its table and throws on error; allSettled so one failure doesn't
+// abort its siblings. Used only until the 0035 migration is applied.
+async function syncChildrenFallback(
+  recipeId: string,
+  contributorId: string,
+  draft: RecipeDraft,
+): Promise<string | null> {
+  const results = await Promise.allSettled([
+    syncIngredients(recipeId, draft.ingredients),
+    syncInstructions(recipeId, draft.instructions),
+    syncTags(recipeId, draft.tags),
+    syncOccasions(recipeId, draft.occasion_slugs ?? []),
+    syncPhotos(recipeId, contributorId, draft.source_photos ?? [], draft.dish_photos ?? []),
+  ]);
+  const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+  if (failed.length > 0) {
+    for (const f of failed) {
+      console.error('recipe sync failed:', recipeId, (f.reason as Error)?.message ?? f.reason);
+    }
+    return 'sync_failed';
+  }
+  return null;
+}
+
 async function notifyAdminOfSubmission(args: {
   recipeId: string;
   title:    string;
@@ -389,25 +492,8 @@ export async function saveRecipe(
 
   // Skip child-table churn on pure reject / unpublish — no content changes.
   if (action !== 'admin_reject' && action !== 'unpublish') {
-    // allSettled so one table's failure doesn't abort its siblings mid-write;
-    // any failure still fails the save loudly (retrying converges — each
-    // sync rebuilds its table from the draft).
-    const results = await Promise.allSettled([
-      syncIngredients(recipeId!, draft.ingredients),
-      syncInstructions(recipeId!, draft.instructions),
-      syncTags(recipeId!, draft.tags),
-      syncOccasions(recipeId!, draft.occasion_slugs ?? []),
-      syncPhotos(recipeId!, contributor.id, draft.source_photos ?? [], draft.dish_photos ?? []),
-    ]);
-    const failed = results.filter(
-      (r): r is PromiseRejectedResult => r.status === 'rejected',
-    );
-    if (failed.length > 0) {
-      for (const f of failed) {
-        console.error('recipe sync failed:', recipeId, (f.reason as Error)?.message ?? f.reason);
-      }
-      return { ok: false, error: 'sync_failed' };
-    }
+    const failReason = await syncRecipeChildren(recipeId!, contributor.id, draft);
+    if (failReason) return { ok: false, error: failReason };
   }
 
   if (action === 'admin_reject' || action === 'publish') {
