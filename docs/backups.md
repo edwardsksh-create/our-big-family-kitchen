@@ -127,3 +127,21 @@ Re-runs only fetch new or changed files, so it's cheap to run after a big
 photo import or once a month. Deletions are never propagated — if a photo
 is removed from the bucket by accident, the mirror still has it. First full
 mirror: 2026-06-12, 680 files, ~825 MB.
+
+### Automated cloud mirror
+
+The local mirror above is manual and lives on one Mac. An automated second
+copy also runs nightly in the cloud: **`/api/cron/photo-backup`** (06:00
+UTC) mirrors `recipe-photos`, `family-photos`, and `contributor-photos`
+into the private **`photo-backups`** bucket, filing each object under
+`<source-bucket>/<original-path>`. It's a server-side copy (no bytes leave
+Supabase), incremental (already-copied objects are skipped), and
+idempotent — a run that times out is simply continued by the next. A clean
+run is silent; failures email the admin. Restore by downloading from the
+`photo-backups` bucket in the Supabase dashboard.
+
+The two layers are complementary: the local mirror is off-machine (survives
+a whole-project loss but needs a human + Kate's Mac); the cloud mirror is
+hands-off and clone-friendly (survives an accidental in-project deletion but
+not a whole-project loss). True off-site automation (Cloudflare R2 / S3) is
+the remaining follow-up.
