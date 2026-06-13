@@ -1,5 +1,6 @@
 import type { FederatedRecipe, FederatedRecipeBySection } from '@/lib/federated';
 import { FederatedRecipeCard } from '@/components/federated-recipe-card';
+import { FAMILY } from '@/config/family';
 
 export function FederatedRecipeGrid({
   recipes,
@@ -22,24 +23,26 @@ export function FederatedRecipeGrid({
 
 export function FederatedRecipesBySection({
   groups,
-  heading = 'From Aunt Laura’s 2003 cookbook',
+  heading,
   subheading,
 }: {
   groups: FederatedRecipeBySection[];
   heading?: string;
   subheading?: string;
 }) {
+  const federation = FAMILY.federation;
   const total = groups.reduce((acc, g) => acc + g.recipes.length, 0);
-  if (total === 0) return null;
+  if (!federation || total === 0) return null;
+  const headingText = heading ?? `From ${federation.archiveName}`;
 
   return (
     <section className="space-y-12">
       <header>
-        <h2 className="font-serif text-3xl text-ink md:text-4xl">{heading}</h2>
+        <h2 className="font-serif text-3xl text-ink md:text-4xl">{headingText}</h2>
         {subheading && <p className="mt-2 font-serif italic text-ink-soft">{subheading}</p>}
         <p className="mt-2 text-sm text-ink-soft">
           {total} {total === 1 ? 'recipe' : 'recipes'} — every card links out
-          to Aunt Laura&rsquo;s original collection, where the full recipe lives.
+          to {federation.collectionName}, where the full recipe lives.
         </p>
       </header>
 

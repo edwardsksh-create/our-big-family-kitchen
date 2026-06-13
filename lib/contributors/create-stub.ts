@@ -3,6 +3,7 @@
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import type { ContributorOption } from '@/lib/recipes/form-options';
+import { FAMILY } from '@/config/family';
 
 export type CreateStubInput = {
   name:                  string;
@@ -44,7 +45,7 @@ export async function createContributorStub(
   // contributors.email is NOT NULL UNIQUE — for stubs without a real email,
   // we synthesize a placeholder that's unique per name.
   const finalEmail = email
-    || `stub+${slugForEmail(name)}-${Date.now()}@ourbigfamilykitchen.local`;
+    || `stub+${slugForEmail(name)}-${Date.now()}${FAMILY.stubEmailSuffix}`;
 
   // Check for collision on real email.
   if (email) {

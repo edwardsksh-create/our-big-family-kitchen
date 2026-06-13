@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { Resend } from 'resend';
+import { FAMILY } from '@/config/family';
 
 // Deploy-failure alerts. A Vercel webhook (scoped to this project, event
 // deployment.error) POSTs here; we verify the signature and email
@@ -67,12 +68,12 @@ export async function POST(req: Request) {
     ?? (event.payload?.deployment?.url ? `https://${event.payload.deployment.url}` : 'https://vercel.com');
 
   const body =
-    `A ${target} deployment of Our Big Family Kitchen failed to build.\n\n` +
+    `A ${target} deployment of ${FAMILY.siteName} failed to build.\n\n` +
     `Commit: ${commitSha} — ${commitMsg}\n` +
     `Logs:   ${logsUrl}\n\n` +
     `Until a build succeeds, the site keeps serving the previous deployment — ` +
     `recent code and content changes are NOT live. If this arrives more than ` +
-    `once for the same commit, the build is stuck and needs a look.\n\n— Our Big Family Kitchen`;
+    `once for the same commit, the build is stuck and needs a look.\n\n— ${FAMILY.siteName}`;
 
   try {
     const resend = new Resend(apiKey);

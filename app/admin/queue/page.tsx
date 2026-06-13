@@ -7,6 +7,7 @@ import {
   sortQueue,
   type QueueSort,
 } from '@/lib/recipes/queue';
+import { FAMILY } from '@/config/family';
 
 export const metadata = { title: 'Admin queue' };
 export const dynamic   = 'force-dynamic';
@@ -40,7 +41,7 @@ export default async function AdminQueuePage({
       <div className="mx-auto max-w-prose px-6 py-16 text-center">
         <p className="label mb-3">Admin</p>
         <h1 className="font-serif text-3xl text-ink">Admins only.</h1>
-        <p className="mt-2 text-ink-soft">This page is just for Kate.</p>
+        <p className="mt-2 text-ink-soft">This page is just for {FAMILY.adminName}.</p>
       </div>
     );
   }

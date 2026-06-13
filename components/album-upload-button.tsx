@@ -7,6 +7,7 @@ import {
   MAX_FAMILY_PHOTO_BYTES,
   MAX_FAMILY_PHOTOS_PER_SUBMIT,
 } from '@/lib/photos/album-submit';
+import { FAMILY } from '@/config/family';
 
 type Status =
   | { kind: 'idle' }
@@ -95,13 +96,13 @@ export function AlbumUploadButton() {
           </button>
         </div>
         <p className="mt-1 text-sm text-ink-soft">
-          Kate will review and tag what you send before it shows up here.
+          {FAMILY.adminName} will review and tag what you send before it shows up here.
         </p>
 
         {status.kind === 'success' ? (
           <div className="mt-4 rounded-xl border border-rule bg-paper p-4 text-sm">
             <p className="font-serif italic text-ink">
-              Thanks for adding to our family album! Kate will review your
+              Thanks for adding to our family album! {FAMILY.adminName} will review your
               photo{status.count === 1 ? '' : 's'} and make public shortly.
             </p>
             <button
@@ -148,7 +149,7 @@ export function AlbumUploadButton() {
                 className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 font-sans text-sm font-medium text-paper transition-colors hover:bg-ink disabled:opacity-50"
               >
                 <Upload size={14} aria-hidden="true" />
-                {status.kind === 'uploading' ? 'Uploading…' : 'Send to Kate'}
+                {status.kind === 'uploading' ? 'Uploading…' : `Send to ${FAMILY.adminName}`}
               </button>
               {status.kind === 'error' && (
                 <p className="text-sm italic text-accent">{status.message}</p>

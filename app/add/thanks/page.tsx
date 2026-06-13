@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { FAMILY } from '@/config/family';
 
 export const metadata = { title: 'Thanks!' };
 
@@ -7,7 +8,7 @@ export default function ThanksPage() {
     <div className="mx-auto flex min-h-[60vh] max-w-prose flex-col justify-center px-6 py-16 text-center">
       <p className="label mb-4">Submitted</p>
       <h1 className="font-serif text-3xl leading-tight text-ink md:text-4xl">
-        Thanks — Kate will review your recipe.
+        Thanks — {FAMILY.adminName} will review your recipe.
       </h1>
       <p className="mt-4 text-ink-soft">
         It’ll show up once she’s had a look.
