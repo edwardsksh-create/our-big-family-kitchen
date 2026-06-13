@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import { auth } from '@/auth';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { canDeleteComment, canPostComment, type CommentViewer } from '@/lib/recipes/comment-permissions';
+import { fetchReviewedPhotosPage, type FamilyPhotoFull } from '@/lib/queries/family-photos';
 
 const FAMILY_PHOTO_BUCKET = 'family-photos';
 
@@ -260,4 +261,18 @@ export async function deletePhotoComment(commentId: string): Promise<DeletePhoto
   if (error) return { ok: false, error: 'delete_failed' };
   revalidatePath('/album');
   return { ok: true };
+}
+
+export type LoadAlbumPhotosResult =
+  | { ok: true; photos: FamilyPhotoFull[] }
+  | { ok: false; error: 'unauthorized' };
+
+/** Background pages for the album grid. The album is sign-in-only, so the
+ *  action re-checks the session — the page-level redirect doesn't protect
+ *  a directly invoked server action. */
+export async function loadAlbumPhotos(offset: number): Promise<LoadAlbumPhotosResult> {
+  const session = await auth();
+  if (!session?.user?.email) return { ok: false, error: 'unauthorized' };
+  const photos = await fetchReviewedPhotosPage(Math.max(0, Math.floor(offset)));
+  return { ok: true, photos };
 }
