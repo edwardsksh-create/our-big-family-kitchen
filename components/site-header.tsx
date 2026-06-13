@@ -15,10 +15,16 @@ export async function SiteHeader() {
   // Show an area's nav link only when this visitor can actually reach it —
   // public to all, or signed in. Avoids links that just bounce to sign-in on
   // a private site. About is always shown; search rides with the recipes area.
-  const showRecipes      = isAreaPublic('recipes')      || signedIn;
-  const showFamily       = isAreaPublic('family')       || signedIn;
-  const showContributors = isAreaPublic('contributors') || signedIn;
-  const showAlbum        = isAreaPublic('album')         || signedIn;
+  const [recipesPublic, familyPublic, contributorsPublic, albumPublic] = await Promise.all([
+    isAreaPublic('recipes'),
+    isAreaPublic('family'),
+    isAreaPublic('contributors'),
+    isAreaPublic('album'),
+  ]);
+  const showRecipes      = recipesPublic      || signedIn;
+  const showFamily       = familyPublic       || signedIn;
+  const showContributors = contributorsPublic || signedIn;
+  const showAlbum        = albumPublic        || signedIn;
 
   // Canonical nav order, kept identical between desktop and mobile.
   const navItems = [

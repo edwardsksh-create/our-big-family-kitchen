@@ -16,9 +16,11 @@ const BASE_URL = FAMILY.baseUrl;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
   const db = supabaseAdmin();
-  const recipesPublic      = isAreaPublic('recipes');
-  const familyPublic       = isAreaPublic('family');
-  const contributorsPublic = isAreaPublic('contributors');
+  const [recipesPublic, familyPublic, contributorsPublic] = await Promise.all([
+    isAreaPublic('recipes'),
+    isAreaPublic('family'),
+    isAreaPublic('contributors'),
+  ]);
 
   const [{ data: recipes }, { data: contributors }] = await Promise.all([
     recipesPublic

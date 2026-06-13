@@ -975,6 +975,35 @@ export type Database = {
         }
         Relationships: []
       }
+      site_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_settings_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "contributors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       submissions: {
         Row: {
           contributor_id: string | null
@@ -1058,19 +1087,25 @@ export type Database = {
     Functions: {
       current_contributor_id: { Args: never; Returns: string }
       is_admin: { Args: never; Returns: boolean }
-      reserve_ai_parse: { Args: { p_contributor_id: string; p_limit: number }; Returns: number }
-      release_ai_parse: { Args: { p_contributor_id: string }; Returns: undefined }
+      release_ai_parse: {
+        Args: { p_contributor_id: string }
+        Returns: undefined
+      }
       replace_recipe_children: {
         Args: {
-          p_recipe_id: string
           p_contributor_id: string
           p_ingredients: Json
           p_instructions: Json
-          p_tags: Json
           p_occasions: Json
           p_photos: Json
+          p_recipe_id: string
+          p_tags: Json
         }
         Returns: undefined
+      }
+      reserve_ai_parse: {
+        Args: { p_contributor_id: string; p_limit: number }
+        Returns: number
       }
     }
     Enums: {
