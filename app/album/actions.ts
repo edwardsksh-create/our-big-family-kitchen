@@ -152,6 +152,8 @@ export async function updatePhotoDetails(
     caption: string;
     year: string;
     place: string;
+    /** Free-text note for people not in the tag list ("…neighbors on Marian Ave"). */
+    additionalPeople: string;
     /** 'contributor:<id>' | 'family_member:<id>' — replaces the photo's people tags. */
     personRefs: string[];
     occasionSlugs: string[];
@@ -175,7 +177,7 @@ export async function updatePhotoDetails(
   const trimmed = (v: string) => v.trim() || null;
   const { error } = await db
     .from('family_photos')
-    .update({ caption: trimmed(details.caption), year: trimmed(details.year), place: trimmed(details.place) })
+    .update({ caption: trimmed(details.caption), year: trimmed(details.year), place: trimmed(details.place), additional_people: trimmed(details.additionalPeople) })
     .eq('id', photoId);
   if (error) {
     console.error('updatePhotoDetails failed:', error);

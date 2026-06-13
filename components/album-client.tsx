@@ -589,6 +589,7 @@ function DetailsEditor({ photo, occasions, people }: { photo: FamilyPhotoFull; o
   const [caption, setCaption] = useState(photo.caption ?? '');
   const [year, setYear] = useState(photo.year ?? '');
   const [place, setPlace] = useState(photo.place ?? '');
+  const [additionalPeople, setAdditionalPeople] = useState(photo.additional_people ?? '');
   const [personRefs, setPersonRefs] = useState<string[]>([]);
   const [selectedOccasions, setSelectedOccasions] = useState<string[]>([]);
   const [personQuery, setPersonQuery] = useState('');
@@ -611,6 +612,7 @@ function DetailsEditor({ photo, occasions, people }: { photo: FamilyPhotoFull; o
     setCaption(photo.caption ?? '');
     setYear(photo.year ?? '');
     setPlace(photo.place ?? '');
+    setAdditionalPeople(photo.additional_people ?? '');
     setPersonRefs(photo.people.map((p) => `${p.person_type}:${p.id}`));
     setSelectedOccasions(photo.occasions);
     setPersonQuery('');
@@ -623,6 +625,7 @@ function DetailsEditor({ photo, occasions, people }: { photo: FamilyPhotoFull; o
     startTransition(async () => {
       const res = await updatePhotoDetails(photo.id, {
         caption, year, place,
+        additionalPeople,
         personRefs,
         occasionSlugs: selectedOccasions,
       });
@@ -688,6 +691,10 @@ function DetailsEditor({ photo, occasions, people }: { photo: FamilyPhotoFull; o
             ))}
           </div>
         )}
+        {/* Free-text note for anyone not in the tag list — clear it to remove. */}
+        <input value={additionalPeople} onChange={(e) => setAdditionalPeople(e.target.value)}
+          placeholder="Others (free text) — e.g. neighbors, friends"
+          className="mt-2 w-full rounded-lg border border-rule bg-paper px-3 py-1.5 text-sm" />
       </div>
 
       {/* Occasions */}
