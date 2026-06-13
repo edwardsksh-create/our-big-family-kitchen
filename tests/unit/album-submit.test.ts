@@ -63,7 +63,7 @@ describe('upload constraints', () => {
 
 describe('feature requirement: family submissions land with reviewed=false and stay out of public album', () => {
   // These rules are enforced at the API + query layer (the route inserts
-  // reviewed=false explicitly, and fetchAllReviewedPhotos filters on
+  // reviewed=false explicitly, and the album queries filter on
   // reviewed=true + not_for_archive=false). The test here documents the
   // contract so a future change can't silently flip the default.
   it('records the contract', () => {

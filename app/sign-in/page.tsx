@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { signIn } from '@/auth';
+import { FAMILY } from '@/config/family';
 
 export const metadata = { title: 'Sign in' };
 
@@ -26,8 +27,8 @@ export default function SignInPage({ searchParams }: { searchParams: SearchParam
       <figure className="mb-8">
         <div className="relative aspect-[7/5] overflow-hidden rounded-2xl border border-rule">
           <Image
-            src="/hero/leusch-sisters-thanksgiving.jpg"
-            alt="Nancy, Laura, and Annie in the Quinn kitchen on Thanksgiving, 1980s."
+            src={FAMILY.heroFallback.src}
+            alt={FAMILY.heroFallback.caption}
             fill
             priority
             sizes="448px"
@@ -37,10 +38,10 @@ export default function SignInPage({ searchParams }: { searchParams: SearchParam
       </figure>
       <p className="label mb-4">Sign in</p>
       <h1 className="font-serif text-3xl leading-tight text-ink md:text-4xl">
-        Welcome to Our Big Family Kitchen.
+        Welcome to {FAMILY.siteName}.
       </h1>
       <p className="mt-3 text-ink-soft">
-        Sign in with the email Kate invited.
+        Sign in with the email {FAMILY.adminName} invited.
       </p>
 
       <form action={send} className="mt-8 space-y-4">
@@ -64,7 +65,7 @@ export default function SignInPage({ searchParams }: { searchParams: SearchParam
       {isNotInvited && (
         <p className="mt-6 rounded-xl border border-rule bg-paper p-4 text-sm text-ink-soft">
           <span className="font-serif italic">Not yet invited.</span> Reach out
-          to Kate if you’d like to be added.
+          to {FAMILY.adminName} if you’d like to be added.
         </p>
       )}
 

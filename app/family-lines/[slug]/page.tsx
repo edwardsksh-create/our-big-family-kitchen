@@ -12,14 +12,9 @@ import { fetchFamilyMembersForLine, type FamilyMember } from '@/lib/queries/fami
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { NativeRecipeGrid } from '@/components/native-recipe-card';
 import { cn } from '@/lib/utils';
+import { FAMILY } from '@/config/family';
 
 export const revalidate = 60;
-
-// Slugs of family lines that have a federated mirror at leuschfamilyrecipes.com.
-// For now only the Leusch line federates.
-const FEDERATED_LINES: Record<string, { siteUrl: string }> = {
-  leusch: { siteUrl: 'https://leuschfamilyrecipes.com' },
-};
 
 export function generateStaticParams() {
   return FAMILY_LINES.map((f) => ({ slug: f.slug }));
@@ -60,7 +55,12 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
   const line = familyLineBySlug(params.slug);
   if (!line) notFound();
 
-  const federation = FEDERATED_LINES[line.slug];
+  // Lines listed in the federation config have a mirror on the older
+  // archive site (Kate's instance: only the Leusch line federates).
+  const federation =
+    FAMILY.federation && FAMILY.federation.lineSlugs.includes(line.slug)
+      ? FAMILY.federation
+      : null;
   const [native, members, photos, federatedCount] = await Promise.all([
     fetchPublishedRecipesForFamilyLine(line.slug),
     fetchFamilyMembersForLine(line.slug),
@@ -167,35 +167,37 @@ export default async function FamilyLinePage({ params }: { params: { slug: strin
       </section>
 
 
-      {/* Federated banner — Leusch only */}
+      {/* Federated banner — only on lines with a mirror on the archive site */}
       {federation && federatedCount > 0 && (
         <section className="mt-16">
           <a
-            href={federation.siteUrl}
+            href={federation.url}
             target="_blank"
             rel="noopener noreferrer"
             className="group block rounded-2xl border border-rule bg-paper p-8 card-hover hover:border-ink hover:shadow-[0_12px_40px_-20px_rgba(42,37,34,0.35)] md:p-12"
           >
-            <p className="font-serif italic text-primary">From Aunt Laura’s 2003 cookbook</p>
+            <p className="font-serif italic text-primary">From {federation.archiveName}</p>
             <h2 className="font-serif mt-2 text-3xl text-ink md:text-4xl">
               {federatedCount} recipes from this family line
             </h2>
             <p className="mt-3 max-w-prose text-ink-soft">
-              The Leusch archive — every recipe with its full ingredients,
-              story, and scans of the original page — lives in Aunt
-              Laura&rsquo;s original collection.
+              The {line.name} archive — every recipe with its full ingredients,
+              story, and scans of the original page — lives
+              in {federation.collectionName}.
             </p>
             <span className="btn-primary mt-7 inline-flex items-center gap-2">
-              Browse Aunt Laura’s cookbook
+              Browse {federation.cookbookShortName}
               <ExternalLink size={14} aria-hidden="true" />
             </span>
-            <span className="sr-only">Opens Aunt Laura&rsquo;s original collection in a new tab.</span>
+            <span className="sr-only">Opens {federation.collectionName} in a new tab.</span>
           </a>
-          <p className="mt-4 text-sm italic text-ink-soft">
-            <Link href="/about#letter" className="hover:text-primary">
-              Read the letter Aunt Laura sent with the original books →
-            </Link>
-          </p>
+          {FAMILY.foundingLetter && (
+            <p className="mt-4 text-sm italic text-ink-soft">
+              <Link href="/about#letter" className="hover:text-primary">
+                {FAMILY.foundingLetter.familyLineLinkText} →
+              </Link>
+            </p>
+          )}
         </section>
       )}
     </div>

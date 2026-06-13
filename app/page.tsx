@@ -10,6 +10,7 @@ import { fetchRandomHeroPhoto, fetchRecentReviewedPhotos, type FamilyPhotoFull }
 import { captionLead } from '@/lib/photos/photo-caption';
 import { RecipeIndexGrid } from '@/components/recipe-index-card';
 import { ANONYMOUS_VIEWER } from '@/lib/recipes/badges';
+import { FAMILY } from '@/config/family';
 
 // Per-request: the album strip is shown only to signed-in family (the album
 // itself is sign-in-only), so the page reads the session. The data sections
@@ -31,10 +32,10 @@ export default async function HomePage() {
 
   // A fresh photo from the curated pool on every page load; the original
   // archival photo stands in whenever the pool is empty (never breaks).
-  const heroSrc = heroPhoto?.public_url || '/hero/leusch-sisters-thanksgiving.jpg';
+  const heroSrc = heroPhoto?.public_url || FAMILY.heroFallback.src;
   const heroCaption = heroPhoto
     ? (heroPhoto.caption ?? captionLead({ occasionNames: [], year: heroPhoto.year, place: heroPhoto.place }))
-    : 'Nancy, Laura, and Annie in the Quinn kitchen on Thanksgiving, 1980s.';
+    : FAMILY.heroFallback.caption;
   const heroAlt = heroCaption ?? 'A photo from the family archive.';
 
   return (
@@ -163,22 +164,24 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* From Aunt Laura’s archive */}
-      {federatedCount > 0 && (
+      {/* The federated archive box (Kate's instance: Aunt Laura's archive) */}
+      {FAMILY.federation && federatedCount > 0 && (
         <section className="pb-16 pt-2 md:pb-20">
           <div className="rounded-2xl border border-rule bg-paper p-6 md:p-8">
-            <h2 className="font-serif text-2xl text-ink md:text-3xl">From Aunt Laura’s archive</h2>
+            <h2 className="font-serif text-2xl text-ink md:text-3xl">From {FAMILY.federation.archiveShortName}</h2>
             <p className="mt-3 max-w-prose text-ink-soft">
-              The original Leusch family cookbook lives at leuschfamilyrecipes.com,
+              {FAMILY.federation.homeBlurbLead},
               with {federatedCount} preserved recipes, scans, and stories.
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-4">
-              <Link href="/family-lines/leusch" className="btn-ghost">
-                Browse Aunt Laura’s original collection
+              <Link href={`/family-lines/${FAMILY.federation.lineSlugs[0]}`} className="btn-ghost">
+                Browse {FAMILY.federation.collectionName}
               </Link>
-              <Link href="/about#letter" className="font-serif text-sm italic text-ink-soft hover:text-primary">
-                Read her letter →
-              </Link>
+              {FAMILY.foundingLetter && (
+                <Link href="/about#letter" className="font-serif text-sm italic text-ink-soft hover:text-primary">
+                  {FAMILY.foundingLetter.homeLinkText} →
+                </Link>
+              )}
             </div>
           </div>
         </section>

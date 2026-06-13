@@ -2,6 +2,7 @@ import { ExternalLink } from 'lucide-react';
 import type { FederatedRecipe } from '@/lib/federated';
 import { sectionBySlug, SECTION_BG, SECTION_TEXT } from '@/lib/sections';
 import { cn } from '@/lib/utils';
+import { FAMILY } from '@/config/family';
 
 export function FederatedRecipeCard({
   recipe,
@@ -10,6 +11,8 @@ export function FederatedRecipeCard({
   recipe: FederatedRecipe;
   showSectionBadge?: boolean;
 }) {
+  const federation = FAMILY.federation;
+  if (!federation) return null;
   const section = recipe.section_slug ? sectionBySlug(recipe.section_slug) : undefined;
 
   return (
@@ -37,7 +40,7 @@ export function FederatedRecipeCard({
 
       <div className="flex items-center justify-between gap-3">
         <span className="font-serif text-xs italic text-primary">
-          From Aunt Laura’s 2003 cookbook
+          From {federation.archiveName}
         </span>
         {showSectionBadge && section && (
           <span
@@ -52,7 +55,7 @@ export function FederatedRecipeCard({
         )}
       </div>
 
-      <span className="sr-only">Opens at leuschfamilyrecipes.com in a new tab.</span>
+      <span className="sr-only">Opens at {federation.host} in a new tab.</span>
     </a>
   );
 }

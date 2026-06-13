@@ -3,6 +3,7 @@ import { Fraunces, Inter } from 'next/font/google';
 import './globals.css';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
+import { FAMILY } from '@/config/family';
 
 const serif = Fraunces({
   subsets: ['latin'],
@@ -19,11 +20,10 @@ const sans = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Our Big Family Kitchen',
-    template: '%s — Our Big Family Kitchen',
+    default: FAMILY.siteName,
+    template: `%s — ${FAMILY.siteName}`,
   },
-  description:
-    'Recipes from the Leusch, Sundy, Edwards, Hong, Quinn, and Branion families. Kept, shared, and growing.',
+  description: FAMILY.metaDescription,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

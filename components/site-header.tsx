@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { auth } from '@/auth';
 import { SearchBar } from '@/components/search-bar';
 import { MobileMenu } from '@/components/mobile-menu';
+import { FAMILY } from '@/config/family';
 
 export async function SiteHeader() {
   const session = await auth();
@@ -37,7 +38,7 @@ export async function SiteHeader() {
     <header className="border-b border-rule bg-paper/90 backdrop-blur supports-[backdrop-filter]:bg-paper/70 sticky top-0 z-30">
       <div className="mx-auto flex max-w-page items-center gap-4 px-6 py-4 md:gap-6">
         <Link href="/" className="group flex items-baseline gap-2 shrink-0">
-          <span className="font-serif text-lg text-ink md:text-xl">Our Big Family Kitchen</span>
+          <span className="font-serif text-lg text-ink md:text-xl">{FAMILY.siteName}</span>
         </Link>
 
         <div className="hidden flex-1 justify-center md:flex">

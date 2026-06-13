@@ -5,6 +5,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { eligibleRecipients, defaultRecipientId, type AskFamilyContext } from '@/lib/recipes/ask-family';
 import { AskFamilyForm } from '@/components/admin/ask-family-form';
+import { FAMILY } from '@/config/family';
 
 export const metadata = { title: 'Ask the family' };
 export const dynamic   = 'force-dynamic';
@@ -24,7 +25,7 @@ export default async function AskFamilyPage({ params }: { params: { slug: string
     return (
       <div className="mx-auto max-w-prose px-6 py-16">
         <h1 className="font-serif text-3xl text-ink">Admin only.</h1>
-        <p className="mt-4 text-ink-soft">This screen is for Kate.</p>
+        <p className="mt-4 text-ink-soft">This screen is for {FAMILY.adminName}.</p>
       </div>
     );
   }
@@ -45,7 +46,7 @@ export default async function AskFamilyPage({ params }: { params: { slug: string
     .select('id, email, name, nickname, birth_name')
     .order('name');
 
-  const baseUrl = process.env.NEXTAUTH_URL || 'https://bigfamilykitchen.com';
+  const baseUrl = process.env.NEXTAUTH_URL || FAMILY.baseUrl;
   const recipeUrl = `${baseUrl}/recipes/${recipe.slug}`;
 
   const contribDisplay = (c: ContribRow): string => {
