@@ -50,7 +50,9 @@ export function AddViaPhoto({ options, isAdmin, canPublish = false }: { options:
       });
       if (!res.ok) {
         // Soft-fall to manual: drop the user on the review screen with a
-        // blank draft, photos still attached.
+        // blank draft, photos still attached. Filling it in by hand uses no
+        // AI, so this still works when the daily AI limit is the blocker.
+        const limited = res.status === 429;
         const fallback = emptyDraft();
         fallback.source_photos = photos;
         if (options.currentContributor) {
@@ -58,7 +60,11 @@ export function AddViaPhoto({ options, isAdmin, canPublish = false }: { options:
           fallback.primary_family_line_id = options.currentContributor.primary_family_line_id ?? undefined;
         }
         setDraft(fallback);
-        setError('We had trouble reading these photos — fill in the rest by hand.');
+        setError(
+          limited
+            ? 'You’ve hit today’s limit for the AI helper — your photos are attached, so you can fill in the recipe by hand.'
+            : 'We had trouble reading these photos — fill in the rest by hand.',
+        );
         return;
       }
       const body = (await res.json()) as { recipe: ParsedFromPhotos };

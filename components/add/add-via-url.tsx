@@ -14,6 +14,7 @@ type FailureReason =
   | 'http_other'
   | 'timeout'
   | 'network_error'
+  | 'ai_daily_limit'
   | 'parse_failed';
 
 type Failure = { reason: FailureReason; url: string; status?: number };
@@ -25,6 +26,7 @@ const FAILURE_HEADLINES: Record<FailureReason, string> = {
   http_other:        'We couldn’t reach that page.',
   timeout:           'We couldn’t reach that page in time.',
   network_error:     'We couldn’t reach that page.',
+  ai_daily_limit:    'You’ve hit today’s limit for the AI helper. You can still paste the recipe text by hand.',
   parse_failed:      'We fetched the page but couldn’t find a recipe in it.',
 };
 
