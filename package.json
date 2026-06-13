@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
     "test:unit": "vitest run",
-    "test:unit:watch": "vitest"
+    "test:unit:watch": "vitest",
+    "gen:types": "supabase gen types typescript --linked > types/supabase.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
