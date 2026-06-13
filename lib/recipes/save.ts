@@ -350,15 +350,24 @@ async function notifyAdminOfSubmission(args: {
 export async function saveRecipe(
   draft: RecipeDraft,
   action: SaveAction,
+  opts?: { actorEmail?: string },
 ): Promise<SaveOutcome> {
-  const session = await auth();
-  if (!session?.user?.email) return { ok: false, error: 'unauthorized' };
+  // actorEmail lets a trusted caller (e.g. the Bearer-authenticated
+  // /api/v1/recipes endpoint, which already verified the token) reuse this exact
+  // save path without a NextAuth session. Web callers omit it and we read the
+  // session as before.
+  let email = opts?.actorEmail ?? null;
+  if (!email) {
+    const session = await auth();
+    email = session?.user?.email ?? null;
+  }
+  if (!email) return { ok: false, error: 'unauthorized' };
 
   const db = supabaseAdmin();
   const { data: contributorRow } = await db
     .from('contributors')
     .select('id, email, name, role, can_publish')
-    .ilike('email', session.user.email)
+    .ilike('email', email)
     .maybeSingle();
   // role is a text column with a CHECK constraint enforcing the union.
   const contributor = contributorRow as unknown as ContributorRow | null;
