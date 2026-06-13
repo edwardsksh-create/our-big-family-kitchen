@@ -115,14 +115,14 @@ export const FAMILY: FamilyConfig = {
     caption: 'Nancy, Laura, and Annie in the Quinn kitchen on Thanksgiving, 1980s.',
   },
 
-  // Matches the site's behavior to date: recipes, family pages, and
-  // contributors are publicly readable; the photo album is sign-in-only.
-  // Flip any of these to 'private' (or 'public') to change what logged-out
-  // visitors can see.
+  // Fully private: every area is sign-in-only. Logged-out visitors get a
+  // sign-in door; viewing is open to anyone signed in, including view-only
+  // guests invited via /invite. Flip any of these back to 'public' to open
+  // that area to the world again.
   visibility: {
-    recipes:      'public',
-    family:       'public',
-    contributors: 'public',
+    recipes:      'private',
+    family:       'private',
+    contributors: 'private',
     album:        'private',
   },
 
