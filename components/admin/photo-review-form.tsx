@@ -164,8 +164,11 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
     window.scrollTo({ top: 0 });
   }
 
-  function submitWith(intent: 'save_and_next' | 'skip' | 'not_for_archive' | 'reject' | 'done') {
+  function submitWith(intent: 'save_and_next' | 'skip' | 'not_for_archive' | 'reject' | 'delete' | 'done') {
     if (intent === 'reject' && !confirm('Reject this submission? The file will be deleted and the row hidden. The uploader is not notified.')) {
+      return;
+    }
+    if (intent === 'delete' && !confirm('Delete this photo permanently? The image file and all its tags are removed for good — this can’t be undone.')) {
       return;
     }
     startTransition(async () => {
@@ -569,7 +572,7 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
             Copy tags &amp; caption from previous
           </button>
         )}
-        {photo.source === 'family' && (
+        {photo.source === 'family' ? (
           <button
             type="button"
             disabled={pending}
@@ -578,6 +581,16 @@ function PhotoReviewFormInner({ photo, occasions: initialOccasions, people, reci
             title="Decline this submission. File deleted, uploader not notified."
           >
             Reject submission
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => submitWith('delete')}
+            className="btn-ghost text-accent hover:text-accent"
+            title="Permanently delete this photo — file and tags removed, can’t be undone."
+          >
+            Delete permanently
           </button>
         )}
         <button

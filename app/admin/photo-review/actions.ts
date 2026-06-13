@@ -17,7 +17,7 @@ type SubmitPayload = {
   // person rows: format 'contributor:<id>' or 'family_member:<id>'
   personRefs:       string[];
   recipeIds:        string[];
-  intent:           'save_and_next' | 'skip' | 'not_for_archive' | 'reject' | 'done';
+  intent:           'save_and_next' | 'skip' | 'not_for_archive' | 'reject' | 'delete' | 'done';
   /** When set, the post-action redirect carries the queue filter forward
    *  so admin batch-processing family submissions stays on that filter. */
   filterSource?:    'family' | null;
@@ -48,6 +48,30 @@ export async function submitPhotoReview(payload: SubmitPayload): Promise<void> {
       .from('family_photos')
       .update({ not_for_archive: true })
       .eq('id', payload.photoId);
+    revalidatePath('/admin/photo-review');
+    redirect(nextUrl);
+  }
+
+  if (payload.intent === 'delete') {
+    // Hard delete for a photo that shouldn't have been imported at all.
+    // Unlike 'reject' (which keeps the row as an audit trail of a declined
+    // submission), this removes the file bytes AND the row — the child
+    // rows (people, occasions, recipe links, comments) all cascade. Both
+    // storage paths go: storage_path may be an edited copy, with the
+    // pre-edit original at original_storage_path.
+    const { data: existing } = await db
+      .from('family_photos')
+      .select('storage_path, original_storage_path')
+      .eq('id', payload.photoId)
+      .maybeSingle();
+    const doomedPaths = [existing?.storage_path, existing?.original_storage_path]
+      .filter((p): p is string => !!p);
+    if (doomedPaths.length > 0) {
+      const { error: rmErr } = await db.storage.from(FAMILY_PHOTO_BUCKET).remove(doomedPaths);
+      if (rmErr) throw new Error(`delete: removing photo files failed: ${rmErr.message}`);
+    }
+    const { error: delErr } = await db.from('family_photos').delete().eq('id', payload.photoId);
+    if (delErr) throw new Error(`delete: removing photo row failed: ${delErr.message}`);
     revalidatePath('/admin/photo-review');
     redirect(nextUrl);
   }
