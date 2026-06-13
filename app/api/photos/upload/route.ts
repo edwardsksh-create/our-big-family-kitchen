@@ -7,6 +7,7 @@ import {
   type StoredPhoto,
   ALLOWED_MIME_TYPES,
   MAX_PHOTO_BYTES,
+  UnsupportedImageError,
 } from '@/lib/storage/photos';
 
 export const maxDuration = 60;
@@ -77,6 +78,14 @@ export async function POST(req: Request) {
       const stored = await uploadPhoto(bytes, file.type, target);
       uploaded.push(stored);
     } catch (err) {
+      // uploadPhoto byte-sniffs the file; a forged or corrupt "image" is the
+      // sender's fault, not a server error.
+      if (err instanceof UnsupportedImageError) {
+        return NextResponse.json(
+          { error: 'unsupported_type', message: `${file.name} isn't a readable image.` },
+          { status: 415 },
+        );
+      }
       console.error('photo upload failed', err);
       return NextResponse.json(
         { error: 'upload_failed', message: (err as Error).message },

@@ -9,6 +9,7 @@ import {
   MAX_FAMILY_PHOTOS_PER_SUBMIT,
 } from '@/lib/photos/album-submit';
 import { generateFamilyPhotoHints, type FamilyPhotoHints } from '@/lib/photos/family-photo-hints';
+import { sniffImage } from '@/lib/photos/sniff-image';
 import { slugify } from '@/lib/utils';
 
 // Family submissions go through the same review queue as the bulk archive.
@@ -95,15 +96,26 @@ export async function POST(req: Request) {
   const created: { id: string; storage_path: string }[] = [];
 
   for (const file of files) {
-    const uuid = crypto.randomUUID();
-    const ext  = extensionFor(file.type);
-    const storagePath = `submissions/${uploaderSlug}/${uuid}.${ext}`;
     const buf = Buffer.from(await file.arrayBuffer());
+
+    // The client's MIME type was only a hint — the bytes decide what this
+    // is, and the sniffed type drives the extension and stored contentType.
+    const sniff = await sniffImage(buf);
+    if (!sniff.ok || !FAMILY_PHOTO_ALLOWED_MIME.has(sniff.mime)) {
+      return NextResponse.json(
+        { error: 'unsupported_type', message: `${file.name} isn't a readable image.` },
+        { status: 415 },
+      );
+    }
+
+    const uuid = crypto.randomUUID();
+    const ext  = extensionFor(sniff.mime);
+    const storagePath = `submissions/${uploaderSlug}/${uuid}.${ext}`;
 
     // 1) Upload to storage.
     const { error: upErr } = await db.storage
       .from(FAMILY_PHOTO_BUCKET)
-      .upload(storagePath, buf, { contentType: file.type, upsert: false });
+      .upload(storagePath, buf, { contentType: sniff.mime, upsert: false });
     if (upErr) {
       console.error('family upload — storage failed:', upErr);
       return NextResponse.json(
