@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDisplayName } from '@/lib/contributors/display-name';
 import { captionLead, joinNames } from '@/lib/photos/photo-caption';
-import { addPhotoComment, deletePhotoComment, setHeroEligible, updatePhotoDetails } from '@/app/album/actions';
+import { addPhotoComment, deletePhotoComment, loadAlbumPhotos, setHeroEligible, updatePhotoDetails } from '@/app/album/actions';
 import { canDeleteComment, canPostComment, type CommentViewer } from '@/lib/recipes/comment-permissions';
 import { PhotoEditor } from '@/components/photo-editor';
 import type { FamilyPhotoFull, OccasionType, PickerPerson } from '@/lib/queries/family-photos';
@@ -16,6 +16,8 @@ type PersonOption = { ref: string; label: string };
 
 export function AlbumClient({
   photos,
+  totalCount,
+  extraPhoto = null,
   occasions,
   initialPhotoId = null,
   isAdmin = false,
@@ -23,7 +25,14 @@ export function AlbumClient({
   people = [],
   viewer,
 }: {
+  /** The first page of the grid, in album order. */
   photos:    FamilyPhotoFull[];
+  /** Total reviewed photos in the archive — when larger than the first
+   *  page, the rest streams in via loadAlbumPhotos after mount. */
+  totalCount?: number;
+  /** A deep-linked photo that lives past the first page, server-fetched so
+   *  its lightbox opens immediately; merged out once its page arrives. */
+  extraPhoto?: FamilyPhotoFull | null;
   occasions: OccasionType[];
   /** Shows the admin-only hero toggle in the lightbox. The server action
    *  re-checks the role; this prop is display-only. */
@@ -47,9 +56,44 @@ export function AlbumClient({
   const [search,    setSearch]    = useState('');
   const [openPhotoId, setOpenPhotoId] = useState<string | null>(initialPhotoId);
 
+  // Background streaming: the server sends one page; the rest arrives here
+  // so filters and search keep operating on the WHOLE archive. `pages` only
+  // ever grows in album order — offsets stay aligned with the server query.
+  const [pages, setPages] = useState<FamilyPhotoFull[]>(photos);
+  const target = totalCount ?? photos.length;
+  const stillLoading = pages.length < target;
+  const streamingRef = useRef(false);
+  useEffect(() => {
+    if (streamingRef.current || pages.length >= target) return;
+    streamingRef.current = true;
+    let cancelled = false;
+    (async () => {
+      let offset = pages.length;
+      while (!cancelled && offset < target) {
+        const result = await loadAlbumPhotos(offset);
+        if (cancelled || !result.ok || result.photos.length === 0) break;
+        offset += result.photos.length;
+        setPages((prev) => {
+          const seen = new Set(prev.map((p) => p.id));
+          return [...prev, ...result.photos.filter((p) => !seen.has(p.id))];
+        });
+      }
+      streamingRef.current = false;
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const allPhotos = useMemo(() => {
+    if (extraPhoto && !pages.some((p) => p.id === extraPhoto.id)) {
+      return [...pages, extraPhoto];
+    }
+    return pages;
+  }, [pages, extraPhoto]);
+
   const personOptions: PersonOption[] = useMemo(() => {
     const m = new Map<string, string>();
-    for (const photo of photos) {
+    for (const photo of allPhotos) {
       for (const p of photo.people) {
         const ref = `${p.person_type}:${p.id}`;
         if (!m.has(ref)) {
@@ -58,26 +102,26 @@ export function AlbumClient({
       }
     }
     return [...m.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([ref, label]) => ({ ref, label }));
-  }, [photos]);
+  }, [allPhotos]);
 
   const placeOptions = useMemo(() => {
     const s = new Set<string>();
-    for (const p of photos) if (p.place) s.add(p.place);
+    for (const p of allPhotos) if (p.place) s.add(p.place);
     return [...s].sort();
-  }, [photos]);
+  }, [allPhotos]);
 
   const decadeOptions = useMemo(() => {
     const s = new Set<string>();
-    for (const p of photos) {
+    for (const p of allPhotos) {
       const m = p.year?.match(/\b(19|20)(\d)/);
       if (m) s.add(`${m[1]}${m[2]}0s`);
     }
     return [...s].sort().reverse();
-  }, [photos]);
+  }, [allPhotos]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return photos.filter((p) => {
+    return allPhotos.filter((p) => {
       if (personRef) {
         const has = p.people.some((x) => `${x.person_type}:${x.id}` === personRef);
         if (!has) return false;
@@ -101,9 +145,9 @@ export function AlbumClient({
       }
       return true;
     });
-  }, [photos, personRef, occasion, decade, place, search]);
+  }, [allPhotos, personRef, occasion, decade, place, search]);
 
-  const openPhoto = openPhotoId ? photos.find((p) => p.id === openPhotoId) ?? null : null;
+  const openPhoto = openPhotoId ? allPhotos.find((p) => p.id === openPhotoId) ?? null : null;
 
   // Keep the address bar in sync with the open photo so "how do I link to
   // this photo?" is just: copy the URL. replaceState avoids polluting the
@@ -182,11 +226,14 @@ export function AlbumClient({
 
       <p className="label mb-6 text-ink-soft">
         {filtered.length} {filtered.length === 1 ? 'photo' : 'photos'}
+        {stillLoading && ' · loading the rest of the archive…'}
       </p>
 
       {filtered.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-rule p-12 text-center">
-          <p className="font-serif italic text-2xl text-ink-soft">No photos match those filters.</p>
+          <p className="font-serif italic text-2xl text-ink-soft">
+            {stillLoading ? 'Still loading the archive…' : 'No photos match those filters.'}
+          </p>
         </div>
       ) : (
         // Decade headers between groups — the photos arrive sorted year-desc
