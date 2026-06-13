@@ -44,6 +44,7 @@ export const INSERT_ORDER = [
   'contributors',
   'contributor_family_lines',
   'invitations',
+  'invite_links',
   'federated_recipes',
   'family_members',
   'recipes',
@@ -72,6 +73,7 @@ export const TABLE_KEYS = {
   contributors:                ['id'],
   contributor_family_lines:    ['contributor_id', 'family_line_id'],
   invitations:                 ['id'],
+  invite_links:                ['id'],
   federated_recipes:           ['id'],
   family_members:              ['id'],
   recipes:                     ['id'],
@@ -91,7 +93,7 @@ export const TABLE_KEYS = {
 
 // Must match SCHEMA_VERSION in lib/backup/tables.ts (CI-enforced). A backup
 // produced under a different schema version is refused without --force.
-export const EXPECTED_SCHEMA_VERSION = '0035';
+export const EXPECTED_SCHEMA_VERSION = '0036';
 
 // Tables that carry a created_at column — used for the "newer rows exist"
 // staleness check.

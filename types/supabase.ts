@@ -620,6 +620,7 @@ export type Database = {
           family_line_ids: string[]
           id: string
           invited_by_id: string | null
+          role: string
           sent_at: string
           token: string
         }
@@ -629,6 +630,7 @@ export type Database = {
           family_line_ids?: string[]
           id?: string
           invited_by_id?: string | null
+          role?: string
           sent_at?: string
           token: string
         }
@@ -638,6 +640,7 @@ export type Database = {
           family_line_ids?: string[]
           id?: string
           invited_by_id?: string | null
+          role?: string
           sent_at?: string
           token?: string
         }
@@ -645,6 +648,47 @@ export type Database = {
           {
             foreignKeyName: "invitations_invited_by_id_fkey"
             columns: ["invited_by_id"]
+            isOneToOne: false
+            referencedRelation: "contributors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invite_links: {
+        Row: {
+          created_at: string
+          created_by_id: string | null
+          expires_at: string
+          id: string
+          note: string | null
+          revoked: boolean
+          role: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          created_by_id?: string | null
+          expires_at?: string
+          id?: string
+          note?: string | null
+          revoked?: boolean
+          role?: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          created_by_id?: string | null
+          expires_at?: string
+          id?: string
+          note?: string | null
+          revoked?: boolean
+          role?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invite_links_created_by_id_fkey"
+            columns: ["created_by_id"]
             isOneToOne: false
             referencedRelation: "contributors"
             referencedColumns: ["id"]
